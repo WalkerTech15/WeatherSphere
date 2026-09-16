@@ -1890,6 +1890,58 @@
                 ></button>
               </div>
             </div>
+
+            <!-- Weather provider: Open-Meteo is the active source; the school API is not integrated yet. -->
+            <section class="card set-card set-provider" aria-labelledby="weatherProviderTitle">
+              <div class="set-head">
+                <span class="metric-ico tint-blue" aria-hidden="true"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    width="18"
+                    height="18"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.9"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M3 15a4 4 0 0 1 4-4h1a5 5 0 0 1 9-1 4 4 0 1 1 1 8H7a4 4 0 0 1-4-3Z" />
+                    <path d="M8 21h8" /></svg
+                ></span>
+                <div>
+                  <h2 id="weatherProviderTitle" data-i18n="setWeatherProvider">Weather provider</h2>
+                  <p data-i18n="setWeatherProviderSub"></p>
+                </div>
+              </div>
+              <div class="set-provider-options">
+                <div class="set-provider-option is-current">
+                  <span class="set-provider-radio" aria-hidden="true"><span></span></span>
+                  <span class="set-provider-copy">
+                    <span class="set-provider-name"
+                      ><b>Open-Meteo</b
+                      ><span class="set-provider-badge is-live" data-i18n="providerCurrent"
+                        >Current</span
+                      ></span
+                    >
+                    <span data-i18n="providerOpenMeteoSub">Currently providing weather data.</span>
+                  </span>
+                </div>
+                <div class="set-provider-option is-unavailable" aria-disabled="true">
+                  <span class="set-provider-radio" aria-hidden="true"><span></span></span>
+                  <span class="set-provider-copy">
+                    <span class="set-provider-name"
+                      ><b data-i18n="providerSchoolApi">My school project API</b
+                      ><span class="set-provider-badge" data-i18n="providerConfigure"
+                        >Not ready</span
+                      ></span
+                    >
+                    <span data-i18n="providerSchoolApiSub"
+                      >This provider will be available once the API is ready.</span
+                    >
+                  </span>
+                </div>
+              </div>
+            </section>
           </div>
 
           <!-- Data & privacy -->
