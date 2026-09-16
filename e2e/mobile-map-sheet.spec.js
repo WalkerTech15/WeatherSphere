@@ -15,6 +15,35 @@ const panel = (app) => app.locator("#mapWeatherPanel");
 const handle = (app) => app.locator("#mapPanelHandle");
 
 test.describe("mobile map detail sheet", () => {
+  test("snap states animate with translate while the panel layout height stays fixed", async ({
+    app,
+  }) => {
+    await openMapPanel(app);
+    const sheet = panel(app);
+    const fullHeight = (await sheet.boundingBox()).height;
+
+    await expect(sheet).toHaveCSS("transition-property", "translate");
+    expect(await sheet.evaluate(() => CSS.supports("translate", "0 1px"))).toBe(true);
+
+    const measureVisibleHeight = () =>
+      sheet.evaluate((el) => window.innerHeight - el.getBoundingClientRect().top);
+    expect(Math.abs((await measureVisibleHeight()) - app.viewportSize().height * 0.3)).toBeLessThan(
+      2,
+    );
+
+    await handle(app).click(); // half → expanded
+    await expect(sheet).toHaveAttribute("data-sheet-state", "expanded");
+    await expect
+      .poll(async () => measureVisibleHeight())
+      .toBeGreaterThan(app.viewportSize().height * 0.8);
+    expect((await sheet.boundingBox()).height).toBeCloseTo(fullHeight, 0);
+
+    await handle(app).click(); // expanded → collapsed
+    await expect(sheet).toHaveAttribute("data-sheet-state", "collapsed");
+    await expect.poll(async () => measureVisibleHeight()).toBeCloseTo(88, 0);
+    expect((await sheet.boundingBox()).height).toBeCloseTo(fullHeight, 0);
+  });
+
   test("opens at the default 'half' state, not fully collapsed or fully expanded", async ({
     app,
   }) => {
@@ -181,7 +210,12 @@ test.describe("mobile map detail sheet", () => {
     const sheetBox = await panel(app).boundingBox();
     const viewport = app.viewportSize();
     expect(sheetBox.y).toBeGreaterThan(0); // never covers the full screen
-    expect(sheetBox.y + sheetBox.height).toBeLessThanOrEqual(viewport.height + 1);
+    await expect
+      .poll(async () => {
+        const box = await panel(app).boundingBox();
+        return box.y + box.height;
+      })
+      .toBeLessThanOrEqual(viewport.height + 1);
   });
 
   test("a brand-new selection resets the sheet to 'half', a same-location re-render (favourite toggle) does not", async ({

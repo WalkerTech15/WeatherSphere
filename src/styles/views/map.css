@@ -1744,17 +1744,20 @@ body[data-theme="dark"] .map-hour + .map-hour {
      never eats the ENTIRE screen, but on a short phone that sliver can still
      land above the layer switcher rather than beside it — the same trade-off
      every native app's fully-expanded bottom sheet makes; expanded is asking
-     for the panel, not the map. height, not transform, is what's animated:
-     js/features/map-sheet.js applies a live transform ONLY while an actual
-     drag is in progress (.is-dragging suspends this transition so the two
-     never fight each other), then clears it and lets this take over for the
-     snap. */
+     for the panel, not the map. The panel keeps its expanded geometry and
+     snaps with the individual `translate` property, avoiding per-frame layout
+     from animating height. The sheet module uses `transform` only while a
+     drag is in progress; those transforms compose, and .is-dragging suspends
+     the snap transition until the finger is released. */
   .map-weather-panel {
     position: fixed;
     z-index: 20;
     inset: auto 0 0;
     width: auto;
-    height: 30vh; /* matches [data-sheet-state="half"] below, the default state */
+    height: 84vh;
+    max-height: none;
+    display: flex;
+    flex-direction: column;
     margin-top: 0;
     padding: 0 18px 18px;
     border-color: var(--border);
@@ -1764,9 +1767,10 @@ body[data-theme="dark"] .map-hour + .map-hour {
     box-shadow: 0 -14px 36px rgba(15, 23, 42, 0.2);
     color: var(--text);
     backdrop-filter: none;
-    overflow-y: auto;
+    overflow: hidden;
     overscroll-behavior: contain;
-    transition: height 0.26s ease;
+    translate: 0 calc(84vh - 30vh); /* half state is the default */
+    transition: translate 0.32s var(--ease);
   }
   .map-weather-panel.is-dragging {
     transition: none;
@@ -1775,7 +1779,7 @@ body[data-theme="dark"] .map-hour + .map-hour {
     /* handle + peek row + the panel's own bottom padding, with headroom —
        not a tight fit, so a slightly longer translated peek label never
        clips */
-    height: 88px;
+    translate: 0 calc(84vh - 88px);
     overflow: hidden;
   }
   /* Deliberately well under half the viewport — the map card itself can be
@@ -1785,15 +1789,20 @@ body[data-theme="dark"] .map-hour + .map-hour {
      48vh measured this way in practice: it left almost nothing of the map
      itself reachable, only its top edge. */
   .map-weather-panel[data-sheet-state="half"] {
-    height: 30vh;
+    translate: 0 calc(84vh - 30vh);
   }
   .map-weather-panel[data-sheet-state="expanded"] {
-    height: 84vh;
+    translate: 0 0;
+  }
+  .map-panel-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
   .map-sheet-handle {
     display: flex;
-    position: sticky;
-    top: 0;
+    flex: 0 0 auto;
     z-index: 1;
     background: inherit;
   }

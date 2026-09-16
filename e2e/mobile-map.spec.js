@@ -20,10 +20,14 @@ test.describe("map workspace on a phone", () => {
     await expect(panel).toHaveCSS("position", "fixed");
     await expect(panel).toHaveAttribute("data-sheet-state", "half");
 
-    const panelBox = await panel.boundingBox();
     const viewport = app.viewportSize();
-    /* anchored to the bottom edge, never spilling past either side */
-    expect(Math.round(panelBox.y + panelBox.height)).toBeLessThanOrEqual(viewport.height + 1);
+    /* The sheet keeps a fixed 84vh layout box and translates offscreen;
+       measure its visible slice, not the offscreen part of that box. */
+    const visibleHeight = await panel.evaluate(
+      (el) => window.innerHeight - el.getBoundingClientRect().top,
+    );
+    expect(Math.abs(visibleHeight - viewport.height * 0.3)).toBeLessThan(2);
+    const panelBox = await panel.boundingBox();
     expect(panelBox.x).toBeGreaterThanOrEqual(0);
     expect(panelBox.x + panelBox.width).toBeLessThanOrEqual(viewport.width + 1);
 
