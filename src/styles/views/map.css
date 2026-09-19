@@ -1904,3 +1904,162 @@ body[data-theme="dark"] .map-hour + .map-hour {
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Expanded map mode ──────────────────────────────────────────────────────
+   Toggled by features/map-expand.js via `body.map-expanded`. The map card
+   takes over the workspace under the top navigation and beside the sidebar;
+   the heading row, the recents/popular cards and the footer step aside for
+   the duration. Both landmarks stay exactly where they are — this is a
+   layout mode, not the Fullscreen API.
+
+   Nothing here restyles the map, its controls or the detail panel: they keep
+   the treatment they already have, and every overlay inside .map-card is
+   position:absolute, so turning the card into a flex column moves only
+   #worldMap. Sizing is flex rather than a calc() height so it inherits
+   .main's own padding at every breakpoint instead of restating it. */
+body.map-expanded {
+  /* the shell is sized to the viewport below, so there is nothing to scroll;
+     this is the belt-and-braces half that also covers the map's own
+     overscroll on touch. Dropped again the moment the class is removed. */
+  overflow: hidden;
+}
+body.map-expanded .shell {
+  /* dvh, not vh: on mobile browsers vh keeps counting the collapsible URL
+     bar, which would push the exit control off the bottom of the screen. */
+  height: calc(100dvh - var(--topnav-h));
+  min-height: 0;
+}
+body.map-expanded .main {
+  display: flex;
+  /* Edge to edge, as the reference layout has it. Not cosmetic: .main's own
+     padding plus the card's is ~80px, and on a 720px-tall viewport that made
+     the "expanded" map SHORTER than the 600px it gets in normal mode, where
+     the page is simply allowed to scroll. Normal mode keeps both paddings —
+     only this mode drops them. */
+  padding: 0;
+  overflow: hidden;
+  min-height: 0;
+  flex-direction: column;
+}
+body.map-expanded .footer,
+body.map-expanded #view-map > .block-head,
+body.map-expanded #mapRecents,
+body.map-expanded #mapPopular {
+  display: none;
+}
+body.map-expanded #view-map.is-visible {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+body.map-expanded .map-card {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  margin-top: 0;
+  padding: 0;
+  border-radius: 0;
+}
+/* height:auto is what defeats the fixed per-breakpoint heights #worldMap
+   carries in normal mode, so the canvas takes whatever the flex row leaves.
+   `body.map-expanded #worldMap` outranks those plain `#worldMap` rules on
+   specificity, so their source order stops mattering. The rounded corners go
+   with the card's: they have nothing to sit against once the map meets the
+   sidebar and the top navigation. */
+body.map-expanded #worldMap {
+  height: auto;
+  min-height: 0;
+  flex: 1;
+  border-radius: 0;
+}
+
+/* The exit control. Deliberately the same treatment as .map-show-panel — the
+   established "floating button over the map" pattern in this view — rather
+   than a new one. */
+.map-exit-expand {
+  position: absolute;
+  z-index: 5;
+  top: 28px;
+  right: 28px;
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 15px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
+  color: #172033;
+  font-size: 12.5px;
+  font-weight: 700;
+  backdrop-filter: blur(12px);
+  transition:
+    color 0.2s,
+    transform 0.2s var(--ease);
+}
+.map-exit-expand:hover {
+  color: var(--primary-600);
+  transform: translateY(-1px);
+}
+.map-exit-expand:active {
+  transform: translateY(0);
+}
+.map-exit-expand-icon {
+  display: inline-flex;
+  align-items: center;
+}
+body[data-theme="dark"] .map-exit-expand {
+  border-color: rgba(148, 163, 184, 0.22);
+  background: rgba(17, 24, 39, 0.95);
+  color: var(--text);
+}
+
+/* Above the sheet breakpoint the detail panel is a floating card pinned to
+   the same top-right corner the exit control takes, so in expanded mode it
+   starts below it instead. At or below 820px the panel is the bottom sheet
+   and that corner is free, so the offset must not apply there. */
+@media (min-width: 821px) {
+  body.map-expanded .map-weather-panel {
+    top: 86px;
+    max-height: calc(100% - 114px);
+  }
+}
+
+/* Below the sheet breakpoint the layer switcher stretches the full width of
+   the map (left:22px/right:22px), so the top-right corner it leaves free on
+   desktop does not exist here — the exit control drops beneath it instead of
+   sitting on top of it. The zoom cluster is left-anchored at top:72px, so the
+   right-hand side of that band is clear. */
+@media (max-width: 820px) {
+  .map-exit-expand {
+    top: 86px;
+    right: 12px;
+    /* 44px, not the 42px it keeps on desktop: on touch this is the only way
+       out of the mode, so it meets the same bar as the burger/theme/language
+       controls (see mobile-sidebar.spec.js "touch targets"). */
+    min-height: 44px;
+    padding: 0 12px;
+    font-size: 12px;
+  }
+}
+
+/* The mode change itself is a layout change and is never animated — only the
+   control that appears with it fades in, and only when motion is welcome. */
+@media (prefers-reduced-motion: no-preference) {
+  body.map-expanded .map-exit-expand {
+    animation: mapExitExpandIn 0.2s var(--ease);
+  }
+  @keyframes mapExitExpandIn {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}

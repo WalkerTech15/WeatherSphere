@@ -31,6 +31,8 @@ import {
 } from "./features/map.js";
 import { selectLocation } from "./features/location.js";
 import { bindMapClickSelection } from "./features/map-click.js";
+import { bindMapExpand, exitMapExpanded } from "./features/map-expand.js";
+import { SHEET_BREAKPOINT } from "./features/map-sheet.js";
 import {
   initUrlSync,
   restoreInitialUrlState,
@@ -120,7 +122,15 @@ document.addEventListener("keydown", (e) => {
     /* mobile bottom sheet (map detail panel): collapse rather than fully
        hide it — hiding it entirely is the close button's own, confirmed
        action. A no-op outside mobile widths and when nothing is open. */
-    collapseMapSheet();
+    const sheetCollapsed = collapseMapSheet();
+    /* Expanded map mode is the outermost thing Escape can leave, so it goes
+       last and only if nothing nearer took the key. The sheet counts as
+       "nearer" only where it is actually a sheet: above 820px the controller
+       still exists and still reports a non-collapsed state, so gating on its
+       return value alone would swallow Escape on desktop, where the panel
+       looks nothing like a sheet and the user plainly meant the map. */
+    const sheetTookEscape = sheetCollapsed && window.matchMedia(SHEET_BREAKPOINT).matches;
+    if (!sheetTookEscape) exitMapExpanded({ focus: true });
   }
 });
 
@@ -268,6 +278,7 @@ bindCountryFilters();
 bindMapLayerControls();
 /* click anywhere on the map → reverse geocode → weather → panel */
 bindMapClickSelection();
+bindMapExpand();
 $("#mapShareBtn")?.addEventListener("click", () => shareMapView());
 /* the location detail panel's own Share button (ui/render-map.js) can't call
    shareMapView() directly — features/map-url-sync.js is deliberately imported

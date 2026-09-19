@@ -1,0 +1,91 @@
+/* Expanded map mode.
+ *
+ * One boolean, mirrored onto <body> as a class. Everything visual is CSS
+ * (see the "Expanded map mode" section of styles/views/map.css): the map card
+ * grows to fill the workspace under the top navigation and beside the
+ * sidebar, while the heading row, the recents/popular cards and the footer
+ * step aside. The top navigation and the sidebar deliberately stay put — this
+ * is a layout mode, not the Fullscreen API, so browser chrome is never
+ * touched and the URL never changes.
+ *
+ * Nothing here knows how to draw a map. The map's camera, layer, selection
+ * and detail panel all live in features/map.js and survive a mode change
+ * untouched; the only thing this module has to tell the map is "your
+ * container changed size, re-measure" — MapLibre cannot detect that itself.
+ */
+import { $ } from "../core/dom.js";
+import { on } from "../core/app-bus.js";
+import { resizeMaps } from "./map.js";
+
+export const EXPANDED_CLASS = "map-expanded";
+
+let expanded = false;
+
+export function isMapExpanded() {
+  return expanded;
+}
+
+/* Both controls describe the same state, so they are updated together rather
+   than each toggle site remembering to touch both. The pair exists because
+   expanded mode hides the block-head the chip lives in — see index.html. */
+function syncControls() {
+  $("#mapExpandBtn")?.setAttribute("aria-pressed", String(expanded));
+  const exit = $("#mapExitExpandBtn");
+  if (exit) {
+    exit.hidden = !expanded;
+    exit.setAttribute("aria-pressed", String(expanded));
+  }
+}
+
+/* `force` lets the caller assert a state instead of flipping ("leaving the
+   map view exits expanded mode" must not accidentally enter it). */
+export function setMapExpanded(next, { focus = false } = {}) {
+  const target = Boolean(next);
+  if (target === expanded) return false;
+  expanded = target;
+  document.body.classList.toggle(EXPANDED_CLASS, expanded);
+  syncControls();
+
+  /* The container's box changes in the same frame the class lands, but
+     MapLibre only re-reads it when asked. Deferred one frame so the new
+     layout has actually been computed before it measures — resizing against
+     the pre-toggle box leaves the canvas the old size until the next
+     unrelated resize. */
+  requestAnimationFrame(() => resizeMaps());
+
+  /* Focus has to follow the control that just disappeared, or it falls to
+     <body> and a keyboard user loses their place. Only on a real activation —
+     a programmatic exit (navigating away) must not steal focus from wherever
+     the user actually went. */
+  if (focus) {
+    const successor = expanded ? $("#mapExitExpandBtn") : $("#mapExpandBtn");
+    successor?.focus();
+  }
+  return true;
+}
+
+export function toggleMapExpanded() {
+  return setMapExpanded(!expanded, { focus: true });
+}
+
+/* Escape, and any other "get me out of here" path. Returns whether it did
+   anything, so a caller can tell if it consumed the key. */
+export function exitMapExpanded({ focus = false } = {}) {
+  return setMapExpanded(false, { focus });
+}
+
+export function bindMapExpand() {
+  $("#mapExpandBtn")?.addEventListener("click", () => toggleMapExpanded());
+  $("#mapExitExpandBtn")?.addEventListener("click", () => toggleMapExpanded());
+
+  /* Subscribed on the bus rather than called from ui/navigation.js, so the
+     navigation layer keeps no knowledge of this mode (same reasoning as
+     features/map-url-sync.js — see core/app-bus.js). Leaving the map view
+     with the body class still set would strand every other view inside a
+     non-scrolling, footer-less shell. */
+  on("view:changed", (view) => {
+    if (view !== "map") exitMapExpanded();
+  });
+
+  syncControls();
+}

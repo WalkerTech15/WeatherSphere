@@ -670,6 +670,36 @@
                 ></span>
                 <span data-i18n="mapShare">Share view</span>
               </button>
+              <!-- Expanded mode's "enter" half. Its "exit" half is the
+                   #mapExitExpandBtn control inside the map card below: this
+                   row is one of the things expanded mode hides, so the two
+                   states need two controls. Both toggle the same state and
+                   both carry aria-pressed, so whichever one is on screen
+                   reports it. -->
+              <button
+                class="chip map-expand-chip"
+                id="mapExpandBtn"
+                type="button"
+                aria-pressed="false"
+              >
+                <span class="chip-icon" aria-hidden="true"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M15 3h6v6" />
+                    <path d="M9 21H3v-6" />
+                    <path d="m21 3-7 7" />
+                    <path d="m3 21 7-7" /></svg
+                ></span>
+                <span data-i18n="mapExpand">Expand map</span>
+              </button>
             </div>
           </div>
           <div class="card map-card" id="mapCard">
@@ -746,6 +776,36 @@
             <aside class="map-weather-panel" id="mapWeatherPanel" aria-live="polite"></aside>
             <button class="map-show-panel" id="mapShowPanel" type="button" hidden>
               <span aria-hidden="true">☁</span><span data-i18n="showMapDetails">Show details</span>
+            </button>
+            <!-- Only rendered while expanded (see features/map-expand.js).
+                 A sibling of #worldMap, never a child, for the same reason
+                 .map-weather-controls is: a click here must not reach
+                 MapLibre's canvas listeners and be read as a coordinate
+                 selection. -->
+            <button
+              class="map-exit-expand"
+              id="mapExitExpandBtn"
+              type="button"
+              aria-pressed="true"
+              hidden
+            >
+              <span class="map-exit-expand-icon" aria-hidden="true"
+                ><svg
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M4 14h6v6" />
+                  <path d="M20 10h-6V4" />
+                  <path d="m3 21 7-7" />
+                  <path d="m21 3-7 7" /></svg
+              ></span>
+              <span data-i18n="mapExitExpand">Exit expanded map</span>
             </button>
           </div>
           <section

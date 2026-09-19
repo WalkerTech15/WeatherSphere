@@ -251,6 +251,10 @@ export const I18N = {
     mapLegendScale: "Colour scale from {min} to {max} {unit}",
     mapLegendUnavailable: "Legend unavailable for this layer.",
 
+    /* expanded map mode */
+    mapExpand: "Expand map",
+    mapExitExpand: "Exit expanded map",
+
     /* shareable map link */
     mapShare: "Share view",
     mapShareCopied: "Link to this map view copied.",
@@ -738,6 +742,10 @@ export const I18N = {
     mapTimeError: "La couche météo n'a pas pu être mise à jour.",
     mapLegendScale: "Échelle de couleurs de {min} à {max} {unit}",
     mapLegendUnavailable: "Légende indisponible pour cette couche.",
+
+    /* mode carte agrandie */
+    mapExpand: "Agrandir la carte",
+    mapExitExpand: "Quitter la carte agrandie",
 
     /* lien de carte partageable */
     mapShare: "Partager la vue",
