@@ -29,6 +29,11 @@
   margin-bottom: var(--s-3);
   flex-wrap: wrap;
 }
+/* A heading row that follows another card in the same view, rather than
+   opening a .block of its own. */
+.block-head--spaced {
+  margin-top: var(--s-3);
+}
 
 .card {
   background: var(--card);

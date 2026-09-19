@@ -679,7 +679,7 @@ body[data-mode="detailed"] .home-grid {
 }
 .adv-desc {
   margin: 3px 0 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text);
 }
 .adv-meta {
@@ -710,7 +710,7 @@ body[data-mode="detailed"] .home-grid {
 .adv-disclaimer {
   grid-column: 1 / -1;
   margin: 0;
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--text-3);
 }
 

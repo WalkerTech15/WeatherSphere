@@ -507,7 +507,9 @@
           <!-- Forecast -->
           <section class="block" aria-labelledby="forecastTitle">
             <div class="block-head">
-              <h2 class="section-title" id="forecastTitle" data-i18n="sevenDay">7-Day Forecast</h2>
+              <h2 class="section-title sm" id="forecastTitle" data-i18n="sevenDay">
+                7-Day Forecast
+              </h2>
               <p class="section-sub" id="forecastSub"></p>
             </div>
             <div class="forecast-row" id="forecastRow"><!-- rendered by JS --></div>
@@ -516,7 +518,7 @@
           <!-- Charts (detailed) -->
           <section class="block detailed-only" aria-labelledby="chartsTitle">
             <div class="block-head">
-              <h2 class="section-title" id="chartsTitle" data-i18n="next24h">Next 24 hours</h2>
+              <h2 class="section-title sm" id="chartsTitle" data-i18n="next24h">Next 24 hours</h2>
               <div
                 class="chart-tabs"
                 role="tablist"
@@ -549,7 +551,7 @@
           <!-- Explore -->
           <section class="block" aria-labelledby="exploreTitle">
             <div class="block-head">
-              <h2 class="section-title" id="exploreTitle" data-i18n="exploreWorld">
+              <h2 class="section-title sm" id="exploreTitle" data-i18n="exploreWorld">
                 Explore the world
               </h2>
               <div class="carousel-nav">
@@ -908,7 +910,7 @@
             <div class="card info-card" id="daySummary"></div>
           </div>
 
-          <div class="block-head" style="margin-top: 24px">
+          <div class="block-head block-head--spaced">
             <h2 class="section-title sm" data-i18n="hourlyDetails">Hourly details</h2>
             <div class="map-actions">
               <button
@@ -1037,7 +1039,7 @@
           <div class="fav-grid" id="favGrid"></div>
 
           <div class="fav-list-block" id="favListBlock" hidden>
-            <div class="block-head" style="margin-top: 24px">
+            <div class="block-head block-head--spaced">
               <h2 class="section-title sm" data-i18n="quickList">Quick list</h2>
             </div>
             <div class="card table-card">
@@ -1169,56 +1171,31 @@
                     data-i18n-title="techHtml5"
                     title="Semantic structure of the interface."
                   >
-                    <span
-                      class="tech-logo"
-                      aria-hidden="true"
-                      style="background: #fdece4; color: #e34f26"
-                      >&lt;&gt;</span
-                    >HTML5
+                    <span class="tech-logo tone-rose" aria-hidden="true">&lt;&gt;</span>HTML5
                   </div>
                   <div
                     class="tech-item"
                     data-i18n-title="techCss3"
                     title="Responsive layout and theming."
                   >
-                    <span
-                      class="tech-logo"
-                      aria-hidden="true"
-                      style="background: #e4f0fa; color: #1572b6"
-                      >#</span
-                    >CSS3
+                    <span class="tech-logo tone-primary" aria-hidden="true">#</span>CSS3
                   </div>
                   <div
                     class="tech-item"
                     data-i18n-title="techJs"
                     title="Logic, state, APIs and interactions."
                   >
-                    <span
-                      class="tech-logo"
-                      aria-hidden="true"
-                      style="background: #fdf7dc; color: #8a7500"
-                      >JS</span
-                    >JavaScript
+                    <span class="tech-logo tone-amber" aria-hidden="true">JS</span>JavaScript
                   </div>
                   <div
                     class="tech-item"
                     data-i18n-title="techPhp"
                     title="Used on the server to protect the Pexels key and proxy photo requests."
                   >
-                    <span
-                      class="tech-logo"
-                      aria-hidden="true"
-                      style="background: #efeafd; color: #6b46c1"
-                      >PHP</span
-                    >PHP
+                    <span class="tech-logo tone-violet" aria-hidden="true">PHP</span>PHP
                   </div>
                   <div class="tech-item" data-i18n-title="techSvg" title="Vector icons and flags.">
-                    <span
-                      class="tech-logo"
-                      aria-hidden="true"
-                      style="background: #f3eefd; color: #7c3aed"
-                      >SVG</span
-                    >SVG
+                    <span class="tech-logo tone-violet" aria-hidden="true">SVG</span>SVG
                   </div>
                 </div>
               </div>
@@ -1231,48 +1208,28 @@
                     data-i18n-title="techVite"
                     title="Development server and optimized production builds."
                   >
-                    <span
-                      class="tech-logo"
-                      aria-hidden="true"
-                      style="background: #fef3c7; color: #b45309"
-                      >Vi</span
-                    >Vite
+                    <span class="tech-logo tone-amber" aria-hidden="true">Vi</span>Vite
                   </div>
                   <div
                     class="tech-item"
                     data-i18n-title="techMaplibre"
                     title="Interactive map rendering."
                   >
-                    <span
-                      class="tech-logo"
-                      aria-hidden="true"
-                      style="background: #e8f0fe; color: #295fcc"
-                      >ML</span
-                    >MapLibre GL JS
+                    <span class="tech-logo tone-primary" aria-hidden="true">ML</span>MapLibre GL JS
                   </div>
                   <div
                     class="tech-item"
                     data-i18n-title="techMaptilerSdk"
                     title="Styles, tiles and geocoding."
                   >
-                    <span
-                      class="tech-logo"
-                      aria-hidden="true"
-                      style="background: #e7f5f1; color: #0e9f6e"
-                      >MT</span
-                    >MapTiler SDK
+                    <span class="tech-logo tone-emerald" aria-hidden="true">MT</span>MapTiler SDK
                   </div>
                   <div
                     class="tech-item"
                     data-i18n-title="techMaptilerWeather"
                     title="Weather layers on the map."
                   >
-                    <span
-                      class="tech-logo"
-                      aria-hidden="true"
-                      style="background: #e6f7fb; color: #0891b2"
-                      >MW</span
-                    >MapTiler Weather
+                    <span class="tech-logo tone-sky" aria-hidden="true">MW</span>MapTiler Weather
                   </div>
                 </div>
               </div>
@@ -1281,60 +1238,35 @@
                 <h3 class="tech-group-title" data-i18n="techGroupQuality">Code quality</h3>
                 <div class="tech-grid">
                   <div class="tech-item" data-i18n-title="techVitest" title="Unit tests.">
-                    <span
-                      class="tech-logo"
-                      aria-hidden="true"
-                      style="background: #f2f8e1; color: #65a30d"
-                      >Vt</span
-                    >Vitest
+                    <span class="tech-logo tone-emerald" aria-hidden="true">Vt</span>Vitest
                   </div>
                   <div
                     class="tech-item"
                     data-i18n-title="techPlaywright"
                     title="Browser-based end-to-end tests."
                   >
-                    <span
-                      class="tech-logo"
-                      aria-hidden="true"
-                      style="background: #fdeef2; color: #d6336c"
-                      >Pw</span
-                    >Playwright
+                    <span class="tech-logo tone-rose" aria-hidden="true">Pw</span>Playwright
                   </div>
                   <div
                     class="tech-item"
                     data-i18n-title="techEslint"
                     title="Static analysis for JavaScript code."
                   >
-                    <span
-                      class="tech-logo"
-                      aria-hidden="true"
-                      style="background: #eee9fb; color: #4b32c3"
-                      >ES</span
-                    >ESLint
+                    <span class="tech-logo tone-violet" aria-hidden="true">ES</span>ESLint
                   </div>
                   <div
                     class="tech-item"
                     data-i18n-title="techStylelint"
                     title="Static analysis for CSS code."
                   >
-                    <span
-                      class="tech-logo"
-                      aria-hidden="true"
-                      style="background: #fff7e0; color: #a16207"
-                      >St</span
-                    >Stylelint
+                    <span class="tech-logo tone-amber" aria-hidden="true">St</span>Stylelint
                   </div>
                   <div
                     class="tech-item"
                     data-i18n-title="techPrettier"
                     title="Consistent code formatting."
                   >
-                    <span
-                      class="tech-logo"
-                      aria-hidden="true"
-                      style="background: #fdeff7; color: #c2409c"
-                      >Pr</span
-                    >Prettier
+                    <span class="tech-logo tone-rose" aria-hidden="true">Pr</span>Prettier
                   </div>
                 </div>
               </div>
@@ -1344,11 +1276,7 @@
               <p class="src-sub" data-i18n="srcSub"></p>
               <div class="src-list">
                 <div class="src-row">
-                  <span
-                    class="src-logo"
-                    style="background: linear-gradient(135deg, #38bdf8, #2563eb)"
-                    >OM</span
-                  >
+                  <span class="src-logo tone-primary">OM</span>
                   <span class="src-body"><b>Open-Meteo</b><span data-i18n="srcOm"></span></span>
                   <a class="link-chip" href="https://open-meteo.com" target="_blank" rel="noopener"
                     >open-meteo.com
@@ -1367,11 +1295,7 @@
                   ></a>
                 </div>
                 <div class="src-row">
-                  <span
-                    class="src-logo"
-                    style="background: linear-gradient(135deg, #a3e635, #4d7c0f)"
-                    >OSM</span
-                  >
+                  <span class="src-logo tone-emerald">OSM</span>
                   <span class="src-body"><b>OpenStreetMap</b><span data-i18n="srcOsm"></span></span>
                   <a
                     class="link-chip"
@@ -1394,11 +1318,7 @@
                   ></a>
                 </div>
                 <div class="src-row">
-                  <span
-                    class="src-logo"
-                    style="background: linear-gradient(135deg, #22c55e, #0e7490)"
-                    >MT</span
-                  >
+                  <span class="src-logo tone-sky">MT</span>
                   <span class="src-body"><b>MapTiler</b><span data-i18n="srcMaptiler"></span></span>
                   <a
                     class="link-chip"
@@ -1421,11 +1341,7 @@
                   ></a>
                 </div>
                 <div class="src-row">
-                  <span
-                    class="src-logo"
-                    style="background: linear-gradient(135deg, #05a081, #0f766e)"
-                    >Px</span
-                  >
+                  <span class="src-logo tone-emerald">Px</span>
                   <span class="src-body"><b>Pexels</b><span data-i18n="srcPexels"></span></span>
                   <a class="link-chip" href="https://www.pexels.com" target="_blank" rel="noopener"
                     >pexels.com
@@ -1444,11 +1360,7 @@
                   ></a>
                 </div>
                 <div class="src-row">
-                  <span
-                    class="src-logo"
-                    style="background: linear-gradient(135deg, #f97316, #b45309)"
-                    >BDC</span
-                  >
+                  <span class="src-logo tone-amber">BDC</span>
                   <span class="src-body"
                     ><b>BigDataCloud</b><span data-i18n="srcBigdatacloud"></span
                   ></span>
@@ -1992,7 +1904,7 @@
                     <span class="set-provider-name"
                       ><b data-i18n="providerSchoolApi">My school project API</b
                       ><span class="set-provider-badge" data-i18n="providerConfigure"
-                        >Not ready</span
+                        >Coming soon</span
                       ></span
                     >
                     <span data-i18n="providerSchoolApiSub"

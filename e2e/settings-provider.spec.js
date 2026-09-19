@@ -16,6 +16,23 @@ test.describe("settings — weather provider", () => {
     await expect(card.locator("button, input, select")).toHaveCount(0);
   });
 
+  test("the unavailable provider says so plainly and stays legible", async ({ app }) => {
+    await goToSettings(app);
+    await app.locator('#view-settings .set-tile[data-lang="en"]').click();
+    const option = app.locator("#view-settings .set-provider .is-unavailable");
+
+    /* "Coming soon", not "Not ready" / "To configure" — the latter reads as
+       something the user is expected to do */
+    await expect(option.locator(".set-provider-badge")).toHaveText("Coming soon");
+    await expect(option).toContainText("available once the API is ready");
+
+    /* unavailable is carried by the outline and the hollow radio, not by
+       fading the row: the explanation is the one thing on it worth reading */
+    await expect(option).toHaveCSS("opacity", "1");
+    await expect(option).toHaveCSS("border-top-style", "dashed");
+    await expect(option).toHaveCSS("cursor", "not-allowed");
+  });
+
   test("provider information translates with the Settings language", async ({ app }) => {
     await goToSettings(app);
     await app.locator('#view-settings .set-tile[data-lang="en"]').click();
@@ -26,7 +43,7 @@ test.describe("settings — weather provider", () => {
     await app.locator('#view-settings .set-tile[data-lang="fr"]').click();
     await expect(card).toContainText("Source météo");
     await expect(card).toContainText("API de mon projet scolaire");
-    await expect(card).toContainText("À configurer");
+    await expect(card).toContainText("Bientôt disponible");
   });
 
   test("provider card fits a mobile viewport without horizontal overflow", async ({ app }) => {

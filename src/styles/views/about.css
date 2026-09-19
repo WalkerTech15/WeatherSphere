@@ -50,7 +50,7 @@
   position: absolute;
   left: 50%;
   top: 46%;
-  border: 1.5px dashed rgba(255, 255, 255, 0.4);
+  border: 1.5px dashed rgba(255, 255, 255, 0.26);
   border-radius: 50%;
   translate: -50% -50%;
   animation: ringSpin 60s linear infinite;
@@ -75,7 +75,7 @@
   width: 58px;
   height: 58px;
   animation: artFloat 8s ease-in-out infinite alternate;
-  filter: drop-shadow(0 6px 14px rgba(2, 6, 23, 0.25));
+  filter: drop-shadow(0 6px 14px rgba(2, 6, 23, 0.18));
 }
 .art-wicon.w1 {
   left: 12%;
@@ -100,10 +100,20 @@
 }
 @keyframes artFloat {
   from {
-    transform: translateY(-3px);
+    transform: translateY(-2px);
   }
   to {
-    transform: translateY(3px);
+    transform: translateY(2px);
+  }
+}
+/* The global reduced-motion rule (utilities/accessibility.css) only shortens
+   durations to 0.01ms. On an infinite animation that is not "off" — the ring
+   would keep restarting thousands of times a second — so the purely
+   decorative art is switched off outright. Nothing here carries meaning. */
+@media (prefers-reduced-motion: reduce) {
+  .art-ring,
+  .art-wicon {
+    animation: none;
   }
 }
 
@@ -193,6 +203,36 @@
     text-align: center;
   }
 }
+/* Tone system for the technology tiles and data-source logos. Each tone is
+   one palette token, so the tiles follow the theme instead of carrying
+   hard-coded light pastels: --tone-soft is already redefined for dark in
+   foundation/tokens.css, and the ink is derived from the tone itself —
+   darkened on a light card, lightened on a dark one — which keeps an amber
+   tile as legible as a blue one in either theme. */
+.tone-primary {
+  --tone: var(--primary);
+  --tone-soft: var(--primary-soft);
+}
+.tone-sky {
+  --tone: var(--sky);
+  --tone-soft: var(--sky-soft);
+}
+.tone-amber {
+  --tone: var(--amber);
+  --tone-soft: var(--amber-soft);
+}
+.tone-emerald {
+  --tone: var(--emerald);
+  --tone-soft: var(--emerald-soft);
+}
+.tone-violet {
+  --tone: var(--violet);
+  --tone-soft: var(--violet-soft);
+}
+.tone-rose {
+  --tone: var(--rose);
+  --tone-soft: var(--rose-soft);
+}
 .tech-logo {
   display: grid;
   place-items: center;
@@ -203,6 +243,11 @@
   font-weight: 800;
   letter-spacing: -0.02em;
   border: 1px solid var(--border);
+  background: var(--tone-soft);
+  color: color-mix(in srgb, var(--tone) 72%, #000);
+}
+body[data-theme="dark"] .tech-logo {
+  color: color-mix(in srgb, var(--tone) 55%, #fff);
 }
 .src-list {
   display: flex;
@@ -223,7 +268,10 @@
   flex-shrink: 0;
   width: 44px;
   height: 44px;
-  border-radius: 13px;
+  border-radius: var(--r-sm);
+  /* white ink on the tone, deepened toward its far corner so the label keeps
+     its contrast even on the lightest tones (amber, sky) */
+  background: linear-gradient(135deg, var(--tone), color-mix(in srgb, var(--tone) 62%, #000));
   color: #fff;
   font-size: 13px;
   font-weight: 800;
@@ -258,8 +306,11 @@
     transform 0.2s var(--ease);
 }
 .link-chip:hover {
-  background: #dfe9fd;
+  background: color-mix(in srgb, var(--primary) 20%, transparent);
   transform: translateY(-1px);
+}
+body[data-theme="dark"] .link-chip {
+  color: color-mix(in srgb, var(--primary) 55%, #fff);
 }
 .src-note {
   margin-top: var(--s-2);

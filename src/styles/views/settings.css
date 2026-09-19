@@ -90,7 +90,7 @@
   flex-shrink: 0;
   width: 38px;
   height: 38px;
-  border-radius: 11px;
+  border-radius: var(--r-sm);
 }
 .tile-txt {
   display: flex;
@@ -101,7 +101,7 @@
   font-size: 14px;
 }
 .tile-txt span {
-  font-size: 12px;
+  font-size: 12.5px;
   color: var(--text-2);
   line-height: 1.45;
 }
@@ -208,7 +208,8 @@
    spacing scale, just the next step down — without touching the shared
    .set-head/.ulabel/.set-toggle-row rules other cards still rely on. */
 .set-time.set-card {
-  padding-bottom: var(--s-2);
+  align-self: start;
+  padding-bottom: 12px;
 }
 .set-time .set-head {
   margin-bottom: var(--s-2);
@@ -279,19 +280,29 @@
   font-size: 13px;
 }
 .set-provider-badge {
-  padding: 2px 7px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--bg);
   color: var(--text-2);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
 }
 .set-provider-badge.is-live {
   background: color-mix(in srgb, var(--primary) 16%, transparent);
   color: var(--primary);
 }
+/* Unavailable, not merely dimmed: the text keeps its full contrast (it is
+   the only explanation of why the option can't be chosen), and the state is
+   carried by the dashed outline and the hollow radio instead of by fading
+   the whole row toward the background. */
 .set-provider-option.is-unavailable {
-  opacity: 0.72;
+  border-style: dashed;
+  cursor: not-allowed;
+}
+.set-provider-option.is-unavailable .set-provider-radio {
+  border-style: dashed;
+  opacity: 0.6;
 }
 
 .notif-item {
@@ -316,7 +327,7 @@
   font-size: 13px;
 }
 .notif-txt span {
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--text-2);
   line-height: 1.4;
 }
@@ -358,7 +369,7 @@
   font-size: 13px;
 }
 .priv-txt span {
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--text-2);
   line-height: 1.4;
 }
