@@ -1,14 +1,23 @@
 /* Location search: instant curated matches, then debounced (300ms) MapTiler
    global autocomplete with request cancellation, keyboard navigation, and a
-   keyless Open-Meteo fallback if MapTiler is unavailable. */
+   keyless Open-Meteo fallback if MapTiler is unavailable.
+
+   Focusing the field with nothing typed opens a short menu of where you might
+   want to go (recent searches, favourites, popular places — see
+   search-suggestions.js), so the field doubles as a command menu. While a
+   remote lookup is in flight, and if every lookup fails, a status line under
+   the list says so and offers a retry, instead of the panel silently staying
+   shut or showing stale rows. */
 import { state } from "../core/state.js";
 import { $, $$, esc } from "../core/dom.js";
 import { t } from "../core/i18n.js";
-import { findLocations, normalize } from "../data/locations.js";
+import { findLocations, normalize, LOCATIONS } from "../data/locations.js";
 import { maptilerGeocode, geocode } from "../services/geocoding-api.js";
 import { locVisual } from "../services/photo-api.js";
 import { locName, locRegion, locCountry, locKindLabel, flagsHtml } from "../core/location.js";
 import { selectLocation } from "./location.js";
+import { recentToLocation } from "./recent-locations.js";
+import { buildSuggestions } from "./search-suggestions.js";
 import { switchView } from "../ui/navigation.js";
 
 let searchIndex = -1;
@@ -42,7 +51,44 @@ function openSearchPanel() {
 function closeSearchPanel() {
   $("#searchPanel").hidden = true;
   $("#searchCombo").setAttribute("aria-expanded", "false");
+  $("#searchInput").removeAttribute("aria-activedescendant");
   searchIndex = -1;
+  setStatus("");
+  announce("");
+}
+
+/* The status line under the list: "" clears it, "loading" is a lookup in
+   flight, "error" is every lookup failed with nothing to show, "partial" is
+   the online lookups failed but built-in places are still listed. */
+function setStatus(kind) {
+  const el = $("#searchStatus");
+  if (!kind) {
+    el.replaceChildren();
+    return;
+  }
+  const text = document.createElement("span");
+  if (kind === "loading") {
+    const spinner = document.createElement("span");
+    spinner.className = "map-panel-spinner";
+    spinner.setAttribute("aria-hidden", "true");
+    text.textContent = t("searchSearching");
+    el.replaceChildren(spinner, text);
+    return;
+  }
+  text.textContent = t(kind === "partial" ? "searchErrorPartial" : "searchError");
+  const retry = document.createElement("button");
+  retry.type = "button";
+  retry.className = "notice-action search-retry";
+  retry.textContent = t("searchRetry");
+  el.replaceChildren(text, retry);
+}
+
+/* The listbox announces an option as it is arrowed to, but nothing says the
+   list itself changed. A separate, visually hidden live region says how many
+   suggestions there are (or that there are none). */
+function announce(message) {
+  const el = $("#searchAnnounce");
+  if (el) el.textContent = message;
 }
 
 /* ── Small-phone search (≤520px, see components/forms.css) ──
@@ -79,17 +125,8 @@ export function closeMobileSearch({ focusTrigger = false } = {}) {
   if (focusTrigger && wasOpen) $("#mobileSearchBtn")?.focus();
 }
 
-function renderSearchResults(list) {
-  searchResults = list;
-  const ul = $("#searchResults");
-  if (!list.length) {
-    ul.innerHTML = `<li class="search-empty">${t("searchNoResult")}</li>`;
-    openSearchPanel();
-    return;
-  }
-  ul.innerHTML = list
-    .map(
-      (loc, i) => `
+function optionHtml(loc, i) {
+  return `
     <li role="option" id="sr-${i}" aria-selected="${i === searchIndex}">
       <button class="search-item" data-i="${i}" tabindex="-1">
         <span class="si-visual" aria-hidden="true">${locVisual(loc)}</span>
@@ -103,12 +140,80 @@ function renderSearchResults(list) {
         </span>
         <span class="si-kind">${locKindLabel(loc)}</span>
       </button>
-    </li>`,
-    )
-    .join("");
+    </li>`;
+}
+
+function bindOptionClicks(ul) {
   $$(".search-item", ul).forEach((btn) => {
     btn.addEventListener("click", () => pickSearchResult(+btn.dataset.i));
   });
+}
+
+function renderSearchResults(list) {
+  searchResults = list;
+  searchIndex = -1;
+  $("#searchInput").removeAttribute(
+    "aria-activedescendant",
+  ); /* it pointed into the list just replaced */
+  const ul = $("#searchResults");
+  if (!list.length) {
+    ul.innerHTML = `<li class="search-empty" role="presentation">${t("searchNoResult")}</li>`;
+    announce(t("searchNoResult"));
+    openSearchPanel();
+    return;
+  }
+  ul.innerHTML = list.map(optionHtml).join("");
+  bindOptionClicks(ul);
+  announce(t("searchCount").replace("{n}", list.length));
+  openSearchPanel();
+}
+
+/* The "popular" list is its own short, mixed one — cities, a region and a
+   country — rather than the Explore carousel's order, which opens with five
+   US/Canadian places and never reaches a country. Curated data has no oceans
+   or seas; those are found by typing (MapTiler) or by tapping the map. */
+const POPULAR_IDS = ["paris", "tokyo", "newyork", "texas", "france"];
+
+const SUGGESTION_LABELS = {
+  recent: "searchRecent",
+  favorites: "searchFavorites",
+  popular: "searchPopular",
+};
+
+/* Nothing typed: offer somewhere to go. Recents are opt-in and stored in a
+   minimal shape, so they are expanded back into full locations here; a stored
+   entry that no longer expands is dropped rather than shown broken. */
+function showSuggestions() {
+  const sections = buildSuggestions({
+    recents: state.saveRecents ? state.recents.map(recentToLocation).filter(Boolean) : [],
+    favorites: state.favorites,
+    popular: POPULAR_IDS.map((id) => LOCATIONS.find((loc) => loc.id === id)).filter(Boolean),
+  });
+  if (!sections.length) {
+    closeSearchPanel();
+    return;
+  }
+  searchResults = sections.flatMap((section) => section.items);
+  searchIndex = -1;
+  $("#searchInput").removeAttribute("aria-activedescendant");
+  let n = 0;
+  /* a group inside the listbox, so a screen reader hears "Recent, group"
+     before the options it holds, and the options keep one running index for
+     the arrow keys */
+  $("#searchResults").innerHTML = sections
+    .map(
+      (section) => `
+    <li role="presentation" class="search-group">
+      <ul role="group" aria-labelledby="sg-${section.id}">
+        <li role="presentation" class="search-group-label" id="sg-${section.id}">${t(SUGGESTION_LABELS[section.id])}</li>
+        ${section.items.map((loc) => optionHtml(loc, n++)).join("")}
+      </ul>
+    </li>`,
+    )
+    .join("");
+  bindOptionClicks($("#searchResults"));
+  setStatus("");
+  announce(t("searchCount").replace("{n}", searchResults.length));
   openSearchPanel();
 }
 
@@ -134,33 +239,62 @@ function onSearchInput() {
     searchAbort = null;
   }
   if (!q) {
-    closeSearchPanel();
+    /* cleared the field: back to the where-to-next menu rather than a shut panel */
+    setStatus("");
+    showSuggestions();
     return;
   }
 
   const curated = findLocations(q, state.lang);
   if (curated.length) renderSearchResults(curated);
+  else {
+    /* Whatever is on screen belongs to an earlier query — the empty-field
+       suggestions, or the previous keystroke's results. Leaving it under a
+       query it doesn't match is how a stray Enter picks the wrong place. */
+    searchResults = [];
+    $("#searchResults").replaceChildren();
+    searchIndex = -1;
+    $("#searchInput").removeAttribute("aria-activedescendant");
+  }
   if (q.length < 2) {
+    setStatus("");
     if (!curated.length) closeSearchPanel();
     return;
   }
+  /* from the first real keystroke, not after the debounce: the panel says it is
+     working instead of sitting shut until the network answers */
+  openSearchPanel();
+  setStatus("loading");
 
   geoTimer = setTimeout(async () => {
     searchAbort = new AbortController();
     const signal = searchAbort.signal;
+    const isCurrent = () => !signal.aborted && $("#searchInput").value.trim() === q;
     try {
       const remote = await maptilerGeocode(q, signal);
-      if (signal.aborted || $("#searchInput").value.trim() !== q) return; /* stale */
-      const merged = mergeResults(curated, remote);
-      renderSearchResults(merged); /* empty list → accessible "no result" state */
+      if (!isCurrent()) return; /* stale */
+      setStatus("");
+      renderSearchResults(mergeResults(curated, remote)); /* empty list → "no result" */
     } catch (e) {
       if (e.name === "AbortError" || signal.aborted) return;
       /* MapTiler unreachable/misconfigured → keyless Open-Meteo fallback */
       try {
         const geo = await geocode(q);
-        if ($("#searchInput").value.trim() === q) renderSearchResults(mergeResults(curated, geo));
+        if (!isCurrent()) return;
+        setStatus("");
+        renderSearchResults(mergeResults(curated, geo));
       } catch {
-        if (!curated.length) renderSearchResults([]);
+        if (!isCurrent()) return;
+        /* Both lookups failed. With built-in matches on screen they stay and
+           the status explains the gap; with none, the panel says the search
+           itself is unavailable — which is not the same as "no place matches". */
+        if (curated.length) setStatus("partial");
+        else {
+          searchResults = [];
+          $("#searchResults").replaceChildren();
+          announce(t("searchError"));
+          setStatus("error");
+        }
       }
     } finally {
       searchAbort = null;
@@ -181,7 +315,9 @@ function onSearchKey(e) {
   } else if (e.key === "Enter") {
     e.preventDefault();
     if (searchIndex >= 0) pickSearchResult(searchIndex);
-    else if (searchResults.length) pickSearchResult(0);
+    /* with nothing typed the menu is a menu, not an answer — Enter needs an
+       arrowed-to row, so it can't select the first recent by accident */
+    else if ($("#searchInput").value.trim() && searchResults.length) pickSearchResult(0);
   } else if (e.key === "Escape") {
     /* on mobile this moves focus to #mobileSearchBtn; on desktop that
        button is display:none and can't receive focus, so blur() below
@@ -209,6 +345,11 @@ export function bindSearchEvents() {
   input.addEventListener("keydown", onSearchKey);
   input.addEventListener("focus", () => {
     if (input.value.trim()) onSearchInput();
+    else showSuggestions();
+  });
+  /* one delegated listener: the status line is rewritten on every state */
+  $("#searchStatus").addEventListener("click", (event) => {
+    if (event.target.closest(".search-retry")) onSearchInput();
   });
   $("#favAddBtn").addEventListener("click", focusSearch);
   $("#mobileSearchBtn")?.addEventListener("click", () => {

@@ -90,12 +90,17 @@ test.describe("mobile search", () => {
     await expect(btn).toHaveAttribute("aria-expanded", "false");
   });
 
-  test("an empty or no-match query keeps a safe, announced state", async ({ app }) => {
+  test("a no-match query keeps a safe, announced state; clearing it offers suggestions", async ({
+    app,
+  }) => {
     await app.locator("#mobileSearchBtn").click();
     await app.locator("#searchInput").fill("zzzznonexistentplace9999");
     await expect(app.locator(".search-empty")).toBeVisible();
+    /* an emptied field is a command menu again, not a shut panel — the
+       "no match" message belongs to the query that is now gone */
     await app.locator("#searchInput").fill("");
-    await expect(app.locator("#searchPanel")).toBeHidden();
+    await expect(app.locator(".search-empty")).toHaveCount(0);
+    await expect(app.locator("#searchPanel .search-group-label").first()).toBeVisible();
   });
 
   test("does not create horizontal page overflow while open", async ({ app }) => {

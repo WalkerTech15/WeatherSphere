@@ -30,6 +30,7 @@ import {
 } from "./weather-layers.js";
 import { normalizeOffset, availableOffsets } from "./map-timeline.js";
 import { renderWeatherOverlayUI } from "../ui/render-map-weather.js";
+import { noticeHtml } from "../ui/notice.js";
 
 /* The SDK's stylesheet is imported HERE, inside the dynamic import, rather
    than statically at the top of this module. features/map.js is reachable
@@ -189,9 +190,27 @@ const MAPS = {}; // containerId → { map, marker, popup, lastKey }
 
 function mapError(id) {
   const el = $("#" + id);
-  if (el && !el.querySelector(".map-offline")) {
-    el.classList.remove("is-loading");
-    el.innerHTML = `<p class="map-offline">${t("mapError")}</p>`;
+  if (!el) return;
+  /* Always, not only the first time: updateMap() puts is-loading back on every
+     repaint before it tries to build the map, and a repeat failure used to hit
+     the "already showing the notice" guard below and leave the spinner drawn
+     over the message for good. */
+  el.classList.remove("is-loading");
+  if (!el.querySelector(".map-offline")) {
+    /* The forecast needs no map, so that is the useful way forward. The Home
+       preview is secondary and fails quietly (polite status); the Map page is
+       the point of the page, so its failure is announced. */
+    el.innerHTML = `<div class="map-offline">${noticeHtml({
+      tone: "warn",
+      icon: "cloud",
+      title: t("mapErrorTitle"),
+      text: t("mapError"),
+      action: { id: "open-forecast", label: t("mapErrorAction") },
+      role: id === "homeMap" ? "status" : "alert",
+    })}</div>`;
+    el.querySelector('[data-notice-action="open-forecast"]')?.addEventListener("click", () =>
+      switchView("forecast"),
+    );
   }
 }
 

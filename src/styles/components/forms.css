@@ -108,9 +108,18 @@ body[data-theme="dark"] .search-kbd {
   text-align: left;
   transition: background 0.15s;
 }
+/* aria-selected sits on the <li role="option">, not on the button inside it, so
+   the keyboard-highlighted row has to be matched through its parent — matching
+   the button itself never fired, and arrowing through results showed nothing. */
 .search-item:hover,
-.search-item[aria-selected="true"] {
+[role="option"][aria-selected="true"] > .search-item {
   background: var(--primary-soft);
+}
+/* the tint alone is faint on a light card, so the active row also gets an
+   outline — visible without relying on colour perception */
+[role="option"][aria-selected="true"] > .search-item {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
 }
 .search-item .si-visual {
   display: grid;
@@ -148,6 +157,47 @@ body[data-theme="dark"] .search-kbd {
   text-align: center;
   color: var(--text-2);
   font-size: 14px;
+}
+/* Sections of the empty-query menu (Recent / Favorites / Popular). The
+   heading is the group's accessible name, so it needs no role of its own. */
+.search-group + .search-group {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+.search-group-label {
+  padding: 8px 12px 4px;
+  color: var(--text-2);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+/* One line under the list for "searching" and "search unavailable" — a status,
+   not a second results list. */
+.search-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 13px;
+}
+.search-status:empty {
+  display: none;
+}
+/* With no rows (searching, or search down) the list's padding would show as a
+   blank strip above the status line — let the status be the whole panel. */
+.search-results:empty {
+  display: none;
+}
+.search-results:empty + .search-status {
+  border-top: 0;
+}
+.search-status .search-retry {
+  margin: 0 0 0 auto;
+  flex-shrink: 0;
 }
 
 /* Small phones: the inline bar above shrinks to ~80px and can't show a

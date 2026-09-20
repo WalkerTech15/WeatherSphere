@@ -8,7 +8,16 @@ export const I18N = {
     searchPlaceholder: "Search a city, region, or country…",
     searchAria: "Search location",
     mobileSearchBtn: "Search for a location",
-    searchNoResult: "No match found — press Enter to search the world.",
+    searchNoResult:
+      "No place matches that search. Check the spelling, or try a nearby city, region or country.",
+    searchRecent: "Recent",
+    searchFavorites: "Favorites",
+    searchPopular: "Popular places",
+    searchSearching: "Searching…",
+    searchError: "Search is unavailable right now. Check your connection and try again.",
+    searchErrorPartial: "Online search is unavailable — showing built-in places only.",
+    searchRetry: "Try again",
+    searchCount: "{n} suggestions available",
     searchHint: "Suggestions",
     displayMode: "Display mode",
     modeSimple: "Simple",
@@ -232,6 +241,8 @@ export const I18N = {
     showMapDetails: "Show details",
     mapFullscreen: "Fullscreen",
     mapError: "The map could not load — check your connection and reload.",
+    mapErrorTitle: "The map couldn't load",
+    mapErrorAction: "Open the forecast",
 
     /* click-to-select on the map */
     mapClickLoading: "Loading weather for this point…",
@@ -254,6 +265,15 @@ export const I18N = {
     /* expanded map mode */
     mapExpand: "Expand map",
     mapExitExpand: "Exit expanded map",
+
+    /* short hover / keyboard-focus hints — never the only label of a control */
+    tipTheme: "Light, dark, or match your device",
+    tipLayerSatellite: "Satellite imagery, no weather overlay",
+    tipLayerTemperature: "Forecast air temperature",
+    tipLayerRain: "Rain and snow forecast",
+    tipLayerWind: "Wind speed and direction",
+    tipExpandMap: "Fill the workspace with the map. Press Esc to go back.",
+    tipExitMap: "Back to the normal layout (Esc)",
 
     /* shareable map link */
     mapShare: "Share view",
@@ -304,6 +324,7 @@ export const I18N = {
     favSub: "Quickly find your favourite places and their weather conditions.",
     favEmptyTitle: "No favorites yet",
     favEmptyText: "Tap the star on any location's hero card to pin it here.",
+    favEmptyAction: "Search for a place",
     addPlace: "Add a place",
     quickList: "Quick list",
     compareTitle: "Compare places",
@@ -492,6 +513,11 @@ export const I18N = {
     footRights: "All rights reserved.",
 
     loadError: "Live data unavailable — showing demo weather.",
+    wxNoticeTitle: "Showing demo weather",
+    wxNoticeText:
+      "Live weather couldn't be loaded for this place, so the numbers here are sample data, not a real forecast.",
+    wxNoticeRetry: "Try again",
+    wxNoticeRetrying: "Retrying…",
     days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
     daysShort: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
     months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
@@ -504,7 +530,18 @@ export const I18N = {
     searchPlaceholder: "Rechercher une ville, une région ou un pays…",
     searchAria: "Rechercher un lieu",
     mobileSearchBtn: "Rechercher un lieu",
-    searchNoResult: "Aucun résultat — appuyez sur Entrée pour chercher dans le monde.",
+    searchNoResult:
+      "Aucun lieu ne correspond. Vérifiez l'orthographe ou essayez une ville, une région ou un pays proche.",
+    searchRecent: "Récents",
+    searchFavorites: "Favoris",
+    searchPopular: "Lieux populaires",
+    searchSearching: "Recherche en cours…",
+    searchError:
+      "La recherche est indisponible pour le moment. Vérifiez votre connexion et réessayez.",
+    searchErrorPartial:
+      "La recherche en ligne est indisponible — seuls les lieux intégrés sont affichés.",
+    searchRetry: "Réessayer",
+    searchCount: "{n} suggestions disponibles",
     searchHint: "Suggestions",
     displayMode: "Mode d'affichage",
     modeSimple: "Simple",
@@ -724,6 +761,8 @@ export const I18N = {
     showMapDetails: "Afficher les détails",
     mapFullscreen: "Plein écran",
     mapError: "Impossible de charger la carte — vérifiez votre connexion et rechargez.",
+    mapErrorTitle: "La carte n'a pas pu se charger",
+    mapErrorAction: "Ouvrir les prévisions",
 
     /* sélection par clic sur la carte */
     mapClickLoading: "Chargement de la météo pour ce point…",
@@ -746,6 +785,15 @@ export const I18N = {
     /* mode carte agrandie */
     mapExpand: "Agrandir la carte",
     mapExitExpand: "Quitter la carte agrandie",
+
+    /* petites infobulles au survol / focus clavier — jamais l'unique libellé d'un contrôle */
+    tipTheme: "Clair, sombre, ou selon votre appareil",
+    tipLayerSatellite: "Imagerie satellite, sans couche météo",
+    tipLayerTemperature: "Température de l'air prévue",
+    tipLayerRain: "Prévision de pluie et de neige",
+    tipLayerWind: "Vitesse et direction du vent",
+    tipExpandMap: "Affiche la carte sur tout l'espace de travail. Échap pour revenir.",
+    tipExitMap: "Retour à la disposition normale (Échap)",
 
     /* lien de carte partageable */
     mapShare: "Partager la vue",
@@ -798,6 +846,7 @@ export const I18N = {
     favSub: "Retrouvez rapidement vos lieux préférés et leurs conditions météo.",
     favEmptyTitle: "Aucun favori pour l'instant",
     favEmptyText: "Touchez l'étoile sur la carte principale d'un lieu pour l'épingler ici.",
+    favEmptyAction: "Rechercher un lieu",
     addPlace: "Ajouter un lieu",
     quickList: "Liste rapide",
     compareTitle: "Comparer des lieux",
@@ -995,6 +1044,11 @@ export const I18N = {
     footRights: "Tous droits réservés.",
 
     loadError: "Données en direct indisponibles — météo de démonstration affichée.",
+    wxNoticeTitle: "Météo de démonstration affichée",
+    wxNoticeText:
+      "La météo en direct n'a pas pu être chargée pour ce lieu : les valeurs ici sont des données d'exemple, pas une vraie prévision.",
+    wxNoticeRetry: "Réessayer",
+    wxNoticeRetrying: "Nouvelle tentative…",
     days: ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"],
     daysShort: ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"],
     months: [

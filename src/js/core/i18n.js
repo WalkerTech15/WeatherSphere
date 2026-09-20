@@ -24,6 +24,13 @@ export function applyStaticI18n() {
   $$("[data-i18n-title]").forEach((el) => {
     el.title = t(el.dataset.i18nTitle);
   });
+  /* short hover/focus hint drawn by components/tooltip.css. Held in data-tip,
+     not title, so it can appear on keyboard focus too and never doubles up
+     with the browser's own delayed tooltip. Always supplementary: the control
+     keeps its own visible text or aria-label. */
+  $$("[data-i18n-tip]").forEach((el) => {
+    el.dataset.tip = t(el.dataset.i18nTip);
+  });
   /* static country names (map quick-jump chips) follow the interface language */
   $$("[data-country]").forEach((el) => {
     el.textContent = countryName(el.dataset.country, el.textContent);

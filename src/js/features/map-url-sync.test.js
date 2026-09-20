@@ -61,6 +61,10 @@ vi.mock("../ui/render-advisory.js", () => ({
   renderAdvisory: vi.fn(),
   clearAdvisory: vi.fn(),
 }));
+vi.mock("../ui/render-weather-notice.js", () => ({
+  renderWeatherNotice: vi.fn(),
+  clearWeatherNotice: vi.fn(),
+}));
 vi.mock("../ui/render-forecast.js", () => ({
   renderHourly: vi.fn(),
   renderForecastPage: vi.fn(),

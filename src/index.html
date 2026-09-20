@@ -104,6 +104,7 @@
                 data-i18n-aria="searchAria"
                 aria-autocomplete="list"
                 aria-controls="searchResults"
+                aria-keyshortcuts="/ Control+K Meta+K"
               />
               <kbd class="search-kbd" aria-hidden="true">/</kbd>
             </div>
@@ -112,10 +113,16 @@
                 class="search-results"
                 id="searchResults"
                 role="listbox"
+                tabindex="-1"
                 aria-label="Search suggestions"
                 data-i18n-aria="searchSuggestions"
               ></ul>
+              <!-- "Searching…" / "search unavailable" + its retry. A separate
+                   live region from the list, so a status change never re-reads
+                   the results. -->
+              <div class="search-status" id="searchStatus" role="status" aria-live="polite"></div>
             </div>
+            <div class="sr-only" id="searchAnnounce" role="status" aria-live="polite"></div>
           </div>
 
           <!-- Small phones only (≤520px): the inline bar above shrinks to ~80px
@@ -174,6 +181,8 @@
               aria-controls="themeMenu"
               aria-label="Choose theme"
               data-i18n-aria="chooseTheme"
+              data-i18n-tip="tipTheme"
+              data-tip-align="end"
             >
               <span id="themeBtnIcon" aria-hidden="true"></span>
             </button>
@@ -457,6 +466,9 @@
       <main id="main" class="main" tabindex="-1">
         <!-- ── HOME VIEW ── -->
         <section class="view is-visible" id="view-home" aria-labelledby="heroCityName">
+          <!-- "Showing demo weather" notice — filled by ui/render-weather-notice.js. The
+               live region exists up front so a later fill is announced reliably. -->
+          <div class="wx-notice" role="status" aria-live="polite"></div>
           <div class="home-grid">
             <!-- Hero -->
             <article class="hero card" id="heroCard" aria-live="polite">
@@ -683,6 +695,8 @@
                 id="mapExpandBtn"
                 type="button"
                 aria-pressed="false"
+                data-i18n-tip="tipExpandMap"
+                data-tip-align="start"
               >
                 <span class="chip-icon" aria-hidden="true"
                   ><svg
@@ -704,6 +718,7 @@
               </button>
             </div>
           </div>
+          <div class="wx-notice" role="status" aria-live="polite"></div>
           <div class="card map-card" id="mapCard">
             <div
               class="map-layer-switcher"
@@ -725,6 +740,7 @@
                 class="map-layer is-active"
                 type="button"
                 data-map-layer="satellite"
+                data-i18n-tip="tipLayerSatellite"
                 aria-checked="true"
                 role="radio"
               >
@@ -735,6 +751,7 @@
                 class="map-layer"
                 type="button"
                 data-map-layer="temperature"
+                data-i18n-tip="tipLayerTemperature"
                 aria-checked="false"
                 role="radio"
               >
@@ -745,6 +762,7 @@
                 class="map-layer"
                 type="button"
                 data-map-layer="rain"
+                data-i18n-tip="tipLayerRain"
                 aria-checked="false"
                 role="radio"
               >
@@ -755,6 +773,7 @@
                 class="map-layer"
                 type="button"
                 data-map-layer="wind"
+                data-i18n-tip="tipLayerWind"
                 aria-checked="false"
                 role="radio"
               >
@@ -789,6 +808,8 @@
               id="mapExitExpandBtn"
               type="button"
               aria-pressed="true"
+              data-i18n-tip="tipExitMap"
+              data-tip-align="end"
               hidden
             >
               <span class="map-exit-expand-icon" aria-hidden="true"
@@ -871,6 +892,7 @@
             </div>
           </div>
 
+          <div class="wx-notice" role="status" aria-live="polite"></div>
           <div class="forecast-carousel-wrap">
             <div class="forecast-carousel" id="forecastRow2" tabindex="0"></div>
             <div class="carousel-fade carousel-fade-left" id="fcFadeLeft" aria-hidden="true"></div>

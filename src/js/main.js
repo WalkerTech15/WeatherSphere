@@ -63,6 +63,7 @@ import {
   clearOfflineCaches,
 } from "./services/offline.js";
 import { renderFavorites } from "./ui/render-favorites.js";
+import { bindWeatherNotice } from "./ui/render-weather-notice.js";
 import { renderForecastPage } from "./ui/render-forecast.js";
 import {
   loadPopular,
@@ -104,7 +105,15 @@ document.addEventListener("click", (e) => {
   if (!e.target.closest(".theme-wrap")) closeThemeMenu();
 });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "/" && !/input|textarea/i.test(document.activeElement.tagName)) {
+  /* Ctrl/Cmd+K: the command-menu shortcut. Works from anywhere, including
+     while typing in the field itself (where "/" is just a character), and
+     selects what is there so the next keystroke replaces it. Alt is excluded
+     so it never shadows an AltGr layout's own K. */
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "k") {
+    e.preventDefault();
+    focusSearch();
+    $("#searchInput").select();
+  } else if (e.key === "/" && !/input|textarea/i.test(document.activeElement.tagName)) {
     e.preventDefault();
     focusSearch();
   } else if (e.key === "Escape") {
@@ -279,12 +288,20 @@ bindMapLayerControls();
 /* click anywhere on the map → reverse geocode → weather → panel */
 bindMapClickSelection();
 bindMapExpand();
+bindWeatherNotice();
 $("#mapShareBtn")?.addEventListener("click", () => shareMapView());
 /* the location detail panel's own Share button (ui/render-map.js) can't call
    shareMapView() directly — features/map-url-sync.js is deliberately imported
    only here (see that file's header) to keep the module graph acyclic, so it
    announces on the bus instead. */
 on("map:share-requested", () => shareMapView());
+/* Same reason: the notice and the empty Favorites state live in ui/ modules that
+   features/location.js and features/search.js import, so they ask on the bus
+   instead of importing those modules back. */
+on("weather:retry", () => {
+  if (state.loc) selectLocation(state.loc);
+});
+on("search:requested", () => focusSearch());
 
 /* ── Resize: realign toggle thumbs, resize maps, redraw charts ── */
 let resizeTimer = null;

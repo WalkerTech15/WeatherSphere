@@ -35,6 +35,42 @@
   margin-top: var(--s-3);
 }
 
+/* Inline notice (ui/notice.js). Its look is the advisory component's; only the
+   parts an advisory does not have live here — the action button and the slot
+   the notice is announced from. */
+.wx-notice:not(:empty) {
+  margin-bottom: var(--s-2);
+}
+.notice-action {
+  min-height: 36px;
+  margin-top: 8px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--card);
+  color: var(--primary-600);
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+.notice-action:hover {
+  background: var(--primary-soft);
+}
+.notice-action:disabled {
+  opacity: 0.65;
+  cursor: progress;
+}
+body[data-theme="dark"] .notice-action {
+  color: color-mix(in srgb, var(--primary) 55%, #fff);
+}
+@media (pointer: coarse) {
+  .notice-action {
+    min-height: 44px;
+  }
+}
+
 .card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -104,6 +140,9 @@
   color: var(--text);
   font-size: 17px;
   margin-bottom: 4px;
+}
+.empty-state .empty-action {
+  margin-top: var(--s-2);
 }
 body[data-theme="dark"] .empty-state {
   border-color: rgba(148, 163, 184, 0.25);

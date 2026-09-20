@@ -1,0 +1,89 @@
+/* Hover / keyboard-focus hint for a control, driven by [data-tip] (set from
+   the dictionary via data-i18n-tip — see core/i18n.js).
+
+   Supplementary by design: it only ever explains a control that already has
+   its own visible text or aria-label, and it never appears on touch, where
+   there is no hover and a long-press hint would fight scrolling. Drawn with a
+   pseudo-element, so it is not in the accessibility tree and cannot double a
+   label that a screen reader already announces.
+
+   The hint is display:none until it is wanted. Hiding it with opacity or
+   visibility is not enough: a hidden box still counts toward the page's
+   scrollable width, so a 240px hint hanging under a control near the edge made
+   the whole page scroll sideways even though nobody could see it. */
+
+[data-tip] {
+  position: relative;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  [data-tip]::after {
+    content: attr(data-tip);
+    display: none;
+    position: absolute;
+    z-index: 120;
+    top: calc(100% + 8px);
+    left: 50%;
+    width: max-content;
+    max-width: 240px;
+    padding: 7px 10px;
+    border-radius: var(--r-sm);
+    background: var(--text);
+    color: var(--bg);
+    box-shadow: var(--shadow-md);
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1.35;
+    text-align: left;
+    white-space: normal;
+    pointer-events: none;
+    --tip-x: -50%;
+  }
+  /* A control near an edge anchors the hint to its own edge, so it can neither
+     run off the viewport nor be clipped. */
+  [data-tip][data-tip-align="end"]::after {
+    right: 0;
+    left: auto;
+    --tip-x: 0;
+  }
+  [data-tip][data-tip-align="start"]::after {
+    right: auto;
+    left: 0;
+    --tip-x: 0;
+  }
+  [data-tip]:hover::after,
+  [data-tip]:focus-visible::after {
+    display: block;
+    /* a short delay on hover, so sweeping the pointer across a row of controls
+       doesn't flash every hint */
+    animation: tipIn 0.15s var(--ease) 0.35s backwards;
+    transform: translate(var(--tip-x), 0);
+  }
+  /* keyboard focus shows it straight away */
+  [data-tip]:focus-visible::after {
+    animation-delay: 0s;
+  }
+  /* an open menu owns the space below its button */
+  [data-tip][aria-expanded="true"]::after {
+    display: none;
+  }
+}
+
+@keyframes tipIn {
+  from {
+    opacity: 0;
+    transform: translate(var(--tip-x), -3px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(var(--tip-x), 0);
+  }
+}
+
+/* The layer row scrolls sideways below the sheet breakpoint, which would clip
+   a hint hanging off it. */
+@media (max-width: 820px) {
+  .map-layer-switcher [data-tip]::after {
+    display: none;
+  }
+}

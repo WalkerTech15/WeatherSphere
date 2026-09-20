@@ -653,6 +653,10 @@ body[data-theme="dark"] .maplibregl-ctrl button .maplibregl-ctrl-icon {
   color: var(--text-2);
   font-size: 14px;
 }
+.map-offline .notice {
+  max-width: 440px;
+  text-align: left;
+}
 
 /* ── Integrated map workspace ───────────────────────────────────────────── */
 .map-layer-switcher {
@@ -1942,6 +1946,7 @@ body.map-expanded .main {
   flex-direction: column;
 }
 body.map-expanded .footer,
+body.map-expanded #view-map .wx-notice,
 body.map-expanded #view-map > .block-head,
 body.map-expanded #mapRecents,
 body.map-expanded #mapPopular {

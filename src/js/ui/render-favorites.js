@@ -2,6 +2,7 @@
 import { state } from "../core/state.js";
 import { $, esc } from "../core/dom.js";
 import { t } from "../core/i18n.js";
+import { emit } from "../core/app-bus.js";
 import { weatherIcon } from "../data/icons.js";
 import { wmo, wxDesc } from "../data/weather-codes.js";
 import { fmtTemp, tempUnit, fmtWind, windUnit } from "../core/units.js";
@@ -196,7 +197,13 @@ export function renderFavorites() {
         <div class="big" aria-hidden="true">⭐</div>
         <h3>${t("favEmptyTitle")}</h3>
         <p>${t("favEmptyText")}</p>
+        <button class="btn-primary empty-action" type="button" data-empty-action="search">${t("favEmptyAction")}</button>
       </div>`;
+    /* the search field lives in the top bar, outside this module's import
+       graph — ask for it on the bus rather than reaching across */
+    grid
+      .querySelector('[data-empty-action="search"]')
+      ?.addEventListener("click", () => emit("search:requested"));
     listBlock.hidden = true;
     return;
   }
