@@ -14,6 +14,7 @@ import {
   scorePhotoForLocation,
   pickBestPhoto,
   isMarineKind,
+  isOpenWaterSubject,
   namesConflictingPlace,
 } from "./photo-relevance.js";
 
@@ -391,5 +392,59 @@ describe("namesConflictingPlace", () => {
        treated as "not a conflict" here too, belt and braces. */
     const ambiguous = new Map([["springfield", ""]]);
     expect(namesConflictingPlace(tarbes, shot("Springfield main street"), ambiguous)).toBe(false);
+  });
+});
+
+describe("isOpenWaterSubject — is the candidate about the water itself?", () => {
+  const c = (title, alt = "") => ({ title, alt });
+
+  it("accepts captions that say what water they show, in several languages", () => {
+    expect(
+      isOpenWaterSubject(c("Norderney, Nordsee am Oststrand.jpg", "North sea at the beach")),
+    ).toBe(true);
+    expect(isOpenWaterSubject(c("Mer Méditerranée au large de Nice.jpg"))).toBe(true);
+    expect(isOpenWaterSubject(c("Océan Atlantique.png"))).toBe(true);
+    expect(isOpenWaterSubject(c("Golfo di Napoli.jpg", "Il golfo visto dall'alto"))).toBe(true);
+    expect(isOpenWaterSubject(c("Ostsee.jpg", "Die Ostsee, ein Meer"))).toBe(true);
+  });
+
+  it("accepts the astronaut frames Commons files against the water they were taken over", () => {
+    expect(isOpenWaterSubject(c("ISS053-E-398529 - View of Earth.jpg"))).toBe(true);
+  });
+
+  it("rejects what merely sits near a coast — the landmark-for-an-ocean failure", () => {
+    /* All four are real results of a Commons geosearch around an offshore
+       point (off Sydney, off Nice, off Cape Town). */
+    expect(isOpenWaterSubject(c("Bondi Beach Aerial - panoramio.jpg"))).toBe(false);
+    expect(isOpenWaterSubject(c("Navire océanographique Pourquoi pas? (Ifremer 00707).jpg"))).toBe(
+      false,
+    );
+    expect(isOpenWaterSubject(c("Aequorea sp P3164696.JPG"))).toBe(false);
+    expect(isOpenWaterSubject(c("Tenerife 2018 111.jpg"))).toBe(false);
+  });
+
+  it("matches whole words only, so a longer word cannot smuggle a match in", () => {
+    /* "océanographique" contains "ocean"; "seaside" contains "sea". */
+    expect(isOpenWaterSubject(c("Institut océanographique.jpg"))).toBe(false);
+    expect(isOpenWaterSubject(c("Seaside hotel.jpg"))).toBe(false);
+  });
+
+  it("accepts a candidate that names the water by its distinctive word", () => {
+    /* "swell" is not in the vocabulary, but the Atlantic is named. */
+    const atlantic = { name: { en: "Atlantic Ocean", fr: "Océan Atlantique" } };
+    expect(isOpenWaterSubject(c("Atlantic swell"), atlantic)).toBe(true);
+    expect(isOpenWaterSubject(c("Atlantic swell"))).toBe(false);
+  });
+
+  it("does not let a generic word of the water's own name count as naming it", () => {
+    /* "ocean" is in the name, but only as a whole word — never as a
+       substring of "océanographique". */
+    const pacific = { name: { en: "Pacific Ocean", fr: "Océan Pacifique" } };
+    expect(isOpenWaterSubject(c("Navire océanographique Pourquoi pas?"), pacific)).toBe(false);
+  });
+
+  it("is total on a missing or empty candidate", () => {
+    expect(isOpenWaterSubject(null)).toBe(false);
+    expect(isOpenWaterSubject({})).toBe(false);
   });
 });

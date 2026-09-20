@@ -53,6 +53,7 @@ import { fetchGooglePlacePhoto, __resetPlacesCacheForTests } from "./places-api.
 import { fetchMapillaryPhoto, __resetMapillaryCacheForTests } from "./mapillary-api.js";
 import {
   photoProvenance,
+  asWaterOverview,
   provenanceLabel,
   provenanceBadge,
   photoAltText,
@@ -63,6 +64,7 @@ import {
   pickBestPhoto,
   isMarineKind,
   namesConflictingPlace,
+  isOpenWaterSubject,
   identityOnly,
   distanceKm,
   scorePhotoForLocation,
@@ -364,7 +366,13 @@ export function rankPexelsCandidates(loc, candidates) {
    to the same isRelevantPhoto check a Pexels text result gets, since Photo
    objects from both sources share the same {alt, photographer} shape. */
 export function rankWikimediaCandidates(loc, candidates, { trustCoordinates = false } = {}) {
-  const list = (Array.isArray(candidates) ? candidates : []).filter((c) => c && c.src);
+  /* Open water has no place name to trust a coordinate against, so what is
+     near the point (a beach, a ship, a marine animal) is not evidence about
+     the water itself: the candidate has to say it is about water. */
+  const marine = isMarineKind(loc?.kind);
+  const list = (Array.isArray(candidates) ? candidates : []).filter(
+    (c) => c && c.src && (!marine || isOpenWaterSubject(c, loc)),
+  );
   const pool = trustCoordinates ? list : list.filter((c) => isRelevantPhoto(loc, c));
   if (pool.length === 0) return null;
   /* Commons candidates carry real coordinates and pixel dimensions, so the
@@ -1059,6 +1067,10 @@ export async function hydrateLocPhoto(el, loc, opts = {}) {
     return done();
   }
   if (stale()) return;
+  /* Open water has no "exact" photo, whichever provider answered: say so. */
+  if (photo && isMarineKind(loc.kind)) {
+    photo = asWaterOverview(photo, (loc.name && (loc.name[state.lang] || loc.name.en)) || "");
+  }
   /* A by-ID photo is a manually reviewed, exact match — never re-checked. A
      Wikimedia result was already filtered by fetchBestPhoto/resolveWikimedia-
      Photo (coordinate trust or its own relevance check) and never re-checked

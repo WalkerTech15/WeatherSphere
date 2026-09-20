@@ -145,3 +145,141 @@ test.describe("Home section headings", () => {
     expect(await size("exploreTitle")).toBe(hourly);
   });
 });
+
+/* Small secondary text: labels, timestamps, status chips and attributions.
+ *
+ * These are the lines most likely to be set in a pale accent at 10–11px, and
+ * the ones a glance at a design tool cannot judge, because their backdrop is a
+ * translucent tint or a card. Each is measured against what is really behind
+ * it: every ancestor background composited from the page down, as the eye
+ * sees it. Text over a photograph is not measured this way — the credit chip
+ * carries its own scrim, checked below. */
+async function textContrast(page, selector) {
+  return page
+    .locator(selector)
+    .first()
+    .evaluate((el) => {
+      const ctx = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
+      const rgba = (color) => {
+        ctx.clearRect(0, 0, 1, 1);
+        ctx.fillStyle = color;
+        ctx.fillRect(0, 0, 1, 1);
+        return [...ctx.getImageData(0, 0, 1, 1).data];
+      };
+      const layers = [];
+      for (let node = el; node; node = node.parentElement) {
+        const c = rgba(getComputedStyle(node).backgroundColor);
+        if (c[3] > 0) layers.push(c);
+        if (c[3] > 250) break;
+      }
+      let bg = [255, 255, 255];
+      for (const c of layers.reverse()) {
+        const a = c[3] / 255;
+        bg = bg.map((v, i) => c[i] * a + v * (1 - a));
+      }
+      const fgRaw = rgba(getComputedStyle(el).color);
+      const fa = fgRaw[3] / 255;
+      const fg = bg.map((v, i) => fgRaw[i] * fa + v * (1 - fa));
+      const lum = ([r, g, b]) => {
+        const f = (v) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+        return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+      };
+      const [hi, lo] = [lum(fg), lum(bg)].sort((x, y) => y - x);
+      return {
+        ratio: (hi + 0.05) / (lo + 0.05),
+        size: parseFloat(getComputedStyle(el).fontSize),
+        text: el.textContent.trim().slice(0, 30),
+      };
+    });
+}
+
+async function openThemed(page, path, theme, ready) {
+  await installMocks(page);
+  await page.addInitScript((t) => localStorage.setItem("ws_theme", t), theme);
+  await page.goto(path);
+  await expect(page.locator(ready).first()).toBeVisible({ timeout: 20000 });
+}
+
+for (const theme of ["light", "dark"]) {
+  test.describe(`small secondary text is readable in the ${theme} theme`, () => {
+    test.describe.configure({ timeout: 60_000 });
+
+    test("Home: the 'updated' status beside the metrics", async ({ page }) => {
+      await openThemed(page, "/", theme, "#view-home .metrics-heading span");
+      const m = await textContrast(page, "#view-home .metrics-heading span");
+      expect(m.ratio, m.text).toBeGreaterThanOrEqual(4.5);
+    });
+
+    test("Forecast: the hourly rain and wind lines, including the 'now' cell", async ({ page }) => {
+      await openThemed(page, "/#/forecast", theme, "#hourlyStrip .hour-cell");
+      for (const sel of ["#hourlyStrip .h-rain", "#hourlyStrip .hour-cell.is-now .h-wind"]) {
+        await expect(page.locator(sel).first()).toBeVisible();
+        const m = await textContrast(page, sel);
+        expect(m.ratio, `${sel} "${m.text}"`).toBeGreaterThanOrEqual(4.5);
+      }
+    });
+
+    test("Settings: the 'Current' provider badge", async ({ page }) => {
+      await openThemed(page, "/#/settings", theme, ".set-provider-badge.is-live");
+      const m = await textContrast(page, ".set-provider-badge.is-live");
+      expect(m.ratio, m.text).toBeGreaterThanOrEqual(4.5);
+    });
+
+    test("Map panel: the stat labels and the hourly time labels", async ({ page }) => {
+      await openThemed(page, "/#/map", theme, "#mapWeatherPanel .map-panel-stats dt");
+      for (const sel of [
+        "#mapWeatherPanel .map-panel-stats dt",
+        "#mapWeatherPanel .map-hour > span",
+      ]) {
+        const m = await textContrast(page, sel);
+        expect(m.ratio, `${sel} "${m.text}"`).toBeGreaterThanOrEqual(4.5);
+        /* and not below the 11px floor the rest of the secondary text keeps */
+        expect(m.size, sel).toBeGreaterThanOrEqual(11);
+      }
+    });
+  });
+}
+
+test.describe("photo attribution chips", () => {
+  /* Built in the page rather than found in it: which credit shows depends on
+     which provider answered, but the rule is about the chip's own styling. */
+  async function chipStyle(page, hostClass, chipClass) {
+    return page.evaluate(
+      ([host, chip]) => {
+        const box = document.createElement("div");
+        box.className = host;
+        const a = document.createElement("a");
+        a.className = chip;
+        a.textContent = "Pexels ↗";
+        box.appendChild(a);
+        document.body.appendChild(box);
+        const cs = getComputedStyle(a);
+        const out = {
+          size: parseFloat(cs.fontSize),
+          scrim: Number((cs.backgroundColor.match(/[\d.]+/g) || [])[3] ?? 1),
+        };
+        box.remove();
+        return out;
+      },
+      [hostClass, chipClass],
+    );
+  }
+
+  test("are set at a readable size, on a scrim strong enough for any photo", async ({ page }) => {
+    await installMocks(page);
+    await page.goto("/");
+    await expect(page.locator("#heroCityName")).not.toBeEmpty();
+
+    /* the hero/map-panel chip, and the Explore card's variant of it */
+    for (const [host, chip] of [
+      ["loc-photo", "loc-credit"],
+      ["explore-card", "loc-credit explore-credit"],
+    ]) {
+      const s = await chipStyle(page, host, chip);
+      expect(s.size, chip).toBeGreaterThanOrEqual(11);
+      /* white text over a bright sky needs the dark scrim; 0.38 left it at
+         about 2.5:1, 0.72 holds 8:1 over pure white */
+      expect(s.scrim, chip).toBeGreaterThanOrEqual(0.7);
+    }
+  });
+});

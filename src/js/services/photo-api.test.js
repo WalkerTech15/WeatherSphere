@@ -831,6 +831,55 @@ describe("wikimediaQuery — Commons-appropriate query construction", () => {
   });
 });
 
+describe("rankWikimediaCandidates — open water", () => {
+  const OFF_SYDNEY = {
+    kind: "ocean",
+    waterKind: "ocean",
+    name: { en: "Pacific Ocean", fr: "Océan Pacifique" },
+    lat: -33.9,
+    lon: 151.35,
+    region: {},
+    country: {},
+  };
+  const cand = (title, over = {}) => ({
+    src: `${title}.jpg`,
+    title,
+    alt: title,
+    photographer: "X",
+    width: 1200,
+    height: 800,
+    ...over,
+  });
+
+  it("does not trust a coastal subject just because a geosearch returned it", () => {
+    /* The real result set for a point off Sydney: a beach, a cargo ship, a
+       whale-watching shot. Trusting them by distance showed Bondi Beach as
+       "the Pacific Ocean". */
+    const coastal = [
+      cand("Bondi Beach Aerial - panoramio"),
+      cand("Carguero rumbo a Melbourne - panoramio"),
+      cand("Ballena a su paso por las costas de Sidney"),
+    ];
+    expect(rankWikimediaCandidates(OFF_SYDNEY, coastal, { trustCoordinates: true })).toBeNull();
+  });
+
+  it("still returns an honest overview of the water when one is among them", () => {
+    const view = cand("ISS043-E-127040 - View of Earth");
+    const picked = rankWikimediaCandidates(
+      OFF_SYDNEY,
+      [cand("Bondi Beach Aerial - panoramio"), view],
+      { trustCoordinates: true },
+    );
+    expect(picked).toBe(view);
+  });
+
+  it("does not change how a land location trusts its geosearch", () => {
+    const town = { kind: "town", name: { en: "Tarbes" }, region: {}, country: {} };
+    const bridge = cand("Old stone bridge");
+    expect(rankWikimediaCandidates(town, [bridge], { trustCoordinates: true })).toBe(bridge);
+  });
+});
+
 describe("rankWikimediaCandidates — coordinate trust vs. text relevance", () => {
   const TARBES = {
     kind: "city",

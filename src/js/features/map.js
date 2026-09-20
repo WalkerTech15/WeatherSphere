@@ -418,6 +418,12 @@ async function createMapInstance(id, el, cfg) {
     pitchWithRotate: false,
     touchPitch: false /* two-finger vertical drag to pitch — fully off */,
     renderWorldCopies: false,
+    /* The SDK adds a starfield ("space") and an atmosphere ("halo") layer for
+       its globe view. Both are meaningless on this flat map, and the space
+       layer's textures load asynchronously, so its first frames log
+       "[CubemapLayer]: Texture is undefined" in development. */
+    space: false,
+    halo: false,
     minZoom: 1 /* mercator already clamps latitude at ±85° — no pole panning */,
     navigationControl: false,
     attributionControl: { compact: true },

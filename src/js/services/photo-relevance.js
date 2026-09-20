@@ -230,6 +230,67 @@ export function isMarineKind(kind) {
   return MARINE_KINDS.has(kind);
 }
 
+/* Whole words that make a candidate a picture OF open water rather than of
+   something that merely sits near it. Accent-folded (océan → ocean) and
+   deliberately multilingual: Commons captions are in whatever language the
+   uploader wrote. "earth" is here for the ISS astronaut frames Commons files
+   against the sea they were taken over ("View of Earth"), which are honest
+   overviews of it. */
+const OPEN_WATER_WORDS = new Set([
+  "sea",
+  "seas",
+  "ocean",
+  "oceans",
+  "seascape",
+  "gulf",
+  "bay",
+  "strait",
+  "lake",
+  "wave",
+  "waves",
+  "water",
+  "waters",
+  "earth",
+  "mer",
+  "golfe",
+  "golfo",
+  "baie",
+  "detroit",
+  "vagues",
+  "lac",
+  "meer",
+  "ozean",
+  "oceano",
+  "lago",
+]);
+
+/**
+ * Is this candidate about open water?
+ *
+ * A Commons geosearch around an offshore point is trusted on distance alone
+ * (there is no place name to match), and near a coast that returns whatever
+ * was photographed within 10 km: Bondi Beach for a point off Sydney, a
+ * research ship or a jellyfish for the Mediterranean. Presenting those as the
+ * sea itself is the "landmark for an ocean" failure, so a marine location
+ * only accepts a candidate whose own title or description says it is about
+ * water, or names the water by its distinctive word ("Atlantic swell").
+ * WHOLE words in both cases: "oceanographique" must not pass as "ocean". A
+ * caption in a script this cannot read simply does not qualify, and the
+ * chain moves on to its next source.
+ *
+ * @param {object} photo
+ * @param {object} [loc]  the water body being shown, for the name check
+ */
+export function isOpenWaterSubject(photo, loc = null) {
+  const text = normalizeForMatch([photo?.alt, photo?.title].filter(Boolean).join(" "));
+  const words = text.match(/[a-z0-9]+/g) || [];
+  if (words.some((word) => OPEN_WATER_WORDS.has(word))) return true;
+  const ownWords = localizedVariants(loc?.name)
+    .flatMap(significantWords)
+    .filter((word) => !OPEN_WATER_WORDS.has(word));
+  return ownWords.some((word) => words.includes(word));
+}
+
 function mismatchPenalty(loc, haystack) {
   if (!haystack) return 0;
   const marine = MARINE_KINDS.has(loc?.kind);

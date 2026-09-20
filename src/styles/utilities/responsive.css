@@ -238,3 +238,19 @@
     gap: 8px;
   }
 }
+
+/* Narrowest phones (320px and the ~340px foldable cover screens): the header
+   is padded twice — 16px on .topnav (with the notch safe-area, see
+   utilities/accessibility.css) and another 16px on .topnav-inner — which
+   leaves 256px for ~287px of controls, so the mobile search button ended up
+   under the theme button. .topnav already provides the gutter, so the inner
+   padding goes and the two gaps tighten; every 44px target keeps its size. */
+@media (max-width: 350px) {
+  .topnav-inner {
+    padding-inline: 0;
+  }
+  .topnav-start,
+  .topnav-actions {
+    gap: 8px;
+  }
+}

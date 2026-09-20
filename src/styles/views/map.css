@@ -1032,8 +1032,8 @@ body[data-theme="dark"] .geo-hierarchy {
 }
 .map-panel-stats dt {
   overflow: hidden;
-  color: #8a99ae;
-  font-size: 10.5px;
+  color: var(--text-2);
+  font-size: 11px;
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1085,8 +1085,8 @@ body[data-theme="dark"] .geo-hierarchy {
   border-left: 1px solid #eef2f7;
 }
 .map-hour > span {
-  color: #8090a7;
-  font-size: 10.5px;
+  color: var(--text-2);
+  font-size: 11px;
   white-space: nowrap;
 }
 .map-hour .wi {
@@ -1247,7 +1247,7 @@ body[data-theme="dark"] .map-nearby-note {
   white-space: nowrap;
 }
 .map-nearby-text span {
-  color: #8a99ae;
+  color: var(--text-2);
   font-size: 11px;
 }
 .map-nearby-stats {
@@ -1263,8 +1263,8 @@ body[data-theme="dark"] .map-nearby-note {
   font-size: 13px;
 }
 .map-nearby-stats span {
-  color: #8a99ae;
-  font-size: 10.5px;
+  color: var(--text-2);
+  font-size: 11px;
   white-space: nowrap;
 }
 body[data-theme="dark"] .map-nearby-place {
@@ -1680,6 +1680,11 @@ body[data-theme="dark"] .map-panel-stats dd {
 }
 body[data-theme="dark"] .map-hour + .map-hour {
   border-color: var(--border);
+}
+/* dark keeps its existing, already-passing muted step */
+body[data-theme="dark"] .map-panel-stats dt,
+body[data-theme="dark"] .map-hour > span {
+  color: var(--text-3);
 }
 
 @media (max-width: 1180px) {

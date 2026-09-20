@@ -335,7 +335,7 @@
   letter-spacing: -0.015em;
 }
 .metrics-heading span {
-  color: var(--emerald);
+  color: var(--ink-emerald);
   font-size: 11px;
   font-weight: 650;
 }
@@ -982,11 +982,9 @@ body[data-mode="simple"] .home-duo {
   right: 0;
   bottom: auto;
   z-index: 2;
-  /* quieter than the hero's credit — these cards are only 220px wide */
+  /* size and scrim come from .loc-credit: a lighter scrim here left white
+     text at ~2.5:1 over a bright sky */
   max-width: calc(100% - 10px);
-  padding: 3px 7px;
-  font-size: 9.5px;
-  background: rgba(2, 6, 23, 0.38);
   border-radius: 0 var(--r-md) 0 8px;
 }
 .explore-txt {

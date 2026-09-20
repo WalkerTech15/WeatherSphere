@@ -24,6 +24,13 @@
   --rose: #e11d48;
   --rose-soft: #fdedf1;
 
+  /* Text-safe steps of the accents above. The fills are for icons and tints;
+     small accent TEXT needs the darker (light theme) or lighter (dark theme)
+     step to reach 4.5:1 on the surface it sits on. */
+  --ink-primary: #1d4ed8;
+  --ink-sky: #0369a1;
+  --ink-emerald: #047857;
+
   /* Chart ink */
   --grid-line: #edf1f6;
   --axis-ink: #94a3b8;
@@ -73,6 +80,9 @@ body[data-theme="dark"] {
   --emerald-soft: rgba(5, 150, 105, 0.18);
   --violet-soft: rgba(124, 58, 237, 0.18);
   --rose-soft: rgba(225, 29, 72, 0.18);
+  --ink-primary: #93c5fd;
+  --ink-sky: #7dd3fc;
+  --ink-emerald: #6ee7b7;
   --grid-line: #22304b;
   --axis-ink: #64748b;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.25);

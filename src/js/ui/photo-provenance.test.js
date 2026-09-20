@@ -7,6 +7,7 @@ import {
   provenanceLabel,
   provenanceBadge,
   photoAltText,
+  asWaterOverview,
 } from "./photo-provenance.js";
 import { state } from "../core/state.js";
 
@@ -44,8 +45,46 @@ describe("photoProvenance — deriving the tier", () => {
     expect(photoProvenance(undefined)).toBe("");
   });
 
-  it("lists exactly the four tiers the UI knows how to render", () => {
-    expect(PROVENANCE_TIERS).toEqual(["exact", "nearby", "regional", "country"]);
+  it("lists exactly the five tiers the UI knows how to render", () => {
+    expect(PROVENANCE_TIERS).toEqual(["exact", "nearby", "regional", "country", "overview"]);
+  });
+
+  it("honours the overview tier that open water is given", () => {
+    expect(photoProvenance(photo({ provenance: "overview" }))).toBe("overview");
+  });
+});
+
+describe("asWaterOverview — open water has no exact photo", () => {
+  it("returns a labelled copy and leaves the shared cached photo untouched", () => {
+    const original = photo({ source: "wikimedia", photographer: "NASA", license: "Public domain" });
+    const labelled = asWaterOverview(original, "Atlantic Ocean");
+    expect(labelled).not.toBe(original);
+    expect(original.provenance).toBeUndefined();
+    expect(labelled.provenance).toBe("overview");
+    expect(labelled.overviewOf).toBe("Atlantic Ocean");
+  });
+
+  it("keeps everything attribution and licensing depend on", () => {
+    const labelled = asWaterOverview(
+      photo({
+        source: "wikimedia",
+        photographer: "NASA",
+        license: "Public domain",
+        link: "https://c/",
+      }),
+      "North Sea",
+    );
+    expect(labelled).toMatchObject({
+      source: "wikimedia",
+      photographer: "NASA",
+      license: "Public domain",
+      link: "https://c/",
+      src: "x.jpg",
+    });
+  });
+
+  it("is total on a missing photo", () => {
+    expect(asWaterOverview(null, "Atlantic Ocean")).toBeNull();
   });
 });
 
@@ -76,6 +115,20 @@ describe("provenanceLabel — what the credit admits", () => {
     expect(label).not.toContain("{area}");
   });
 
+  it("says an ocean photo is an overview of the water, not of this exact spot", () => {
+    state.lang = "en";
+    const label = provenanceLabel(asWaterOverview(photo(), "Atlantic Ocean"));
+    expect(label).toContain("Atlantic Ocean");
+    expect(label.toLowerCase()).toContain("overview");
+    expect(label.toLowerCase()).toContain("not this exact spot");
+  });
+
+  it("still says it plainly when the water's name is unknown", () => {
+    const label = provenanceLabel(photo({ provenance: "overview" }));
+    expect(label).toBeTruthy();
+    expect(label).not.toMatch(/\{\w+\}/);
+  });
+
   it("never leaves an unsubstituted placeholder in any tier or language", () => {
     for (const lang of ["en", "fr"]) {
       state.lang = lang;
@@ -84,6 +137,8 @@ describe("provenanceLabel — what the credit admits", () => {
         photo({ provenance: "nearby", subjectName: "X" }),
         photo({ approximate: true, areaKind: "region", approximateOf: "Y" }),
         photo({ approximate: true, areaKind: "country", approximateOf: "Z" }),
+        asWaterOverview(photo(), "Mer du Nord"),
+        photo({ provenance: "overview" }),
       ]) {
         expect(provenanceLabel(p)).not.toMatch(/\{\w+\}/);
       }
@@ -113,6 +168,12 @@ describe("provenanceBadge — the few words shown on the image", () => {
     expect(badge.length).toBeLessThan(20);
   });
 
+  it("is a short word for an ocean overview", () => {
+    const badge = provenanceBadge(asWaterOverview(photo(), "Mer Méditerranée"));
+    expect(badge).toBeTruthy();
+    expect(badge.length).toBeLessThan(20);
+  });
+
   it("names the area for a regional or country photo", () => {
     expect(
       provenanceBadge(photo({ approximate: true, areaKind: "region", approximateOf: "Occitanie" })),
@@ -133,6 +194,13 @@ describe("photoAltText — no image is left unlabelled", () => {
     const alt = photoAltText(photo({ source: "mapillary", provenance: "nearby" }), "Tarbes");
     expect(alt).toContain("Tarbes");
     expect(alt).not.toMatch(/\{\w+\}/);
+  });
+
+  it("describes a caption-less open-water photo as a general view", () => {
+    state.lang = "en";
+    const alt = photoAltText(asWaterOverview(photo(), "Atlantic Ocean"), "Atlantic Ocean");
+    expect(alt).toContain("Atlantic Ocean");
+    expect(alt.toLowerCase()).toContain("general view");
   });
 
   it("distinguishes a nearby photo from an exact one in the alt text too", () => {

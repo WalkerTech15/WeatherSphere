@@ -18,17 +18,29 @@
  *   regional  somewhere in the surrounding region   "Photo of <region>, not
  *                                                    of this place itself"
  *   country   somewhere in the country              same, with the country
+ *   overview  a general image of open water         "Overview of <water> — a
+ *             (an ocean or sea has no "exact" photo:  general image, not this
+ *             a satellite frame, a map, a seascape)   exact spot"
  *
  * `exact` deliberately shows no qualifier: adding "exact photo" to the common
  * case would be noise, and an absent qualifier already means "this is the
- * place". The other three are always announced.
+ * place". The other four are always announced.
  *
  * Pure functions only — no DOM, no state — so every wording rule is testable
  * and the renderer in services/photo-api.js stays a renderer.
  */
 import { t } from "../core/i18n.js";
 
-export const PROVENANCE_TIERS = ["exact", "nearby", "regional", "country"];
+export const PROVENANCE_TIERS = ["exact", "nearby", "regional", "country", "overview"];
+
+/* An ocean or sea is never photographed "as itself": whatever Commons or
+   Pexels returns for it — an astronaut's frame, a locator map, a stretch of
+   coast — is a general view of that water. Returns a labelled COPY (the same
+   photo object is shared through the provider caches). */
+export function asWaterOverview(photo, waterName) {
+  if (!photo) return photo;
+  return { ...photo, provenance: "overview", overviewOf: waterName || "" };
+}
 
 /* The one place that decides a photo's tier, so no caller has to re-derive it
    from a mix of `source`, `approximate` and `approximateOf`. Providers set
@@ -53,6 +65,11 @@ export function photoProvenance(photo) {
 export function provenanceLabel(photo) {
   const tier = photoProvenance(photo);
   if (tier === "exact" || tier === "") return "";
+  if (tier === "overview") {
+    return photo.overviewOf
+      ? t("photoOverview").replace("{area}", photo.overviewOf)
+      : t("photoOverviewShort");
+  }
   if (tier === "nearby") {
     /* Name the subject when we know it ("Nearby · Tarbes Cathedral"), so the
        visitor can see WHAT they are looking at rather than only being told
@@ -70,6 +87,7 @@ export function provenanceLabel(photo) {
 export function provenanceBadge(photo) {
   const tier = photoProvenance(photo);
   if (tier === "nearby") return t("photoNearbyShort");
+  if (tier === "overview") return t("photoOverviewShort");
   if (tier === "regional" || tier === "country") return photo.approximateOf || "";
   return "";
 }
@@ -91,5 +109,6 @@ export function photoAltText(photo, placeName) {
   if (!name) return "";
   const tier = photoProvenance(photo);
   if (tier === "nearby") return t("photoAltNearby").replace("{place}", name);
+  if (tier === "overview") return t("photoAltOverview").replace("{place}", name);
   return t("photoAltExact").replace("{place}", name);
 }

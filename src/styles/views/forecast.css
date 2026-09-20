@@ -194,7 +194,7 @@
 }
 .hour-cell .h-rain {
   font-size: 11.5px;
-  color: var(--sky);
+  color: var(--ink-sky);
   font-weight: 600;
   margin-top: 6px;
 }
@@ -207,6 +207,10 @@
   color: var(--text-2);
   font-weight: 600;
   margin-top: 3px;
+}
+/* --text-2 on the "now" cell's blue tint is 4.3:1; a step toward --text */
+.hour-cell.is-now .h-wind {
+  color: color-mix(in srgb, var(--text-2) 70%, var(--text));
 }
 .hour-cell .h-wind svg {
   width: 12px;

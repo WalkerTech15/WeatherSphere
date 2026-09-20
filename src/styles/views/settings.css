@@ -290,7 +290,7 @@
 }
 .set-provider-badge.is-live {
   background: color-mix(in srgb, var(--primary) 16%, transparent);
-  color: var(--primary);
+  color: var(--ink-primary);
 }
 /* Unavailable, not merely dimmed: the text keeps its full contrast (it is
    the only explanation of why the option can't be chosen), and the state is

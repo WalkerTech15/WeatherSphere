@@ -325,7 +325,7 @@ body[data-theme="dark"] .forecast-card.is-today {
   bottom: 0;
   z-index: 2;
   padding: 3px 7px;
-  font-size: 9.5px;
+  font-size: 11px;
   line-height: 1.2;
   /* Contrast, not decoration. This label sits over an ARBITRARY photo and
      carries the provenance disclosure ("Nearby — not a photo of the place
