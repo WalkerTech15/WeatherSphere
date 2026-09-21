@@ -135,3 +135,66 @@ describe("batched requests", () => {
     expect(calls).toHaveLength(2);
   });
 });
+
+describe("fetchForecast cancellation", () => {
+  /* fetch that answers only when the test says so, and rejects when its
+     signal aborts — the way a real fetch does */
+  function controlledFetch() {
+    const pending = [];
+    globalThis.fetch = vi.fn(
+      (url, { signal }) =>
+        new Promise((resolve, reject) => {
+          if (signal.aborted) return reject(signal.reason);
+          signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+          pending.push({ url: String(url), signal, resolve });
+        }),
+    );
+    return pending;
+  }
+
+  it("cancels both the forecast and its air-quality request when the only caller leaves", async () => {
+    const pending = controlledFetch();
+    const controller = new AbortController();
+    const request = fetchForecast(PARIS, { signal: controller.signal });
+    expect(pending).toHaveLength(2);
+    controller.abort();
+    await expect(request).rejects.toMatchObject({ kind: "aborted" });
+    expect(pending.every((p) => p.signal.aborted)).toBe(true);
+  });
+
+  it("keeps the request alive for a second caller when the first leaves", async () => {
+    const pending = controlledFetch();
+    const first = new AbortController();
+    const a = fetchForecast(PARIS, { signal: first.signal });
+    const b = fetchForecast(PARIS, { signal: new AbortController().signal });
+    expect(forecastCalls(pending.map((p) => p.url))).toHaveLength(1);
+    first.abort();
+    await expect(a).rejects.toMatchObject({ kind: "aborted" });
+    for (const p of pending) {
+      p.resolve(ok(p.url.includes("air-quality") ? aqiEntry(12) : forecastPayload()));
+    }
+    const wx = await b;
+    expect(wx.current.temp).toBe(18.4);
+    await expect(wx._aqi).resolves.toBe(12);
+  });
+
+  it("starts a fresh request for the same place after a cancelled one", async () => {
+    const pending = controlledFetch();
+    const controller = new AbortController();
+    const a = fetchForecast(PARIS, { signal: controller.signal });
+    controller.abort();
+    await a.catch(() => {});
+    fetchForecast(PARIS);
+    expect(forecastCalls(pending.map((p) => p.url))).toHaveLength(2);
+  });
+});
+
+describe("the school API cannot be reached through the app entry points", () => {
+  it("routes every entry point to Open-Meteo", async () => {
+    const calls = stubFetch((url) =>
+      url.includes("air-quality") ? ok([aqiEntry(1)]) : ok(forecastPayload()),
+    );
+    await fetchForecast(PARIS);
+    expect(calls.every((u) => u.includes("open-meteo.com"))).toBe(true);
+  });
+});

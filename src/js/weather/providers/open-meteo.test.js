@@ -285,11 +285,13 @@ describe("fetchCurrentBatch", () => {
     expect(out[1]).toBeNull();
   });
 
-  it("uses a caller-supplied signal instead of creating its own", async () => {
-    const signal = AbortSignal.timeout(50_000);
+  it("lets a caller-supplied signal cancel the request", async () => {
+    const controller = new AbortController();
     const calls = stubFetch(() => ok([batchEntry(1)]));
-    await fetchCurrentBatch([PARIS], "comparison", { signal });
-    expect(calls[0].signal).toBe(signal);
+    await fetchCurrentBatch([PARIS], "comparison", { signal: controller.signal });
+    expect(calls[0].signal.aborted).toBe(false);
+    controller.abort();
+    expect(calls[0].signal.aborted).toBe(true);
   });
 
   it("rejects on an HTTP error", async () => {

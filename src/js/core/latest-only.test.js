@@ -60,3 +60,47 @@ describe("createLatestOnly", () => {
     expect(await first).toBe("a");
   });
 });
+
+describe("createLatestOnly cancellation signal", () => {
+  it("gives each run a signal that aborts when a newer run starts", async () => {
+    const run = createLatestOnly();
+    let firstSignal;
+    const first = run(async (isStale, signal) => {
+      firstSignal = signal;
+      await after(10);
+      return "a";
+    });
+    expect(firstSignal.aborted).toBe(false);
+    const second = run(async (isStale, signal) => {
+      expect(signal.aborted).toBe(false);
+      return "b";
+    });
+    expect(firstSignal.aborted).toBe(true);
+    expect(await second).toBe("b");
+    expect(await first).toBeNull();
+  });
+
+  it("aborts the run in flight on cancel()", async () => {
+    const run = createLatestOnly();
+    let signal;
+    const pending = run(async (isStale, s) => {
+      signal = s;
+      await after(5);
+      return "x";
+    });
+    run.cancel();
+    expect(signal.aborted).toBe(true);
+    expect(await pending).toBeNull();
+  });
+
+  it("does not abort a run that has already finished", async () => {
+    const run = createLatestOnly();
+    let signal;
+    await run(async (isStale, s) => {
+      signal = s;
+      return "done";
+    });
+    await run(async () => "next");
+    expect(signal.aborted).toBe(false);
+  });
+});

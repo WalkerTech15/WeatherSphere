@@ -4,7 +4,7 @@ import { state } from "../core/state.js";
 import { t } from "../core/i18n.js";
 import { setJSON, KEYS } from "../core/storage.js";
 import { fetchCurrentBatch } from "../weather/weather-provider.js";
-import { batchKey, isBatchFresh } from "../weather/weather-cache.js";
+import { batchKey, isBatchFresh, createBatchLoader } from "../weather/weather-cache.js";
 import { demoWeather } from "../weather/weather-demo.js";
 import { snapshotFromForecast, toFavoriteWeather } from "../weather/weather-normalizer.js";
 import { showToast } from "../ui/notifications.js";
@@ -30,26 +30,34 @@ export function favAgoMinutes() {
   return Math.max(0, Math.round((Date.now() - favWxAt) / 60000));
 }
 
+/* Opening the view while a star-toggle's load is still in flight joins it;
+   a changed list cancels the older load so it cannot overwrite the newer. */
+const loadLatest = createBatchLoader();
+
 export async function loadFavWeather(force = false) {
   const locs = state.favorites;
   if (!locs.length) return;
   const key = batchKey(locs);
   if (!force && isBatchFresh({ key: favWxKey, at: favWxAt }, key)) return;
-  try {
-    const snapshots = await fetchCurrentBatch(locs, "favorites");
-    favWx = {};
-    locs.forEach((loc, i) => {
-      favWx[loc.id] = toFavoriteWeather(snapshots[i]);
-    });
-  } catch {
-    favWx = {};
-    locs.forEach((loc) => {
-      favWx[loc.id] = toFavoriteWeather(snapshotFromForecast(demoWeather(loc)));
-    });
-  }
-  favWxAt = Date.now();
-  favWxKey = key;
-  renderFavorites();
+  await loadLatest(key, force, async (isStale, signal) => {
+    const next = {};
+    try {
+      const snapshots = await fetchCurrentBatch(locs, "favorites", { signal });
+      locs.forEach((loc, i) => {
+        next[loc.id] = toFavoriteWeather(snapshots[i]);
+      });
+    } catch {
+      if (isStale()) return; /* superseded by a newer list — no fallback */
+      locs.forEach((loc) => {
+        next[loc.id] = toFavoriteWeather(snapshotFromForecast(demoWeather(loc)));
+      });
+    }
+    if (isStale()) return;
+    favWx = next;
+    favWxAt = Date.now();
+    favWxKey = key;
+    renderFavorites();
+  });
 }
 
 export function toggleFavorite() {

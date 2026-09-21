@@ -314,3 +314,72 @@ describe("loadComparisonWeather", () => {
     expect(comparisonWx).toBeDefined();
   });
 });
+
+describe("loadComparisonWeather — overlapping loads", () => {
+  const weatherPayload = (temp) => ({
+    timezone: "Europe/Paris",
+    current: {
+      temperature_2m: temp,
+      apparent_temperature: temp - 1,
+      relative_humidity_2m: 55,
+      wind_speed_10m: 12,
+      weather_code: 1,
+      is_day: 1,
+    },
+    daily: { precipitation_probability_max: [30], uv_index_max: [4] },
+  });
+  const ok = (body) => ({ ok: true, status: 200, json: async () => body });
+
+  function controlledFetch() {
+    const requests = [];
+    globalThis.fetch = vi.fn(
+      (url, { signal }) =>
+        new Promise((resolve, reject) => {
+          if (signal.aborted) return reject(signal.reason);
+          signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+          requests.push({ url: String(url), signal, resolve });
+        }),
+    );
+    return requests;
+  }
+  const weatherCalls = (requests) => requests.filter((r) => !r.url.includes("air-quality"));
+
+  beforeEach(() => {
+    state.favorites = [PARIS, TOKYO, LIMA];
+    toggleComparison(PARIS);
+    toggleComparison(TOKYO);
+  });
+
+  it("reopening the view while the same selection is loading joins that load", async () => {
+    const requests = controlledFetch();
+    const first = loadComparisonWeather();
+    const second = loadComparisonWeather();
+    expect(second).toBe(first);
+    expect(weatherCalls(requests)).toHaveLength(1);
+    weatherCalls(requests)[0].resolve(ok([weatherPayload(20), weatherPayload(30)]));
+    await Promise.resolve();
+    await new Promise((r) => setTimeout(r, 0));
+    requests.filter((r) => r.url.includes("air-quality")).forEach((r) => r.resolve(ok([])));
+    const wx = await first;
+    expect(wx.paris.temp).toBe(20);
+  });
+
+  it("a changed selection cancels the older load, which cannot overwrite the newer", async () => {
+    const requests = controlledFetch();
+    const older = loadComparisonWeather(true);
+    toggleComparison(LIMA);
+    const newer = loadComparisonWeather(true);
+    expect(requests[0].signal.aborted).toBe(true);
+    const current = weatherCalls(requests).find((r) => !r.signal.aborted);
+    current.resolve(ok([weatherPayload(20), weatherPayload(30), weatherPayload(40)]));
+    await new Promise((r) => setTimeout(r, 0));
+    requests
+      .filter((r) => r.url.includes("air-quality") && !r.signal.aborted)
+      .forEach((r) => r.resolve(ok([])));
+    await expect(older).resolves.toBeNull();
+    const wx = await newer;
+    expect(Object.keys(wx)).toEqual(["paris", "tokyo", "lima"]);
+    expect(wx.lima.temp).toBe(40);
+    expect(comparisonWx).toBe(wx);
+  });
+});

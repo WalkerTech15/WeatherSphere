@@ -449,5 +449,15 @@ export function renderMapInfo() {
   );
 
   bindNearbyClicks();
+  loadNearbyIfMapVisible();
+}
+
+/* Nearby places cost six reverse-geocoding lookups plus a weather request,
+   and they only appear in this panel — so they are looked up while the Map
+   view is open, not for every place picked on Home or Forecast. main.js
+   calls this again when the Map view opens; until then the section shows
+   its usual "loading" state. */
+export function loadNearbyIfMapVisible() {
+  if (state.view !== "map" || !state.loc) return;
   void loadAndRenderNearbyPlaces(state.loc);
 }

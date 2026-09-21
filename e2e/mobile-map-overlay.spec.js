@@ -60,7 +60,7 @@ test.describe("map overlay controls on a phone", () => {
     await openMap(page);
     await chooseLayer(page, "wind");
 
-    const buttons = page.locator(".map-time");
+    const buttons = page.locator(".map-time:not(.map-anim)");
     await expect(buttons).toHaveCount(3);
     const boxes = await buttons.evaluateAll((els) => els.map((el) => el.getBoundingClientRect()));
     boxes.forEach((box) => expect(box.height).toBeGreaterThanOrEqual(40));

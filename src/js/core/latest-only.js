@@ -8,30 +8,45 @@
  * timing.
  *
  * The task receives `isStale` so it can also bail early — between two awaits —
- * instead of doing the rest of the work and having its result discarded.
+ * instead of doing the rest of the work and having its result discarded. It
+ * also receives an AbortSignal that fires the moment the run is superseded,
+ * so a task that passes it to fetch() stops downloading an answer nobody
+ * will use. Tasks that ignore it behave exactly as before.
  *
  * No DOM, no timers, no globals: one runner per concurrent activity. */
 
 export function createLatestOnly() {
   let token = 0;
+  let controller = null;
+
+  function supersede() {
+    token++;
+    controller?.abort();
+    controller = null;
+  }
 
   /**
-   * @param {(isStale: () => boolean) => Promise<any>} task
+   * @param {(isStale: () => boolean, signal: AbortSignal) => Promise<any>} task
    * @returns {Promise<any|null>} the task's result, or null if superseded
    */
   async function run(task) {
-    const mine = ++token;
+    supersede();
+    const mine = token;
+    const own = new AbortController();
+    controller = own;
     const isStale = () => mine !== token;
-    const result = await task(isStale);
-    return isStale() ? null : result;
+    try {
+      const result = await task(isStale, own.signal);
+      return isStale() ? null : result;
+    } finally {
+      if (controller === own) controller = null;
+    }
   }
 
   /** How many runs have been started — useful for assertions and diagnostics. */
   run.count = () => token;
-  /** Invalidate anything in flight without starting a new run. */
-  run.cancel = () => {
-    token++;
-  };
+  /** Invalidate (and abort) anything in flight without starting a new run. */
+  run.cancel = supersede;
 
   return run;
 }

@@ -23,10 +23,19 @@ export function getActiveProvider() {
   return WEATHER_PROVIDERS[ACTIVE_PROVIDER_ID];
 }
 
-/* Full forecast for one place, cached and deduplicated per coordinates. */
-export function fetchForecast(loc) {
+/**
+ * Full forecast for one place, cached and shared per provider + coordinates.
+ * @param {{signal?: AbortSignal}} [options] aborting stops this caller
+ *   waiting (rejects with kind "aborted"); the request itself is cancelled
+ *   only when no other caller still wants it.
+ */
+export function fetchForecast(loc, { signal } = {}) {
   const provider = getActiveProvider();
-  return forecastCache.get(forecastCacheKey(provider.id, loc), () => provider.fetchForecast(loc));
+  return forecastCache.get(
+    forecastCacheKey(provider.id, loc),
+    (requestSignal) => provider.fetchForecast(loc, { signal: requestSignal }),
+    signal,
+  );
 }
 
 /**

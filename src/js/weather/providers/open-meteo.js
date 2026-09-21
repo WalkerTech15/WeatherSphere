@@ -196,14 +196,16 @@ export async function fetchAirQuality(locs, { signal } = {}) {
   return asArray(data).map((entry) => entry?.current?.european_aqi ?? null);
 }
 
-export async function fetchForecast(loc) {
+export async function fetchForecast(loc, { signal } = {}) {
   /* Air quality comes from a separate endpoint and is optional: it is
      requested alongside the forecast and resolves to null on any failure,
-     so it never delays or breaks the weather render. */
-  const aqi = fetchAirQuality([loc])
+     so it never delays or breaks the weather render. Both requests share
+     the caller's cancellation signal, so a cancelled forecast leaves no
+     air-quality request running either. */
+  const aqi = fetchAirQuality([loc], { signal })
     .then((values) => values[0] ?? null)
     .catch(() => null);
-  const payload = await requestJson(forecastUrl(loc));
+  const payload = await requestJson(forecastUrl(loc), { signal });
   return { ...normalizeForecast(payload), _aqi: aqi };
 }
 

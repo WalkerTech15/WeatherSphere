@@ -72,6 +72,7 @@ import {
   renderRecentLocations,
   clearRecentSearches,
   collapseMapSheet,
+  loadNearbyIfMapVisible,
 } from "./ui/render-map.js";
 import { on } from "./core/app-bus.js";
 import { bindForecastCarousel } from "./ui/render-forecast.js";
@@ -306,6 +307,11 @@ on("weather:retry", () => {
   if (state.loc) selectLocation(state.loc);
 });
 on("search:requested", () => focusSearch());
+/* Nearby places are only looked up while the Map view is open — see
+   loadNearbyIfMapVisible() in ui/render-map.js. */
+on("view:changed", (view) => {
+  if (view === "map") loadNearbyIfMapVisible();
+});
 
 /* ── Resize: realign toggle thumbs, resize maps, redraw charts ── */
 let resizeTimer = null;

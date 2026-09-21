@@ -37,6 +37,9 @@ let lastErrToast = 0;
    response can never land on top of a faster later choice — the map would
    otherwise end up showing one place's name over another place's numbers. */
 let selectionToken = 0;
+/* Cancels the previous selection's weather request when a newer one starts,
+   so a quick run of clicks downloads one forecast, not one per click. */
+let selectionController = null;
 
 export async function selectLocation(loc) {
   const token = ++selectionToken;
@@ -69,15 +72,27 @@ export async function selectLocation(loc) {
      (services/photo-api.js) for the measured LCP impact. */
   prefetchLocPhoto(loc);
 
+  /* This selection's request is started BEFORE the previous one is
+     cancelled: re-selecting a place whose forecast is still loading (a retry,
+     a double click) then joins that request instead of restarting it. */
+  const controller = new AbortController();
+  const request = fetchForecast(loc, { signal: controller.signal });
+  selectionController?.abort();
+  selectionController = controller;
+
   let wx;
   let isDemo = false;
   try {
-    wx = await fetchForecast(loc);
+    wx = await request;
   } catch {
+    /* superseded (and cancelled): the newer selection owns the screen, so
+       no demo fallback and no error toast for this one */
+    if (isStale()) return;
     wx = demoWeather(loc);
     isDemo = true;
   }
   if (isStale()) return;
+  if (selectionController === controller) selectionController = null;
 
   state.wx = wx;
   state.isDemo = isDemo;

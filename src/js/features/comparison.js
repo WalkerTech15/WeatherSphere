@@ -18,9 +18,9 @@ import { state } from "../core/state.js";
 import { getJSON, setJSON, KEYS } from "../core/storage.js";
 import { FETCH_TIMEOUT_MS } from "../core/config.js";
 import { fetchCurrentBatch, fetchAirQuality } from "../weather/weather-provider.js";
-import { batchKey, isBatchFresh } from "../weather/weather-cache.js";
+import { batchKey, isBatchFresh, createBatchLoader } from "../weather/weather-cache.js";
+import { anySignal } from "../weather/weather-errors.js";
 import { toComparisonWeather } from "../weather/weather-normalizer.js";
-import { createLatestOnly } from "../core/latest-only.js";
 
 /* How many places can be compared at once. Five columns remains readable
    with the existing horizontal scroll on smaller screens. */
@@ -134,9 +134,10 @@ export function __resetComparisonForTests() {
   comparisonAt = 0;
 }
 
-/* One runner, so a rapid sequence of selections can only ever paint the
-   last one — the same stale-response guard the map click uses. */
-const runLatest = createLatestOnly();
+/* One loader, so a rapid sequence of selections can only ever paint the
+   last one (older loads are cancelled), and reopening the view while the
+   same selection is loading joins that load instead of repeating it. */
+const loadLatest = createBatchLoader();
 
 async function loadAirQuality(locs, signal) {
   try {
@@ -153,19 +154,20 @@ async function loadAirQuality(locs, signal) {
  * @param {boolean} force skip the freshness check (used after a change)
  */
 export function loadComparisonWeather(force = false) {
-  return runLatest(async (isStale) => {
-    const locs = comparisonLocations();
+  const locs = comparisonLocations();
+  const key = batchKey(locs);
+  return loadLatest(key, force, async (isStale, cancelSignal) => {
     if (!locs.length) {
       comparisonWx = {};
       comparisonKey = "";
       return {};
     }
-    const key = batchKey(locs);
     if (!force && isBatchFresh({ key: comparisonKey, at: comparisonAt }, key)) {
       return comparisonWx;
     }
 
-    const signal = AbortSignal.timeout(FETCH_TIMEOUT_MS);
+    /* one timeout shared by both requests, plus cancellation by a newer load */
+    const signal = anySignal([cancelSignal, AbortSignal.timeout(FETCH_TIMEOUT_MS)]);
     let next = {};
     try {
       const snapshots = await fetchCurrentBatch(locs, "comparison", { signal });

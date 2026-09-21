@@ -120,3 +120,67 @@ describe("loadFavWeather", () => {
     expect(globalThis.fetch).toHaveBeenCalledTimes(3);
   });
 });
+
+describe("loadFavWeather — overlapping loads", () => {
+  /* fetch answered by hand; rejects on abort like a real fetch */
+  function controlledFetch() {
+    const requests = [];
+    globalThis.fetch = vi.fn(
+      (url, { signal }) =>
+        new Promise((resolve, reject) => {
+          if (signal.aborted) return reject(signal.reason);
+          signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+          requests.push({ url: String(url), signal, resolve });
+        }),
+    );
+    return requests;
+  }
+  const places = (url) => new URL(url).searchParams.get("latitude").split(",").length;
+  const answer = (req, temps) => req.resolve(ok(temps.map((t) => batchEntry(t))));
+
+  it("opening Favorites while a star-toggle's load is in flight sends no second request", async () => {
+    const requests = controlledFetch();
+    const forced = favorites.loadFavWeather(true); /* the star toggle */
+    const viewOpen = favorites.loadFavWeather(); /* the view opening right after */
+    expect(requests).toHaveLength(1);
+    answer(requests[0], [20, 30]);
+    await Promise.all([forced, viewOpen]);
+    expect(favorites.favWx.paris.temp).toBe(20);
+    expect(renderFavorites).toHaveBeenCalledTimes(1);
+  });
+
+  it("a changed list cancels the older load, whose late answer is ignored", async () => {
+    const requests = controlledFetch();
+    state.favorites = [PARIS];
+    const older = favorites.loadFavWeather(true);
+    state.favorites = [PARIS, TOKYO];
+    const newer = favorites.loadFavWeather(true);
+    expect(requests[0].signal.aborted).toBe(true);
+    expect(places(requests[1].url)).toBe(2);
+    answer(requests[1], [21, 31]);
+    await Promise.all([older, newer]);
+    expect(favorites.favWx).toEqual({
+      paris: { temp: 21, code: 61, isDay: 1, humidity: 55, wind: 12, hi: 25, lo: 15 },
+      tokyo: { temp: 31, code: 61, isDay: 1, humidity: 55, wind: 12, hi: 35, lo: 25 },
+    });
+    /* the cancelled load neither rendered nor fell back to demo data */
+    expect(renderFavorites).toHaveBeenCalledTimes(1);
+  });
+
+  it("a slow older answer cannot overwrite a newer list even if it arrives", async () => {
+    const answers = [];
+    globalThis.fetch = vi.fn(
+      (url) => new Promise((resolve) => answers.push({ url: String(url), resolve })),
+    );
+    state.favorites = [PARIS];
+    const older = favorites.loadFavWeather(true);
+    state.favorites = [PARIS, TOKYO];
+    const newer = favorites.loadFavWeather(true);
+    answer(answers[1], [22, 32]);
+    await newer;
+    answer(answers[0], [99]); /* lands last */
+    await older;
+    expect(favorites.favWx.paris.temp).toBe(22);
+    expect(favorites.favWx.tokyo.temp).toBe(32);
+  });
+});
