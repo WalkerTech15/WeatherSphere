@@ -20,7 +20,6 @@
 .hero-fx[hidden] {
   display: none;
 }
-
 /* Snow. Each flake is a full-height column with the dot at its top, so the
    column can travel the hero's height by a percentage of ITSELF while only
    transform changes. */
@@ -179,12 +178,4 @@ body[data-theme="dark"] .map-time.map-anim[aria-pressed="true"]:not([disabled]) 
   .map-time.map-anim {
     min-height: 44px;
   }
-}
-
-/* ── Settings ───────────────────────────────────────────────────────────
-   The switch is unavailable, not merely off, when the device asks for
-   reduced motion — say so rather than leave a dead-looking control. */
-.set-anim .switch[disabled] {
-  cursor: not-allowed;
-  opacity: 0.55;
 }

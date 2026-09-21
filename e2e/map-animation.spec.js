@@ -239,25 +239,6 @@ test.describe("reduced motion and the animation setting", () => {
     await expect(page.locator("#mapWeatherControls .map-legend")).toBeVisible();
   });
 
-  test("switching animations off in Settings removes the control from the map", async ({
-    page,
-  }) => {
-    await openMap(page);
-    await chooseLayer(page, "rain");
-    await expect(animate(page)).toBeVisible();
-
-    await page.locator('.side-item[data-view="settings"]').click();
-    await page.locator("#animationsSwitch").click();
-    await page.locator('.side-item[data-view="map"]').click();
-    await expect(animate(page)).toHaveCount(0);
-
-    await page.locator('.side-item[data-view="settings"]').click();
-    await page.locator("#animationsSwitch").click();
-    await page.locator('.side-item[data-view="map"]').click();
-    await expect(animate(page)).toBeVisible();
-    await expect(animate(page)).toHaveAttribute("aria-pressed", "false");
-  });
-
   test("a device preference that flips while the map is open takes effect at once", async ({
     page,
   }) => {

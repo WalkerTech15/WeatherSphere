@@ -203,55 +203,6 @@ test.describe("reduced motion and the animation setting", () => {
     await expectNoEffects(page);
   });
 
-  test("the Settings switch is on by default and stores an explicit off", async ({ page }) => {
-    await openHome(page, { weatherKind: "snow" });
-    await page.goto("/#/settings");
-    const toggle = page.locator("#animationsSwitch");
-    await expect(toggle).toHaveAttribute("aria-checked", "true");
-    await expect(toggle).toBeEnabled();
-    /* one labelled control: name and description both resolve */
-    await expect(toggle).toHaveAttribute("aria-labelledby", "animationsLbl");
-    await expect(page.locator("#animationsLbl")).not.toBeEmpty();
-
-    await toggle.click();
-    await expect(toggle).toHaveAttribute("aria-checked", "false");
-    expect(await page.evaluate(() => localStorage.getItem("ws_anim"))).toBe("0");
-  });
-
-  test("switched off, snow becomes a still and the choice survives a reload", async ({ page }) => {
-    await openHome(page, { weatherKind: "snow" });
-    await page.goto("/#/settings");
-    await page.locator("#animationsSwitch").click();
-
-    await page.reload();
-    await expect(page.locator("#animationsSwitch")).toHaveAttribute("aria-checked", "false");
-    await page.locator('.side-item[data-view="home"]').click();
-    await expect(fx(page)).toHaveAttribute("data-motion", "static");
-    await expect(flakes(page).first()).toHaveCSS("animation-name", "none");
-  });
-
-  test("switching it back on animates again, without a reload", async ({ page }) => {
-    await openHome(page, { weatherKind: "snow" });
-    await page.goto("/#/settings");
-    await page.locator("#animationsSwitch").click(); /* off */
-    await page.locator("#animationsSwitch").click(); /* on */
-    expect(await page.evaluate(() => localStorage.getItem("ws_anim"))).toBe("1");
-    await page.locator('.side-item[data-view="home"]').click();
-    await expect(fx(page)).toHaveAttribute("data-motion", "animated");
-    await expect(flakes(page).first()).toHaveCSS("animation-name", "fxSnow");
-  });
-
-  test("under reduced motion the switch is unavailable, reads off, and says why", async ({
-    page,
-  }) => {
-    await openHome(page, {}, { reducedMotion: true });
-    await page.goto("/#/settings");
-    const toggle = page.locator("#animationsSwitch");
-    await expect(toggle).toBeDisabled();
-    await expect(toggle).toHaveAttribute("aria-checked", "false");
-    await expect(page.locator("#animationsNote")).toContainText(/réduire|reduce/i);
-  });
-
   test("a device preference that changes while the page is open takes effect at once", async ({
     page,
   }) => {
