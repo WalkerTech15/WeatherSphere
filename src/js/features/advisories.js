@@ -26,8 +26,9 @@ export const THRESHOLDS = {
 /* WMO weather-interpretation codes. Only the violent end of each family: 63
    (moderate rain) and 71 (slight snow) are ordinary weather and never raise an
    advisory. */
+export const THUNDERSTORM_CODES = [95, 96, 99]; // storm, storm with slight/heavy hail
 const CODES = {
-  thunderstorm: [95, 96, 99], // storm, storm with slight/heavy hail
+  thunderstorm: THUNDERSTORM_CODES,
   heavyRain: [65, 67, 82], // heavy rain, heavy freezing rain, violent showers
   heavySnow: [75, 77, 86], // heavy snowfall, snow grains, heavy snow showers
 };

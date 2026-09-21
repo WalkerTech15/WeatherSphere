@@ -85,6 +85,36 @@ function legendHtml(overlay, legend) {
     </figure>`;
 }
 
+/* The optional "Animate" toggle: the rain forecast playing through, or the
+   wind particles moving. Offered only while the overlay is ready AND the
+   animation controller says there is real data to animate and motion is
+   allowed — otherwise nothing is drawn, not a disabled button. It is a toggle,
+   so it carries aria-pressed and one constant name. */
+function animationHtml(overlay) {
+  const anim = overlay.animation;
+  if (!anim?.available || overlay.status !== "ready") return "";
+  const label = anim.kind === "rain" ? t("mapAnimateRain") : t("mapAnimateWind");
+  const icon = anim.playing
+    ? '<path d="M8 5v14M16 5v14"/>' /* pause: what pressing it will do */
+    : '<path d="m7 4 13 8-13 8z"/>';
+  return `<div class="map-anim-row">
+      <button class="map-time map-anim" type="button" data-map-anim="${esc(anim.kind)}"
+        aria-pressed="${anim.playing ? "true" : "false"}" aria-label="${esc(label)}">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" stroke="currentColor"
+          stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">${icon}</svg>
+        ${esc(t("mapAnimate"))}
+      </button>
+    </div>`;
+}
+
+/* While rain plays the forecast time moves several times a second. Only the
+   status line changes, so the buttons — and keyboard focus on them — are left
+   alone rather than rebuilt every tick. */
+export function updateTimeStatus(overlay) {
+  const status = $("#mapWeatherControls .map-time-status");
+  if (status && overlay) status.textContent = timeStatusText(overlay);
+}
+
 /* The gradient and tick offsets are numeric values derived from the layer's
    own color ramp; they are applied as element styles rather than interpolated
    into the markup so no provider-supplied value ever reaches an HTML string. */
@@ -101,7 +131,7 @@ function paintLegend(host, legend) {
 /* Roving-tabindex arrow navigation, the same pattern the theme menu uses:
    one tab stop for the group, arrows move between the options and select. */
 function bindTimeline(host, onSelectTime) {
-  const buttons = $$(".map-time", host);
+  const buttons = $$(".map-time:not(.map-anim)", host);
   buttons.forEach((button) => {
     button.addEventListener("click", () => onSelectTime(Number(button.dataset.mapTime)));
   });
@@ -129,7 +159,7 @@ function bindTimeline(host, onSelectTime) {
  *                          offset, colorRamp, timeMs, clamped, offsets)
  * @param {object} handlers { onSelectTime }
  */
-export function renderWeatherOverlayUI(overlay, { onSelectTime } = {}) {
+export function renderWeatherOverlayUI(overlay, { onSelectTime, onToggleAnimation } = {}) {
   const host = $("#mapWeatherControls");
   if (!host) return;
 
@@ -141,13 +171,17 @@ export function renderWeatherOverlayUI(overlay, { onSelectTime } = {}) {
 
   /* re-rendering replaces the buttons, so remember whether focus was inside
      the group and put it back on the equivalent control afterwards */
-  const focusedOffset = document.activeElement?.closest?.(".map-time")?.dataset.mapTime;
+  const focusedOffset = document.activeElement?.closest?.(".map-time:not(.map-anim)")?.dataset
+    .mapTime;
+  const focusedAnim = Boolean(document.activeElement?.closest?.(".map-anim"));
 
   const legend = legendFor(overlay);
   host.hidden = false;
-  host.innerHTML = `${timelineHtml(overlay)}${legendHtml(overlay, legend)}`;
+  host.innerHTML = `${animationHtml(overlay)}${timelineHtml(overlay)}${legendHtml(overlay, legend)}`;
   paintLegend(host, legend);
   if (onSelectTime) bindTimeline(host, onSelectTime);
+  $(".map-anim", host)?.addEventListener("click", () => onToggleAnimation?.());
+  if (focusedAnim) $(".map-anim", host)?.focus();
 
   if (focusedOffset !== undefined) {
     $(`.map-time[data-map-time="${focusedOffset}"]`, host)?.focus();

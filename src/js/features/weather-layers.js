@@ -44,11 +44,12 @@ export function removeWeatherLayer(inst) {
   inst.weatherLayerType = null;
 }
 
-function makeWeatherLayer(module, type) {
+function makeWeatherLayer(module, type, windOptions = {}) {
   const options = { id: WEATHER_LAYER_IDS[type], opacity: type === "wind" ? 0.8 : 0.68 };
   if (type === "temperature") return new module.TemperatureLayer(options);
   if (type === "rain") return new module.PrecipitationLayer(options);
-  return new module.WindLayer(options);
+  /* the particle budget (features/map-animation.js) applies to wind only */
+  return new module.WindLayer({ ...options, ...windOptions });
 }
 
 /* Insert weather UNDER the basemap's labels rather than on top of everything.
@@ -128,6 +129,7 @@ export async function applyWeatherLayer(
     offsetHours = 0,
     now,
     timeoutMs = WEATHER_SOURCE_TIMEOUT_MS,
+    windOptions,
   } = {},
 ) {
   await awaitMapReady(inst.map);
@@ -141,7 +143,7 @@ export async function applyWeatherLayer(
   /* always remove any previous overlay first — repeated clicks (even on the
      same layer) never leave more than one weather layer on the map */
   removeWeatherLayer(inst);
-  const layer = makeWeatherLayer(weather, requested);
+  const layer = makeWeatherLayer(weather, requested, windOptions);
   inst.map.addLayer(layer, firstSymbolLayerId(inst.map));
   inst.weatherLayer = layer;
   inst.weatherLayerType = requested;

@@ -19,6 +19,9 @@ export const state = {
   /* off by default — getStr() returns null for a visitor who never set it,
      and null !== "1" */
   clockSeconds: getStr(KEYS.clockSeconds) === "1",
+  /* on unless the visitor switched it off — and even then only "may" animate:
+     core/motion.js still forces motion off for prefers-reduced-motion. */
+  animations: getStr(KEYS.animations) !== "0",
   favorites: getJSON(KEYS.favorites, []),
   /* Recent searches: opt-in, so a missing flag means off for a new visitor.
      The list itself is loaded/sanitized by features/recent-locations.js at

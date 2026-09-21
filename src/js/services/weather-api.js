@@ -22,7 +22,7 @@ export async function fetchWeatherRaw(loc) {
        defined against (sustained wind understates a squall). Added to the
        SAME request — no extra round trip. */
     current:
-      "temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,surface_pressure",
+      "temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,surface_pressure,precipitation,snowfall",
     hourly:
       "temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_gusts_10m,surface_pressure,dew_point_2m,precipitation_probability,visibility,uv_index,weather_code,is_day",
     daily:
@@ -92,6 +92,11 @@ export async function fetchWeatherRaw(loc) {
       gust: d.current.wind_gusts_10m ?? null,
       windDir: d.current.wind_direction_10m,
       pressure: d.current.surface_pressure,
+      /* Measured precipitation now (mm) and snowfall now (cm). null when the
+         provider omits them — the weather animations treat that as "no
+         data" and show nothing, never as "zero" or "some". */
+      precip: d.current.precipitation ?? null,
+      snowfall: d.current.snowfall ?? null,
       code: d.current.weather_code,
       isDay: d.current.is_day,
       uv: d.hourly.uv_index?.[idx] ?? 0,

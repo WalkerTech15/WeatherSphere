@@ -3,6 +3,8 @@
 import { state } from "../core/state.js";
 import { $, $$ } from "../core/dom.js";
 import { setStr, KEYS } from "../core/storage.js";
+import { emit } from "../core/app-bus.js";
+import { prefersReducedMotion } from "../core/motion.js";
 import { t, applyStaticI18n } from "../core/i18n.js";
 import { syncSegToggle, syncSidebarA11y } from "../ui/navigation.js";
 import { renderChart, renderExplore, updateHeroClock } from "../ui/render-home.js";
@@ -61,6 +63,16 @@ export function setClockSeconds(v) {
   updateHeroClock();
 }
 
+/* Weather animations on/off. The visitor's choice is stored as given; whether
+   anything actually moves is decided by core/motion.js, where a device set to
+   reduce motion always wins. Everything that animates listens for the event. */
+export function setAnimations(v) {
+  state.animations = v;
+  setStr(KEYS.animations, v ? "1" : "0");
+  updateSettingsUI();
+  emit("animations:changed", { enabled: v });
+}
+
 export function applyTheme() {
   const dark =
     state.theme === "dark" ||
@@ -91,6 +103,19 @@ export function updateSettingsUI() {
   const secSwitch = $("#clockSecondsSwitch");
   if (secSwitch) secSwitch.setAttribute("aria-checked", !!state.clockSeconds);
   $$(".switch[data-recents]").forEach((b) => b.setAttribute("aria-checked", !!state.saveRecents));
+  const animSwitch = $("#animationsSwitch");
+  if (animSwitch) {
+    /* Under reduced motion the switch is unavailable rather than merely off:
+       it reads off, cannot be turned on, and says why. */
+    const reduced = prefersReducedMotion();
+    animSwitch.setAttribute("aria-checked", String(state.animations && !reduced));
+    animSwitch.disabled = reduced;
+    const note = $("#animationsNote");
+    if (note) {
+      note.dataset.i18n = reduced ? "animReduced" : "animSwitchSub";
+      note.textContent = t(note.dataset.i18n);
+    }
+  }
 }
 
 /* ── Navbar theme control ──

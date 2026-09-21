@@ -22,6 +22,7 @@ import {
 } from "../ui/render-home.js";
 import { renderAdvisory, clearAdvisory } from "../ui/render-advisory.js";
 import { renderWeatherNotice, clearWeatherNotice } from "../ui/render-weather-notice.js";
+import { syncAmbient, clearAmbient } from "../ui/render-ambient.js";
 import { renderHourly, renderForecastPage } from "../ui/render-forecast.js";
 import { renderMap } from "./map.js";
 import { renderMapInfo, renderRecentLocations, resetMapSheet } from "../ui/render-map.js";
@@ -60,6 +61,7 @@ export async function selectLocation(loc) {
   /* the previous city's hazards must not hang over the one now loading */
   clearAdvisory();
   clearWeatherNotice(); /* the previous place's "demo weather" notice must not hang over this one */
+  clearAmbient(); /* …and neither may its snow, storm or waves */
   /* Starts the hero photo's own network lookup NOW, in parallel with the
      weather fetch below, rather than leaving it to wait behind it — the photo
      only ever needed `loc`, never `wx`. See prefetchLocPhoto's own comment
@@ -99,6 +101,7 @@ export async function selectLocation(loc) {
 export function renderAllWeather() {
   if (!state.wx) return;
   renderHero();
+  syncAmbient(); /* only ever from THIS place's own weather */
   renderWeatherNotice();
   renderAdvisory();
   renderMetrics();

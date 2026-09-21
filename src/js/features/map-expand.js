@@ -2,11 +2,11 @@
  *
  * One boolean, mirrored onto <body> as a class. Everything visual is CSS
  * (see the "Expanded map mode" section of styles/views/map.css): the map card
- * grows to fill the workspace under the top navigation and beside the
- * sidebar, while the heading row, the recents/popular cards and the footer
- * step aside. The top navigation and the sidebar deliberately stay put — this
- * is a layout mode, not the Fullscreen API, so browser chrome is never
- * touched and the URL never changes.
+ * becomes a fixed layer covering the whole viewport, the sidebar steps out,
+ * and the top navigation shrinks into a compact floating bar over the map.
+ * It is still a layout mode, not the Fullscreen API: browser chrome is never
+ * touched, the URL never changes, and the same header elements stay in the
+ * DOM, so search, theme and language keep working without a second copy.
  *
  * Nothing here knows how to draw a map. The map's camera, layer, selection
  * and detail panel all live in features/map.js and survive a mode change
@@ -20,6 +20,11 @@ import { resizeMaps } from "./map.js";
 export const EXPANDED_CLASS = "map-expanded";
 
 let expanded = false;
+/* Where the page was scrolled when the mode was entered. Hiding the heading,
+   the recents cards and the footer shortens the document, so the browser
+   clamps the scroll position — without this, leaving the mode would drop
+   the visitor back at the top of the page instead of where they were. */
+let savedScrollY = 0;
 
 export function isMapExpanded() {
   return expanded;
@@ -39,19 +44,25 @@ function syncControls() {
 
 /* `force` lets the caller assert a state instead of flipping ("leaving the
    map view exits expanded mode" must not accidentally enter it). */
-export function setMapExpanded(next, { focus = false } = {}) {
+export function setMapExpanded(next, { focus = false, restoreScroll = true } = {}) {
   const target = Boolean(next);
   if (target === expanded) return false;
+  if (target) savedScrollY = window.scrollY;
   expanded = target;
   document.body.classList.toggle(EXPANDED_CLASS, expanded);
   syncControls();
-
   /* The container's box changes in the same frame the class lands, but
      MapLibre only re-reads it when asked. Deferred one frame so the new
      layout has actually been computed before it measures — resizing against
      the pre-toggle box leaves the canvas the old size until the next
      unrelated resize. */
-  requestAnimationFrame(() => resizeMaps());
+  requestAnimationFrame(() => {
+    resizeMaps();
+    /* Removing overflow:hidden can make the browser clamp the scroll
+       position before the new layout is ready. Restore it after that frame,
+       using the numeric overload so smooth-scroll CSS cannot interfere. */
+    if (!expanded && restoreScroll) window.scrollTo(0, savedScrollY);
+  });
 
   /* Focus has to follow the control that just disappeared, or it falls to
      <body> and a keyboard user loses their place. Only on a real activation —
@@ -59,7 +70,9 @@ export function setMapExpanded(next, { focus = false } = {}) {
      the user actually went. */
   if (focus) {
     const successor = expanded ? $("#mapExitExpandBtn") : $("#mapExpandBtn");
-    successor?.focus();
+    /* Moving focus must not scroll the restored normal page back to the
+       control; scroll restoration is handled independently above. */
+    successor?.focus({ preventScroll: true });
   }
   return true;
 }
@@ -70,8 +83,8 @@ export function toggleMapExpanded() {
 
 /* Escape, and any other "get me out of here" path. Returns whether it did
    anything, so a caller can tell if it consumed the key. */
-export function exitMapExpanded({ focus = false } = {}) {
-  return setMapExpanded(false, { focus });
+export function exitMapExpanded({ focus = false, restoreScroll = true } = {}) {
+  return setMapExpanded(false, { focus, restoreScroll });
 }
 
 export function bindMapExpand() {
@@ -84,7 +97,8 @@ export function bindMapExpand() {
      with the body class still set would strand every other view inside a
      non-scrolling, footer-less shell. */
   on("view:changed", (view) => {
-    if (view !== "map") exitMapExpanded();
+    /* The Map page's scroll offset means nothing on the view being opened. */
+    if (view !== "map") exitMapExpanded({ restoreScroll: false });
   });
 
   syncControls();

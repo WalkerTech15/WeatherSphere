@@ -18,7 +18,14 @@ import { COUNTRY_JUMPS } from "../data/country-jumps.js";
 import { computeFadeVisibility } from "../core/carousel-fade.js";
 import { normalizeBbox } from "../core/geo-bounds.js";
 import { selectionFeature, isAdministrativeArea } from "../core/selection-area.js";
-import { emit } from "../core/app-bus.js";
+import { emit, on } from "../core/app-bus.js";
+import {
+  animationsAllowed,
+  isConstrainedDevice,
+  isPageHidden,
+  prefersReducedMotion,
+  watchReducedMotion,
+} from "../core/motion.js";
 import { switchView } from "../ui/navigation.js";
 import { showToast } from "../ui/notifications.js";
 import {
@@ -29,7 +36,8 @@ import {
   firstSymbolLayerId,
 } from "./weather-layers.js";
 import { normalizeOffset, availableOffsets } from "./map-timeline.js";
-import { renderWeatherOverlayUI } from "../ui/render-map-weather.js";
+import { createMapAnimator, planMapAnimation, windLayerOptions } from "./map-animation.js";
+import { renderWeatherOverlayUI, updateTimeStatus } from "../ui/render-map-weather.js";
 import { noticeHtml } from "../ui/notice.js";
 
 /* The SDK's stylesheet is imported HERE, inside the dynamic import, rather
@@ -113,6 +121,10 @@ function mapLocale() {
     "NavigationControl.ZoomIn": t("mapZoomIn"),
     "NavigationControl.ZoomOut": t("mapZoomOut"),
     "AttributionControl.ToggleAttribution": t("mapToggleAttribution"),
+    /* The MapTiler SDK adds a GeolocateControl on its own (top-right) unless
+       told not to, so it never appeared in this list — and it announced
+       "Find my location" in English inside the French interface. */
+    "GeolocateControl.FindMyLocation": t("geoUse"),
   };
 }
 
@@ -124,6 +136,7 @@ const CONTROL_LABELS = [
   [".maplibregl-popup-close-button", "mapClosePopup"],
   [".maplibregl-marker", "mapMarker"],
   [".map-reset-btn", "mapResetView"],
+  [".maplibregl-ctrl-geolocate", "geoUse"],
 ];
 
 /* Custom MapLibre IControl: re-flattens the camera to north-up (bearing 0)
@@ -662,7 +675,79 @@ export function getMapOverlayState() {
 }
 
 function renderWeatherOverlay() {
-  renderWeatherOverlayUI(overlay, { onSelectTime: setMapTime });
+  overlay.animation = animator.snapshot();
+  renderWeatherOverlayUI(overlay, {
+    onSelectTime: setMapTime,
+    onToggleAnimation: () => animator.toggle(),
+  });
+}
+
+/* Optional animation of the active overlay — the rain forecast playing through,
+   or the wind particles moving. The policy lives in features/map-animation.js;
+   this owns the one instance and connects it to the overlay UI. Playback ends
+   on a layer change, a time change, a hidden tab, a map scrolled out of view or
+   optional animations being switched off, and never starts before the layer is ready. */
+const animator = createMapAnimator({
+  onState: () => renderWeatherOverlay(),
+  /* also reports the time a stopped replay returns to, so the status line
+     never names a time the layer is not showing */
+  onTime: (timeMs) => {
+    overlay.timeMs = timeMs;
+    updateTimeStatus(overlay);
+  },
+});
+
+const motionAllowed = () => animationsAllowed(state.animations);
+
+/* The layer has just been ADDED, its data not yet ready. Reduced motion is
+   the only preference that freezes wind; the optional-effects setting does
+   not control the Wind layer. */
+function freezeWindIfNotAllowed(inst) {
+  if (!prefersReducedMotion() || inst.weatherLayerType !== "wind") return;
+  try {
+    inst.weatherLayer?.setRepaintOnPausedAnimation?.(false);
+  } catch {
+    /* layer already gone */
+  }
+}
+
+function attachAnimation(inst) {
+  const plan = planMapAnimation({
+    type: overlay.type,
+    status: overlay.status,
+    layer: inst.weatherLayer,
+    allowed: motionAllowed(),
+  });
+  animator.attach(inst.weatherLayer, plan, {
+    isAllowed: motionAllowed(),
+    windAllowed: !prefersReducedMotion(),
+  });
+}
+
+/* Settings or the device preference changed. */
+function syncMapAnimation() {
+  animator.setAllowed(motionAllowed());
+  animator.setWindAllowed(!prefersReducedMotion());
+}
+
+/* One-time wiring. Hidden tab and off-screen map both SUSPEND playback (and
+   resume it) rather than stop it; the map card leaving the screen also covers
+   switching to another view, because a hidden view is never intersecting. */
+export function bindMapAnimation() {
+  document.addEventListener("visibilitychange", () => {
+    if (isPageHidden()) animator.suspend("hidden");
+    else animator.resume("hidden");
+  });
+  const card = $("#mapCard");
+  if (card && typeof IntersectionObserver === "function") {
+    new IntersectionObserver((entries) => {
+      const visible = entries[entries.length - 1].isIntersecting;
+      if (visible) animator.resume("offscreen");
+      else animator.suspend("offscreen");
+    }).observe(card);
+  }
+  on("animations:changed", syncMapAnimation);
+  watchReducedMotion(syncMapAnimation);
 }
 
 function resetOverlay(type) {
@@ -701,6 +786,8 @@ export async function setMapLayer(type, { offset = overlay.offset } = {}) {
   const isStale = () => requestId !== layerRequestId;
   const button = $(`.map-layer[data-map-layer="${requested}"]`);
   button?.classList.add("is-loading");
+  /* whatever was animating belongs to the layer about to be replaced */
+  animator.detach({ silent: true });
 
   resetOverlay(requested);
   overlay.offset = requested === "satellite" ? 0 : normalizeOffset(offset);
@@ -713,16 +800,22 @@ export async function setMapLayer(type, { offset = overlay.offset } = {}) {
     if (!inst) throw new Error("Map unavailable");
     const report = await applyWeatherLayer(inst, requested, {
       isStale,
-      onLayerAdded: raiseSelectionArea,
+      onLayerAdded: (added) => {
+        raiseSelectionArea(added);
+        freezeWindIfNotAllowed(added);
+      },
       offsetHours: overlay.offset,
+      windOptions: windLayerOptions({ constrained: isConstrainedDevice() }),
     });
     if (isStale()) return;
     absorbReport(report);
+    if (overlay.status === "ready") attachAnimation(inst);
     setLayerButtonState(requested);
     renderWeatherOverlay();
     emit("map:layer", getMapOverlayState());
   } catch {
     if (isStale()) return;
+    animator.detach({ silent: true });
     removeWeatherLayer(MAPS.worldMap);
     resetOverlay("satellite");
     setLayerButtonState("satellite");
@@ -747,6 +840,8 @@ export async function setMapTime(offsetHours) {
   const isStale = () => requestId !== layerRequestId;
 
   overlay.offset = offset;
+  /* choosing a forecast hour ends a rain replay; wind particles carry on */
+  if (animator.snapshot().kind === "rain") animator.stop();
   overlay.status = "loading";
   renderWeatherOverlay();
 

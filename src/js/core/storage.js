@@ -11,6 +11,9 @@ export const KEYS = {
   theme: "ws_theme",
   clockFormat: "ws_clock_fmt",
   clockSeconds: "ws_clock_sec",
+  /* Weather animations (rain/wind on the map, snow/storm/ocean on the hero):
+     stored only as an explicit "0"; absent means the default, on. */
+  animations: "ws_anim",
   favorites: "ws_favs",
   lastLocation: "ws_lastLoc",
   geo: "ws_geo",

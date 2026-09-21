@@ -16,6 +16,7 @@ import {
   setLang,
   setClockFormat,
   setClockSeconds,
+  setAnimations,
   applyTheme,
   syncThemeNav,
   syncLangBtnLabel,
@@ -26,6 +27,7 @@ import { locateMe, initGeo } from "./features/geolocation.js";
 import {
   resizeMaps,
   bindMapLayerControls,
+  bindMapAnimation,
   bindCountryFilters,
   updateMapLayerFades,
 } from "./features/map.js";
@@ -64,6 +66,8 @@ import {
 } from "./services/offline.js";
 import { renderFavorites } from "./ui/render-favorites.js";
 import { bindWeatherNotice } from "./ui/render-weather-notice.js";
+import { bindAmbient } from "./ui/render-ambient.js";
+import { watchReducedMotion } from "./core/motion.js";
 import { renderForecastPage } from "./ui/render-forecast.js";
 import {
   loadPopular,
@@ -216,6 +220,12 @@ $("#clockSecondsSwitch")?.addEventListener("click", () => {
   setClockSeconds(!state.clockSeconds);
   showToast(t("prefSaved"));
 });
+$("#animationsSwitch")?.addEventListener("click", () => {
+  setAnimations(!state.animations);
+  showToast(t("prefSaved"));
+});
+/* the device's reduced-motion preference can change while Settings is open */
+watchReducedMotion(() => updateSettingsUI());
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
   if (state.theme === "system") applyTheme();
 });
@@ -289,6 +299,8 @@ bindMapLayerControls();
 bindMapClickSelection();
 bindMapExpand();
 bindWeatherNotice();
+bindAmbient();
+bindMapAnimation();
 $("#mapShareBtn")?.addEventListener("click", () => shareMapView());
 /* the location detail panel's own Share button (ui/render-map.js) can't call
    shareMapView() directly — features/map-url-sync.js is deliberately imported

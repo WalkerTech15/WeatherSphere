@@ -31,6 +31,24 @@ const WEATHER_KINDS = {
   /* thunderstorm + gusts + sub-1000m visibility → all three severity tiers
      (high/moderate/low) at once, for the three-advisory layout */
   severe: { code: 95, feels: 18, gust: 88, visibility: 900 },
+  /* Weather-animation scenarios. Precipitation and temperature are what the
+     snow gate reads, so each kind sets them deliberately; `omit` drops a
+     field from the payload entirely (a provider that does not report it). */
+  snow: { code: 73, temp: -3, feels: -8, gust: 20, visibility: 8000, precip: 1.2, snowfall: 1.4 },
+  snowUnmeasured: {
+    code: 73,
+    temp: -3,
+    feels: -8,
+    gust: 20,
+    visibility: 8000,
+    omit: ["precipitation", "snowfall"],
+  },
+  /* a snow code on a 9 °C day contradicts itself, so nothing may fall */
+  snowWarm: { code: 73, temp: 9, feels: 6, gust: 20, visibility: 8000, precip: 1, snowfall: 1 },
+  rain: { code: 63, temp: 12, feels: 10, gust: 30, visibility: 9000, precip: 2.4 },
+  /* violent wind, heavy rain, a pressure crash — and NO thunderstorm code:
+     the bait for anything that would infer lightning or a tornado */
+  gale: { code: 65, temp: 14, feels: 9, gust: 130, visibility: 4000, precip: 6, pressure: 955 },
 };
 
 /* `place` distinguishes one entry of a BATCHED (comma-joined coordinates)
@@ -43,11 +61,11 @@ const WEATHER_KINDS = {
 function weatherPayload(kind = "calm", place = 0, timezone = "Europe/Paris") {
   const w = WEATHER_KINDS[kind] || WEATHER_KINDS.calm;
   const dTemp = place * 2;
-  return {
+  const payload = {
     timezone,
     current: {
       time: `${DAY}T00:00`,
-      temperature_2m: WEATHER_TEMP_C + dTemp,
+      temperature_2m: (w.temp ?? WEATHER_TEMP_C) + dTemp,
       relative_humidity_2m: 55,
       apparent_temperature: w.feels + dTemp,
       is_day: 1,
@@ -55,11 +73,13 @@ function weatherPayload(kind = "calm", place = 0, timezone = "Europe/Paris") {
       wind_speed_10m: 12.5 + place,
       wind_gusts_10m: w.gust,
       wind_direction_10m: 220,
-      surface_pressure: 1014,
+      surface_pressure: w.pressure ?? 1014,
+      precipitation: w.precip ?? 0,
+      snowfall: w.snowfall ?? 0,
     },
     hourly: {
       time: HOURS.map(hourIso),
-      temperature_2m: HOURS.map((i) => 18 + (i % 8) + dTemp),
+      temperature_2m: HOURS.map((i) => (w.temp ?? 18) + (w.temp === undefined ? i % 8 : 0) + dTemp),
       apparent_temperature: HOURS.map(() => w.feels + dTemp),
       relative_humidity_2m: HOURS.map(() => 55),
       wind_speed_10m: HOURS.map((i) => 10 + (i % 5) + place),
@@ -84,6 +104,8 @@ function weatherPayload(kind = "calm", place = 0, timezone = "Europe/Paris") {
       wind_speed_10m_max: [18, 16, 20, 14, 24, 17, 15, 13],
     },
   };
+  for (const field of w.omit ?? []) delete payload.current[field];
+  return payload;
 }
 
 /* Forward geocoding — one unambiguous hit, in both providers' formats.

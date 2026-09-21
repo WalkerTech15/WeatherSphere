@@ -235,7 +235,13 @@ function weatherPanelHtml(loc, wx) {
             </svg>
           </button>
           <button class="map-panel-close" id="mapPanelClose" type="button" aria-label="${t("hideMapDetails")}">
-            <span aria-hidden="true">×</span>
+            <!-- A drawn cross, not the "×" character: the character's ink sat
+                 3px below the button's centre, because a font's ascent and
+                 descent are not symmetric. A path is centred by geometry. -->
+            <span aria-hidden="true"
+              ><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"
+                ><path d="M6 6l12 12M18 6 6 18" /></svg
+            ></span>
           </button>
         </div>
       </div>
