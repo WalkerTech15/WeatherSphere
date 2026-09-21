@@ -6,7 +6,8 @@ import { t } from "../core/i18n.js";
 import { setJSON, KEYS } from "../core/storage.js";
 import { emit } from "../core/app-bus.js";
 import { recordRecent } from "./recent-locations.js";
-import { fetchWeather, demoWeather } from "../services/weather-api.js";
+import { fetchForecast } from "../weather/weather-provider.js";
+import { demoWeather } from "../weather/weather-demo.js";
 import { bumpPhotoToken, prefetchLocPhoto } from "../services/photo-api.js";
 import { showToast } from "../ui/notifications.js";
 import {
@@ -44,7 +45,7 @@ export async function selectLocation(loc) {
   /* Synchronous and first: state.loc changes on the next line, and nothing
      must be able to observe that new location — via a pan, a view switch, or
      any other bus event — while still carrying share consent granted for
-     whatever was selected before. fetchWeather() below can take a while, and
+     whatever was selected before. fetchForecast() below can take a while, and
      location:selected does not fire until it resolves, so a revoke that
      waited for that event would leave a window where a stale `true` consent
      could publish a location the user never chose to share. Emitting here,
@@ -71,7 +72,7 @@ export async function selectLocation(loc) {
   let wx;
   let isDemo = false;
   try {
-    wx = await fetchWeather(loc);
+    wx = await fetchForecast(loc);
   } catch {
     wx = demoWeather(loc);
     isDemo = true;

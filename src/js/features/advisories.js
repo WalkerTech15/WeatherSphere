@@ -1,7 +1,7 @@
 /* Forecast-based severe-weather advisory detection.
  *
  * Pure: no DOM, no app state, no i18n, no network. It reads the weather object
- * the app ALREADY holds (services/weather-api.js) and returns descriptors made
+ * the app ALREADY holds (weather/weather-provider.js) and returns descriptors made
  * of type keys and canonical metric numbers. Turning those into translated
  * sentences is the renderer's job (ui/render-advisory.js), which is what keeps
  * this file testable in plain Node and free of interface strings.

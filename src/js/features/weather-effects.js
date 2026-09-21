@@ -1,7 +1,7 @@
 /* When a weather effect may exist — and, just as much, when it may not.
  *
  * Pure: no DOM, no app state, no timers. Everything here takes the weather
- * object the app already holds (services/weather-api.js) and answers a single
+ * object the app already holds (weather/weather-provider.js) and answers a single
  * question per effect. Nothing is inferred from a neighbouring field, and a
  * missing field is never read as a value:
  *

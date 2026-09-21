@@ -74,8 +74,10 @@ vi.mock("../ui/render-forecast.js", () => ({
   renderForecastPage: vi.fn(),
 }));
 const fetchWeather = vi.fn();
-vi.mock("../services/weather-api.js", () => ({
-  fetchWeather: (...args) => fetchWeather(...args),
+vi.mock("../weather/weather-provider.js", () => ({
+  fetchForecast: (...args) => fetchWeather(...args),
+}));
+vi.mock("../weather/weather-demo.js", () => ({
   demoWeather: () => FAKE_WX,
 }));
 

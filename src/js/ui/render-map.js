@@ -3,7 +3,6 @@ import { state } from "../core/state.js";
 import { $, $$, esc } from "../core/dom.js";
 import { t } from "../core/i18n.js";
 import { fmtHour } from "../core/datetime.js";
-import { FETCH_TIMEOUT_MS } from "../core/config.js";
 import { emit } from "../core/app-bus.js";
 import { LOCATIONS } from "../data/locations.js";
 import { weatherIcon } from "../data/icons.js";
@@ -12,7 +11,7 @@ import { fmtTemp, tempUnit, fmtWind, windUnit, fmtDistance, distanceUnit } from 
 import { locName, locRegion, locCountry, locKindLabel, flagsHtml } from "../core/location.js";
 import { coordLabel } from "../core/coord-location.js";
 import { geoIdentityHtml } from "../core/geo-identity.js";
-import { demoWeather } from "../services/weather-api.js";
+import { loadPopularWeather } from "../features/popular-weather.js";
 import { hydrateLocPhoto, locPhotoHtml } from "../services/photo-api.js";
 import { loadNearbyPlaces, isNearbyEligible } from "../services/nearby-api.js";
 import { selectLocation } from "../features/location.js";
@@ -34,28 +33,7 @@ let panelHidden = false;
 
 export async function loadPopular() {
   const locs = POPULAR_IDS.map((id) => LOCATIONS.find((l) => l.id === id));
-  try {
-    const url = new URL("https://api.open-meteo.com/v1/forecast");
-    url.search = new URLSearchParams({
-      latitude: locs.map((l) => l.lat).join(","),
-      longitude: locs.map((l) => l.lon).join(","),
-      current: "temperature_2m,weather_code,is_day",
-    }).toString();
-    const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-    const d = await res.json();
-    const arr = Array.isArray(d) ? d : [d];
-    popularCache = locs.map((loc, i) => ({
-      loc,
-      temp: arr[i].current.temperature_2m,
-      code: arr[i].current.weather_code,
-      isDay: arr[i].current.is_day,
-    }));
-  } catch {
-    popularCache = locs.map((loc) => {
-      const w = demoWeather(loc);
-      return { loc, temp: w.current.temp, code: w.current.code, isDay: w.current.isDay };
-    });
-  }
+  popularCache = await loadPopularWeather(locs);
   renderMapInfo();
 }
 

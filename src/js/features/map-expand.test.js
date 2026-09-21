@@ -85,7 +85,7 @@ describe("entering and leaving", () => {
     /* a second "enter" must not overwrite the offset saved by the first */
     expect(setMapExpanded(true)).toBe(false);
     setMapExpanded(false);
-    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "instant" });
+    expect(window.scrollTo).toHaveBeenCalledWith(0, 0);
   });
 
   it("moves focus only on a real activation", async () => {
@@ -110,7 +110,7 @@ describe("the page's scroll position", () => {
     window.scrollY = 0;
 
     exitMapExpanded();
-    expect(window.scrollTo).toHaveBeenCalledWith({ top: 140, behavior: "instant" });
+    expect(window.scrollTo).toHaveBeenCalledWith(0, 140);
   });
 
   it("is not restored when the mode ends because another view opened", async () => {

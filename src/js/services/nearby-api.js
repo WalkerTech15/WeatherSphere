@@ -13,7 +13,8 @@
  * probing a ring around a COUNTRY's centroid would just return other spots in
  * the same province, which is not what "nearby" means for an area that large. */
 import { reverseGeocodeLocation } from "./geocoding-api.js";
-import { FETCH_TIMEOUT_MS } from "../core/config.js";
+import { fetchCurrentBatch } from "../weather/weather-provider.js";
+import { toNearbyWeather } from "../weather/weather-normalizer.js";
 import { createAsyncCache } from "./cache.js";
 import { haversineKm, offsetPoint } from "../core/geo.js";
 
@@ -75,46 +76,12 @@ async function discoverCandidates(loc) {
   return { list, allFailed: fulfilledCount === 0 };
 }
 
-/* Same index-matching approach as fetchWeatherRaw in weather-api.js: the
-   batched response's hourly array is in each place's own local time
-   (timezone=auto), so "now" is found per-place rather than assumed to be
-   index 0. */
-function currentRainProb(entry) {
-  const times = entry?.hourly?.time || [];
-  const nowIso = entry?.current?.time?.slice(0, 13);
-  let idx = nowIso ? times.findIndex((x) => x.slice(0, 13) === nowIso) : -1;
-  if (idx < 0) idx = 0;
-  return entry?.hourly?.precipitation_probability?.[idx] ?? 0;
-}
-
 async function attachWeather(candidates) {
-  const url = new URL("https://api.open-meteo.com/v1/forecast");
-  url.search = new URLSearchParams({
-    latitude: candidates.map((c) => c.loc.lat).join(","),
-    longitude: candidates.map((c) => c.loc.lon).join(","),
-    current: "temperature_2m,wind_speed_10m,weather_code,is_day",
-    hourly: "precipitation_probability",
-    forecast_days: "1",
-    timezone: "auto",
-  }).toString();
-  const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-  if (!res.ok) throw new Error("HTTP " + res.status);
-  const d = await res.json();
-  const arr = Array.isArray(d) ? d : [d];
-  return candidates.map((c, i) => {
-    const entry = arr[i];
-    if (!entry || !entry.current) return { ...c, weather: null };
-    return {
-      ...c,
-      weather: {
-        temp: entry.current.temperature_2m,
-        windSpeed: entry.current.wind_speed_10m,
-        code: entry.current.weather_code,
-        isDay: entry.current.is_day,
-        rainProb: currentRainProb(entry),
-      },
-    };
-  });
+  const snapshots = await fetchCurrentBatch(
+    candidates.map((c) => c.loc),
+    "nearby",
+  );
+  return candidates.map((c, i) => ({ ...c, weather: toNearbyWeather(snapshots[i]) }));
 }
 
 const nearbyCache = createAsyncCache(NEARBY_CACHE_TTL_MS);

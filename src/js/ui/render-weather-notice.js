@@ -1,7 +1,7 @@
 /* "Showing demo weather" — the persistent counterpart of the one-minute toast.
  *
  * When live weather can't be loaded the app falls back to generated sample
- * data (services/weather-api.js demoWeather). Until now that was signalled by
+ * data (weather/weather-demo.js demoWeather). Until now that was signalled by
  * a toast that vanishes in seconds and a small badge in the hero, so a visitor
  * could easily read invented numbers as a real forecast. This keeps a notice
  * on every view that shows those numbers for as long as they are on screen,

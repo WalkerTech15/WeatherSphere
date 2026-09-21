@@ -11,7 +11,8 @@ import { coordLocation } from "../core/coord-location.js";
 import { fmtTemp, tempUnit } from "../core/units.js";
 import { weatherIcon } from "../data/icons.js";
 import { wmo, wxDesc } from "../data/weather-codes.js";
-import { fetchWeather, demoWeather } from "../services/weather-api.js";
+import { fetchForecast } from "../weather/weather-provider.js";
+import { demoWeather } from "../weather/weather-demo.js";
 import { reverseGeocode } from "../services/geocoding-api.js";
 import { showUserLocation } from "./map.js";
 import { locName, locRegion, locCountry } from "../core/location.js";
@@ -40,7 +41,7 @@ export async function applyGeoSuccess(lat, lon, info, opts = {}) {
     geoState.wx = state.wx; /* reuse the just-fetched weather for the card */
   } else {
     try {
-      geoState.wx = await fetchWeather(loc);
+      geoState.wx = await fetchForecast(loc);
     } catch {
       geoState.wx = demoWeather(loc);
     }

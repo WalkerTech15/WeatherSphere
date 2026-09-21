@@ -16,7 +16,10 @@
  * way the rest of the app does: the row shows "—" rather than an error. */
 import { state } from "../core/state.js";
 import { getJSON, setJSON, KEYS } from "../core/storage.js";
-import { FETCH_TIMEOUT_MS, FAVORITES_WEATHER_TTL_MS } from "../core/config.js";
+import { FETCH_TIMEOUT_MS } from "../core/config.js";
+import { fetchCurrentBatch, fetchAirQuality } from "../weather/weather-provider.js";
+import { batchKey, isBatchFresh } from "../weather/weather-cache.js";
+import { toComparisonWeather } from "../weather/weather-normalizer.js";
 import { createLatestOnly } from "../core/latest-only.js";
 
 /* How many places can be compared at once. Five columns remains readable
@@ -135,34 +138,9 @@ export function __resetComparisonForTests() {
    last one — the same stale-response guard the map click uses. */
 const runLatest = createLatestOnly();
 
-function toEntry(current, daily) {
-  return {
-    temp: current?.temperature_2m ?? null,
-    feelsLike: current?.apparent_temperature ?? null,
-    humidity: current?.relative_humidity_2m ?? null,
-    wind: current?.wind_speed_10m ?? null,
-    code: current?.weather_code ?? null,
-    isDay: current?.is_day ?? 1,
-    precipitation: daily?.precipitation_probability_max?.[0] ?? null,
-    uv: daily?.uv_index_max?.[0] ?? null,
-    timezone: null,
-    aqi: null,
-  };
-}
-
-async function fetchAirQuality(locs, signal) {
+async function loadAirQuality(locs, signal) {
   try {
-    const url = new URL("https://air-quality-api.open-meteo.com/v1/air-quality");
-    url.search = new URLSearchParams({
-      latitude: locs.map((l) => l.lat).join(","),
-      longitude: locs.map((l) => l.lon).join(","),
-      current: "european_aqi",
-    }).toString();
-    const res = await fetch(url, { signal });
-    if (!res.ok) return [];
-    const data = await res.json();
-    const arr = Array.isArray(data) ? data : [data];
-    return arr.map((d) => d?.current?.european_aqi ?? null);
+    return await fetchAirQuality(locs, { signal });
   } catch {
     /* Air quality is the one column allowed to be missing on its own — it
        is a separate service, and losing it must not blank the comparison. */
@@ -182,43 +160,28 @@ export function loadComparisonWeather(force = false) {
       comparisonKey = "";
       return {};
     }
-    const key = locs.map((l) => l.id).join(",");
-    if (!force && key === comparisonKey && Date.now() - comparisonAt < FAVORITES_WEATHER_TTL_MS) {
+    const key = batchKey(locs);
+    if (!force && isBatchFresh({ key: comparisonKey, at: comparisonAt }, key)) {
       return comparisonWx;
     }
 
     const signal = AbortSignal.timeout(FETCH_TIMEOUT_MS);
     let next = {};
     try {
-      const url = new URL("https://api.open-meteo.com/v1/forecast");
-      url.search = new URLSearchParams({
-        latitude: locs.map((l) => l.lat).join(","),
-        longitude: locs.map((l) => l.lon).join(","),
-        current:
-          "temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day",
-        daily: "precipitation_probability_max,uv_index_max",
-        forecast_days: "1",
-        timezone: "auto",
-      }).toString();
-      const res = await fetch(url, { signal });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      const data = await res.json();
-      const arr = Array.isArray(data) ? data : [data];
+      const snapshots = await fetchCurrentBatch(locs, "comparison", { signal });
       locs.forEach((loc, i) => {
-        const entry = toEntry(arr[i]?.current, arr[i]?.daily);
-        entry.timezone = arr[i]?.timezone || null;
-        next[loc.id] = entry;
+        next[loc.id] = toComparisonWeather(snapshots[i]);
       });
     } catch {
       /* Whole-batch failure: keep the columns, blank the numbers. The
          renderer prints "—" per cell, which is honest and keeps the layout
          (and the remove buttons) usable. */
       next = {};
-      for (const loc of locs) next[loc.id] = toEntry(null, null);
+      for (const loc of locs) next[loc.id] = toComparisonWeather(null);
     }
     if (isStale()) return comparisonWx;
 
-    const aqi = await fetchAirQuality(locs, signal);
+    const aqi = await loadAirQuality(locs, signal);
     if (isStale()) return comparisonWx;
     locs.forEach((loc, i) => {
       if (next[loc.id]) next[loc.id].aqi = aqi[i] ?? null;

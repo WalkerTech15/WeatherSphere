@@ -214,7 +214,7 @@ const METRICS = [
     tint: "tint-rose",
     simple: true,
     /* 4th Simple-mode card: apparent_temperature is a plain `current` field with
-       no `??` fallback in fetchWeatherRaw (unlike rainProb, which defaults to 0
+       no `??` fallback in the Open-Meteo normalizer (unlike rainProb, which defaults to 0
        when Open-Meteo omits it) — the most reliable value already on hand. */
     val: (c) => `${fmtTemp(c.feels)}<span class="unit">${tempUnit()}</span>`,
     foot: () => "",
@@ -435,7 +435,7 @@ export function renderGroupedMetrics() {
       label: `${t("sunCycle")}: ${t("sunrise")} ${fmtClock(wx.daily[0].sunrise)}, ${t("sunset")} ${fmtClock(wx.daily[0].sunset)}`,
     },
     /* Precipitation: only a probability % exists anywhere in this app's data
-       model (fetchWeatherRaw never requests a raw mm amount) — no secondary
+       model (the Open-Meteo forecast never requests a raw mm amount) — no secondary
        row is fabricated for it, per "hide cleanly rather than show fake data". */
     {
       key: "rain",
