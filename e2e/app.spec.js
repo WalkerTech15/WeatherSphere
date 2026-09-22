@@ -2363,12 +2363,12 @@ test.describe("map layer switcher: Pressure and the disabled placeholders", () =
     await expect(legend).toContainText("hPa");
   });
 
-  test("Clouds, Humidity, Air quality and Alerts are disabled and inert", async ({ page }) => {
+  test("Clouds, Humidity and Alerts are disabled and inert", async ({ page }) => {
     await openMap(page);
     const requests = [];
     page.on("request", (request) => requests.push(request.url()));
 
-    for (const layer of ["clouds", "humidity", "airQuality", "alerts"]) {
+    for (const layer of ["clouds", "humidity", "alerts"]) {
       const btn = page.locator(`.map-layer[data-map-layer="${layer}"]`);
       await expect(btn).toBeDisabled();
       await expect(btn).toHaveAttribute("aria-disabled", "true");
@@ -2379,7 +2379,7 @@ test.describe("map layer switcher: Pressure and the disabled placeholders", () =
     }
 
     await expect(page.locator('.map-layer[data-map-layer="clouds"]')).not.toHaveClass(/is-active/);
-    /* none of the four disabled layers ever requested weather tiles */
+    /* none of the three still-disabled layers ever requested weather tiles */
     expect(requests.some(isWeatherLayerRequest)).toBe(false);
   });
 
@@ -2389,6 +2389,159 @@ test.describe("map layer switcher: Pressure and the disabled placeholders", () =
     await expect(alerts).toContainText("Alertes");
     await expect(alerts.locator(".map-layer-badge")).toContainText("Bientôt disponible");
     await expect(alerts).toBeDisabled();
+  });
+});
+
+/* Air Quality: a point reading for the selected place (Open-Meteo has no
+   spatial/tile product for it), not a rendered map layer — see
+   features/map.js and ui/render-map-airquality.js. */
+test.describe("map layer switcher: Air Quality", () => {
+  const aqiBtn = (page) => page.locator('.map-layer[data-map-layer="airQuality"]');
+  const panel = (page) => page.locator("#mapWeatherControls");
+
+  async function openMap(page, overrides) {
+    await installMocks(page, overrides);
+    await page.goto("/");
+    await expect(page.locator("#heroCityName")).not.toBeEmpty();
+    await page.locator('.side-item[data-view="map"]').click();
+  }
+
+  test("is a real, selectable control — not disabled, no 'coming soon' badge", async ({ page }) => {
+    await openMap(page);
+    await expect(aqiBtn(page)).toBeEnabled();
+    await expect(aqiBtn(page)).not.toHaveAttribute("aria-disabled", "true");
+    await expect(aqiBtn(page).locator(".map-layer-badge")).toHaveCount(0);
+  });
+
+  test("loads and shows the reading: value, category, four pollutants, source and update time", async ({
+    page,
+  }) => {
+    await openMap(page, { airQualityDetailDelayMs: 2000 });
+    await aqiBtn(page).click();
+    /* checked BEFORE waiting on aria-checked below — once that resolves the
+       request has necessarily already settled, so the loading state is gone */
+    await expect(panel(page).locator('[data-loading="1"]')).toBeVisible();
+    await expect(aqiBtn(page)).toHaveAttribute("aria-checked", "true", { timeout: 20000 });
+
+    const aqi = panel(page).locator(".map-aqi");
+    await expect(aqi).toBeVisible({ timeout: 20000 });
+    await expect(aqi.locator(".map-aqi-value")).toHaveText("34");
+    /* French default; 34 ≤ 50 → "Good" band, classifyAqi()'s own threshold;
+       PM2,5 uses the French decimal comma, matching the rest of the app's
+       French number formatting */
+    await expect(aqi.locator(".map-aqi-badge")).toContainText("Bonne");
+    await expect(aqi).toContainText("PM2,5");
+    await expect(aqi).toContainText("PM10");
+    await expect(aqi.locator(".map-aqi-meta")).toContainText("Open-Meteo");
+  });
+
+  test("never renders a colour-ramp legend or a forecast-time row — it isn't a map layer", async ({
+    page,
+  }) => {
+    await openMap(page);
+    await aqiBtn(page).click();
+    await expect(panel(page).locator(".map-aqi")).toBeVisible({ timeout: 20000 });
+    await expect(panel(page).locator(".map-legend")).toHaveCount(0);
+    await expect(panel(page).locator(".map-time-row")).toHaveCount(0);
+  });
+
+  test("an HTTP failure shows an error state and keeps the layer selected, not a fallback to satellite", async ({
+    page,
+  }) => {
+    await openMap(page, { airQualityDetailStatus: 500 });
+    await aqiBtn(page).click();
+    await expect(aqiBtn(page)).toHaveAttribute("aria-checked", "true", { timeout: 20000 });
+    await expect(panel(page).locator('[data-state="error"]')).toBeVisible();
+    await expect(panel(page).locator(".map-aqi")).toHaveCount(0);
+  });
+
+  test("a malformed response is reported honestly, not as empty/zero data", async ({ page }) => {
+    await openMap(page, { airQualityDetailBody: { current: {} } });
+    await aqiBtn(page).click();
+    await expect(panel(page).locator('[data-state="error"]')).toBeVisible({ timeout: 20000 });
+    await expect(panel(page)).toContainText("format inattendu");
+  });
+
+  test("offline is reported as offline, not as a generic error", async ({ page }) => {
+    await openMap(page);
+    /* setOffline(true) flips navigator.onLine, which is what the app's own
+       offline classification reads (services/offline.js) — but Playwright's
+       mocked routes still fulfill even while "offline", so the request
+       itself is also made to fail here, the way a real offline fetch would. */
+    await page.route("**://air-quality-api.open-meteo.com/**", async (route, request) => {
+      const url = new URL(request.url());
+      if ((url.searchParams.get("current") || "").includes("pm10")) return route.abort();
+      return route.fulfill(json({ current: { european_aqi: 31 } }));
+    });
+    await page.context().setOffline(true);
+    await aqiBtn(page).click();
+    await expect(panel(page)).toContainText("hors ligne", { timeout: 20000 });
+    await page.context().setOffline(false);
+  });
+
+  test("switching to a new place while active never shows the old place's numbers", async ({
+    page,
+  }) => {
+    await openMap(page);
+    /* two different readings, keyed by which place's request is in flight */
+    let hits = 0;
+    await page.route("**://air-quality-api.open-meteo.com/**", async (route, request) => {
+      const url = new URL(request.url());
+      if (!(url.searchParams.get("current") || "").includes("pm10")) {
+        return route.fulfill(json({ current: { european_aqi: 31 } }));
+      }
+      hits++;
+      const first = hits === 1;
+      if (first) await new Promise((resolve) => setTimeout(resolve, 500)); /* Paris is slow */
+      return route.fulfill(
+        json({
+          current: {
+            time: "2026-09-21T14:00",
+            european_aqi: first ? 10 : 90,
+            pm10: first ? 1 : 99,
+            pm2_5: first ? 1 : 99,
+            nitrogen_dioxide: first ? 1 : 99,
+            ozone: first ? 1 : 99,
+          },
+          current_units: {
+            pm10: "μg/m³",
+            pm2_5: "μg/m³",
+            nitrogen_dioxide: "μg/m³",
+            ozone: "μg/m³",
+          },
+        }),
+      );
+    });
+
+    await aqiBtn(page).click();
+    /* leave Paris's slow request in flight, then switch place immediately */
+    const card = page.locator("#exploreCarousel .explore-open").nth(1);
+    await card.evaluate((button) => button.click());
+    await expect(panel(page).locator(".map-aqi-value")).toHaveText("90", { timeout: 20000 });
+    /* Paris's late, superseded answer must never land afterwards */
+    await page.waitForTimeout(700);
+    await expect(panel(page).locator(".map-aqi-value")).toHaveText("90");
+  });
+
+  test("the panel is labelled in English too", async ({ page }) => {
+    await openMap(page);
+    await page.locator("#langBtn").click();
+    await page.locator('#langMenu button[data-lang="en"]').click();
+    await expect(aqiBtn(page)).toContainText("Air quality");
+    await aqiBtn(page).click();
+    const aqi = panel(page).locator(".map-aqi");
+    await expect(aqi).toBeVisible({ timeout: 20000 });
+    await expect(aqi.locator(".map-aqi-meta")).toContainText("Open-Meteo");
+    await expect(aqi).toContainText("Nitrogen dioxide");
+  });
+
+  test("is keyboard-reachable and activatable, with correct radio semantics", async ({ page }) => {
+    await openMap(page);
+    await aqiBtn(page).focus();
+    await expect(aqiBtn(page)).toBeFocused();
+    await expect(aqiBtn(page)).toHaveAttribute("role", "radio");
+    await page.keyboard.press("Enter");
+    await expect(aqiBtn(page)).toHaveAttribute("aria-checked", "true", { timeout: 20000 });
   });
 });
 

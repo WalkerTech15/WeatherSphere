@@ -3,6 +3,8 @@ import { FAVORITES_WEATHER_TTL_MS, WEATHER_CACHE_TTL_MS } from "../core/config.j
 import {
   forecastCache,
   forecastCacheKey,
+  airQualityDetailCache,
+  airQualityDetailCacheKey,
   batchKey,
   isBatchFresh,
   createSharedRequestCache,
@@ -60,6 +62,27 @@ describe("forecast cache", () => {
     await forecastCache.get("k", factory);
     expect(calls).toBe(1);
     expect(WEATHER_CACHE_TTL_MS).toBe(5 * 60000);
+  });
+});
+
+describe("air quality detail cache", () => {
+  it("keys by provider and coordinates, same shape as the forecast cache", () => {
+    expect(airQualityDetailCacheKey("open-meteo", { lat: 1.5, lon: -2 })).toBe("open-meteo:1.5,-2");
+  });
+
+  it("is a separate cache instance from the forecast cache", () => {
+    expect(airQualityDetailCache).not.toBe(forecastCache);
+  });
+
+  it("dedups by key and is never populated by a forecast request for the same key", async () => {
+    airQualityDetailCache.clear();
+    forecastCache.clear();
+    const key = airQualityDetailCacheKey("open-meteo", { lat: 1, lon: 2 });
+    let calls = 0;
+    await airQualityDetailCache.get(key, () => Promise.resolve(++calls));
+    await airQualityDetailCache.get(key, () => Promise.resolve(++calls));
+    expect(calls).toBe(1);
+    expect(forecastCache.has(key)).toBe(false);
   });
 });
 

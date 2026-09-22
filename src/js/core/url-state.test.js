@@ -68,14 +68,19 @@ describe("parseAppUrl", () => {
     expect(parseAppUrl("#/map?layer=radioactivity").layer).toBe("satellite");
   });
 
-  it("accepts pressure, the one newly-supported weather layer", () => {
+  it("accepts pressure and airQuality, the two working real layers", () => {
     expect(parseAppUrl("#/map?layer=pressure").layer).toBe("pressure");
+    expect(parseAppUrl("#/map?layer=airQuality").layer).toBe("airQuality");
   });
 
   it("rejects the disabled placeholder layers — they have no real data source", () => {
-    for (const layer of ["clouds", "humidity", "airQuality", "alerts"]) {
+    for (const layer of ["clouds", "humidity", "alerts"]) {
       expect(parseAppUrl(`#/map?layer=${layer}`).layer).toBe("satellite");
     }
+  });
+
+  it("airQuality has no forecast-time concept, so a t= under it is dropped", () => {
+    expect(parseAppUrl("#/map?layer=airQuality&t=3").offset).toBe(0);
   });
 
   it.each(["t=99", "t=-3", "t=1.5", "t=abc"])(
@@ -129,6 +134,13 @@ describe("buildAppUrl", () => {
 
   it("never writes a forecast offset without its layer", () => {
     expect(buildAppUrl({ view: "map", layer: "satellite", offset: 6 })).toBe("#/map");
+  });
+
+  it("round-trips the airQuality layer, with no t= param (it has no forecast time)", () => {
+    expect(buildAppUrl({ view: "map", layer: "airQuality", offset: 6 })).toBe(
+      "#/map?layer=airQuality",
+    );
+    expect(parseAppUrl("#/map?layer=airQuality").layer).toBe("airQuality");
   });
 
   it("writes panel=0 explicitly, since 'closed' is a real shared state", () => {

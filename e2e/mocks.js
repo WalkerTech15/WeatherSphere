@@ -676,6 +676,28 @@ export const json = (body) => ({
   body: JSON.stringify(body),
 });
 
+/* The Air Quality map layer's own reading (fetchAirQualityDetail) — a real,
+   complete response so its normalizer, legend-less panel and unit labels
+   all exercise the real shape rather than a stub. */
+export function airQualityDetailPayload() {
+  return {
+    current: {
+      time: "2026-09-21T14:00",
+      european_aqi: 34,
+      pm10: 12.4,
+      pm2_5: 6.1,
+      nitrogen_dioxide: 18.7,
+      ozone: 52.3,
+    },
+    current_units: {
+      pm10: "μg/m³",
+      pm2_5: "μg/m³",
+      nitrogen_dioxide: "μg/m³",
+      ozone: "μg/m³",
+    },
+  };
+}
+
 /* ── Installer ─────────────────────────────────────────────────────────── */
 
 export async function installMocks(page, overrides = {}) {
@@ -686,6 +708,9 @@ export async function installMocks(page, overrides = {}) {
     placesProxy,
     mapillaryProxy,
     reverseDelayMs,
+    airQualityDetailStatus = 200,
+    airQualityDetailBody,
+    airQualityDetailDelayMs,
   } = overrides;
   /* "calm" by default. Pass a function to vary the weather per request — the
      URL carries the coordinates, which is how a test gives two cities two
@@ -741,9 +766,26 @@ export async function installMocks(page, overrides = {}) {
     }
     return route.fulfill(json(weatherPayload(kind, 0, weatherTimezone)));
   });
-  await page.route("**://air-quality-api.open-meteo.com/**", (route) =>
-    route.fulfill(json({ current: { european_aqi: 31 } })),
-  );
+  await page.route("**://air-quality-api.open-meteo.com/**", async (route, request) => {
+    const url = new URL(request.url());
+    /* fetchForecast()'s own `_aqi` asks only `european_aqi` — the Air
+       Quality map layer's dedicated, richer request (fetchAirQualityDetail)
+       always asks `pm10` alongside it, so the two are told apart by that. */
+    const isDetail = (url.searchParams.get("current") || "").includes("pm10");
+    if (!isDetail) return route.fulfill(json({ current: { european_aqi: 31 } }));
+
+    if (airQualityDetailDelayMs) {
+      await new Promise((resolve) => setTimeout(resolve, airQualityDetailDelayMs));
+    }
+    if (airQualityDetailStatus !== 200) {
+      return route.fulfill({
+        status: airQualityDetailStatus,
+        contentType: "text/plain",
+        body: "mocked failure",
+      });
+    }
+    return route.fulfill(json(airQualityDetailBody ?? airQualityDetailPayload()));
+  });
   await page.route("**://geocoding-api.open-meteo.com/**", (route) =>
     route.fulfill(json(geocodePayload())),
   );

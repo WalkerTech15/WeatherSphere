@@ -144,3 +144,24 @@ export function batchEntry(temp, { timezone = "Europe/Paris" } = {}) {
 }
 
 export const aqiEntry = (aqi) => ({ current: { european_aqi: aqi } });
+
+/* A complete Air Quality map-layer response (fetchAirQualityDetail). */
+export function airQualityDetailPayload(overrides = {}) {
+  return {
+    current: {
+      time: "2026-09-21T14:00",
+      european_aqi: 34,
+      pm10: 12.4,
+      pm2_5: 6.1,
+      nitrogen_dioxide: 18.7,
+      ozone: 52.3,
+      ...overrides,
+    },
+    current_units: {
+      pm10: "μg/m³",
+      pm2_5: "μg/m³",
+      nitrogen_dioxide: "μg/m³",
+      ozone: "μg/m³",
+    },
+  };
+}

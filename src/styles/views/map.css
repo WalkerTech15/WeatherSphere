@@ -1563,6 +1563,95 @@ body[data-theme="dark"] .map-panel-loading-coords {
   font-size: 11.5px;
 }
 
+/* ── Air Quality panel ─────────────────────────────────────────────────
+   Shares #mapWeatherControls's own card chrome (position, width, padding,
+   background — see .map-weather-controls above); only the CONTENT is
+   styled here. A point reading for the selected place, not a rendered map
+   layer, so it has no colour-ramp legend or forecast-time row of its own —
+   see ui/render-map-airquality.js. */
+.map-aqi-status {
+  margin: 0;
+  color: #64748b;
+  font-size: 11.5px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.map-aqi-status[data-loading]::after {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-left: 6px;
+  vertical-align: -1px;
+  border-radius: 50%;
+  border: 2px solid var(--primary-soft);
+  border-top-color: var(--primary);
+  animation: geoSpin 1s linear infinite;
+}
+.map-aqi-status[data-state="error"] {
+  color: var(--rose);
+}
+.map-aqi-headline {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.map-aqi-value {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.map-aqi-badge {
+  font-size: 12px;
+  font-weight: 700;
+}
+.map-aqi-badge.is-good {
+  color: var(--emerald);
+}
+.map-aqi-badge.is-warn {
+  color: var(--amber);
+}
+.map-aqi-badge.is-bad {
+  color: var(--rose);
+}
+.map-aqi-index-label {
+  flex-basis: 100%;
+  color: #64748b;
+  font-size: 11px;
+}
+.map-aqi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px 14px;
+  margin: 10px 0 0;
+  padding: 9px 0 0;
+  border-top: 1px solid rgba(15, 23, 42, 0.1);
+}
+.map-aqi-item dt {
+  margin: 0;
+  color: #64748b;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.map-aqi-item dd {
+  margin: 1px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+.map-aqi-unit {
+  margin-left: 3px;
+  color: #64748b;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.map-aqi-meta {
+  margin: 10px 0 0;
+  color: #64748b;
+  font-size: 10.5px;
+  overflow-wrap: anywhere;
+}
+
 body[data-theme="dark"] .map-weather-controls {
   border-color: rgba(148, 163, 184, 0.22);
   background: rgba(17, 24, 39, 0.95);
@@ -1592,10 +1681,21 @@ body[data-theme="dark"] .map-legend {
 body[data-theme="dark"] .map-legend-bar {
   box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.28);
 }
+body[data-theme="dark"] .map-aqi-status,
+body[data-theme="dark"] .map-aqi-index-label,
+body[data-theme="dark"] .map-aqi-item dt,
+body[data-theme="dark"] .map-aqi-unit,
+body[data-theme="dark"] .map-aqi-meta {
+  color: var(--text-2);
+}
+body[data-theme="dark"] .map-aqi-grid {
+  border-color: var(--border);
+}
 
 @media (prefers-reduced-motion: reduce) {
   .map-panel-spinner,
-  .map-time-status[data-loading]::after {
+  .map-time-status[data-loading]::after,
+  .map-aqi-status[data-loading]::after {
     animation: none;
   }
 }

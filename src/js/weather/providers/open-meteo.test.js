@@ -8,11 +8,14 @@ import {
   forecastUrl,
   currentBatchUrl,
   airQualityUrl,
+  airQualityDetailUrl,
   normalizeForecast,
+  normalizeAirQualityDetail,
   toSnapshot,
   fetchForecast,
   fetchCurrentBatch,
   fetchAirQuality,
+  fetchAirQualityDetail,
   CURRENT_BATCH_QUERY_NAMES,
 } from "./open-meteo.js";
 import { WeatherError } from "../weather-errors.js";
@@ -21,6 +24,7 @@ import {
   sparseForecastPayload,
   batchEntry,
   aqiEntry,
+  airQualityDetailPayload,
 } from "../open-meteo.fixtures.js";
 
 const PARIS = { lat: 48.8566, lon: 2.3522 };
@@ -89,6 +93,13 @@ describe("request URLs", () => {
   it("rejects a query name it does not know", () => {
     expect(() => currentBatchUrl([PARIS], "nope")).toThrow(/Unknown weather query/);
     expect(CURRENT_BATCH_QUERY_NAMES).toEqual(["favorites", "popular", "nearby", "comparison"]);
+  });
+
+  it("builds the Air Quality layer's own detail URL — one place, five fields, local time", () => {
+    expect(String(airQualityDetailUrl(PARIS))).toBe(
+      "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=48.8566&longitude=2.3522" +
+        "&current=european_aqi%2Cpm10%2Cpm2_5%2Cnitrogen_dioxide%2Cozone&timezone=auto",
+    );
   });
 });
 
@@ -314,6 +325,71 @@ describe("fetchAirQuality", () => {
   it("rejects on failure so each caller decides what a missing value means", async () => {
     stubFetch(() => ({ ok: false, status: 500 }));
     await expect(fetchAirQuality([PARIS])).rejects.toMatchObject({ kind: "http" });
+  });
+});
+
+describe("normalizeAirQualityDetail", () => {
+  it("maps every field the map layer displays, units read from the provider", () => {
+    expect(normalizeAirQualityDetail(airQualityDetailPayload())).toEqual({
+      aqi: 34,
+      pm10: 12.4,
+      pm25: 6.1,
+      no2: 18.7,
+      o3: 52.3,
+      units: { pm10: "μg/m³", pm25: "μg/m³", no2: "μg/m³", o3: "μg/m³" },
+      time: "2026-09-21T14:00",
+    });
+  });
+
+  it("falls back to µg/m³ when the provider omits current_units", () => {
+    const payload = airQualityDetailPayload();
+    delete payload.current_units;
+    expect(normalizeAirQualityDetail(payload).units.pm25).toBe("µg/m³");
+  });
+
+  it.each([
+    ["no current block at all", {}],
+    ["a missing time", { current: { ...airQualityDetailPayload().current, time: undefined } }],
+    [
+      "a missing pollutant",
+      { current: { ...airQualityDetailPayload().current, ozone: undefined } },
+    ],
+    [
+      "a non-numeric pollutant",
+      { current: { ...airQualityDetailPayload().current, pm10: "high" } },
+    ],
+    ["a null payload", null],
+  ])("throws malformed on %s", (_label, payload) => {
+    expect(() => normalizeAirQualityDetail(payload)).toThrow(WeatherError);
+    try {
+      normalizeAirQualityDetail(payload);
+    } catch (err) {
+      expect(err.kind).toBe("malformed");
+    }
+  });
+});
+
+describe("fetchAirQualityDetail", () => {
+  it("fetches and normalizes one place's reading", async () => {
+    stubFetch(() => ok(airQualityDetailPayload()));
+    await expect(fetchAirQualityDetail(PARIS)).resolves.toMatchObject({ aqi: 34, pm25: 6.1 });
+  });
+
+  it("rejects on an HTTP error", async () => {
+    stubFetch(() => ({ ok: false, status: 503 }));
+    await expect(fetchAirQualityDetail(PARIS)).rejects.toMatchObject({ kind: "http" });
+  });
+
+  it("rejects malformed JSON as malformed, not a crash", async () => {
+    stubFetch(() => ok({ current: {} }));
+    await expect(fetchAirQualityDetail(PARIS)).rejects.toMatchObject({ kind: "malformed" });
+  });
+
+  it("passes the caller's signal through to fetch", async () => {
+    const calls = stubFetch(() => ok(airQualityDetailPayload()));
+    const controller = new AbortController();
+    await fetchAirQualityDetail(PARIS, { signal: controller.signal });
+    expect(calls[0].signal).toBeInstanceOf(AbortSignal);
   });
 });
 

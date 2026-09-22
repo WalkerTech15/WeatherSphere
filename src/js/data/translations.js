@@ -268,6 +268,23 @@ export const I18N = {
     mapLegendScale: "Colour scale from {min} to {max} {unit}",
     mapLegendUnavailable: "Legend unavailable for this layer.",
 
+    /* Air Quality map layer — a point reading for the selected place, not a
+       rendered map layer (see features/map.js) */
+    mapAqiIndex: "European Air Quality Index",
+    mapAqiPm25: "PM2.5",
+    mapAqiPm10: "PM10",
+    mapAqiNo2: "Nitrogen dioxide",
+    mapAqiO3: "Ozone",
+    mapAqiProvider: "Source: Open-Meteo",
+    mapAqiUpdated: "Updated {time}",
+    mapAqiLoading: "Loading air quality…",
+    mapAqiTimeout: "Air quality data timed out — try again in a moment.",
+    mapAqiOffline: "You're offline — air quality data is unavailable.",
+    mapAqiHttpError: "Air quality data could not be loaded.",
+    mapAqiMalformed: "Air quality data came back in an unexpected format.",
+    mapAqiUnavailable: "Air quality data is unavailable for this location.",
+    mapAqiError: "Air quality data could not be loaded.",
+
     /* expanded map mode */
     mapExpand: "Expand map",
     mapExitExpand: "Exit expanded map",
@@ -281,7 +298,7 @@ export const I18N = {
     tipLayerPressure: "Forecast sea-level pressure",
     tipLayerClouds: "Cloud cover — coming soon",
     tipLayerHumidity: "Humidity — coming soon",
-    tipLayerAirQuality: "Air quality — coming soon",
+    tipLayerAirQuality: "Air quality at the selected place",
     tipLayerAlerts: "Weather alerts — coming soon",
     tipExpandMap: "Fill the workspace with the map. Press Esc to go back.",
     tipExitMap: "Back to the normal layout (Esc)",
@@ -802,6 +819,23 @@ export const I18N = {
     mapLegendScale: "Échelle de couleurs de {min} à {max} {unit}",
     mapLegendUnavailable: "Légende indisponible pour cette couche.",
 
+    /* couche météo Qualité de l'air — une mesure ponctuelle pour le lieu
+       sélectionné, pas une couche cartographique rendue */
+    mapAqiIndex: "Indice de qualité de l'air européen",
+    mapAqiPm25: "PM2,5",
+    mapAqiPm10: "PM10",
+    mapAqiNo2: "Dioxyde d'azote",
+    mapAqiO3: "Ozone",
+    mapAqiProvider: "Source : Open-Meteo",
+    mapAqiUpdated: "Mis à jour {time}",
+    mapAqiLoading: "Chargement de la qualité de l'air…",
+    mapAqiTimeout: "Délai dépassé pour la qualité de l'air — réessayez dans un instant.",
+    mapAqiOffline: "Vous êtes hors ligne — qualité de l'air indisponible.",
+    mapAqiHttpError: "La qualité de l'air n'a pas pu être chargée.",
+    mapAqiMalformed: "La qualité de l'air a été reçue dans un format inattendu.",
+    mapAqiUnavailable: "La qualité de l'air est indisponible pour ce lieu.",
+    mapAqiError: "La qualité de l'air n'a pas pu être chargée.",
+
     /* mode carte agrandie */
     mapExpand: "Agrandir la carte",
     mapExitExpand: "Quitter la carte agrandie",
@@ -815,7 +849,7 @@ export const I18N = {
     tipLayerPressure: "Pression atmosphérique prévue",
     tipLayerClouds: "Couverture nuageuse — bientôt disponible",
     tipLayerHumidity: "Humidité — bientôt disponible",
-    tipLayerAirQuality: "Qualité de l'air — bientôt disponible",
+    tipLayerAirQuality: "Qualité de l'air au lieu sélectionné",
     tipLayerAlerts: "Alertes météo — bientôt disponible",
     tipExpandMap: "Affiche la carte sur tout l'espace de travail. Échap pour revenir.",
     tipExitMap: "Retour à la disposition normale (Échap)",

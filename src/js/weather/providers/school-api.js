@@ -21,3 +21,7 @@ export async function fetchCurrentBatch() {
 export async function fetchAirQuality() {
   throw unavailable(id);
 }
+
+export async function fetchAirQualityDetail() {
+  throw unavailable(id);
+}

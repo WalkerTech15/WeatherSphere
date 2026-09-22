@@ -10,7 +10,12 @@
  * switch, so the active provider is fixed here. */
 import * as openMeteo from "./providers/open-meteo.js";
 import * as schoolApi from "./providers/school-api.js";
-import { forecastCache, forecastCacheKey } from "./weather-cache.js";
+import {
+  forecastCache,
+  forecastCacheKey,
+  airQualityDetailCache,
+  airQualityDetailCacheKey,
+} from "./weather-cache.js";
 
 export const WEATHER_PROVIDERS = Object.freeze({
   [openMeteo.id]: openMeteo,
@@ -52,4 +57,20 @@ export function fetchCurrentBatch(locs, query, options) {
 /* European AQI per place, in order (null where unknown). */
 export function fetchAirQuality(locs, options) {
   return getActiveProvider().fetchAirQuality(locs, options);
+}
+
+/**
+ * The Air Quality map layer's own reading for one place — the richer,
+ * multi-pollutant request, cached and shared separately from
+ * fetchForecast()'s single-value `_aqi` (see weather-cache.js).
+ * @param {{signal?: AbortSignal}} [options] same cancellation contract as
+ *   fetchForecast(): a caller's own signal only detaches that caller.
+ */
+export function fetchAirQualityDetail(loc, { signal } = {}) {
+  const provider = getActiveProvider();
+  return airQualityDetailCache.get(
+    airQualityDetailCacheKey(provider.id, loc),
+    (requestSignal) => provider.fetchAirQualityDetail(loc, { signal: requestSignal }),
+    signal,
+  );
 }

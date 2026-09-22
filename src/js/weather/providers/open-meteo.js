@@ -5,6 +5,8 @@
  *   fetchForecast(loc)                    → full forecast for one place
  *   fetchCurrentBatch(locs, query, opts)  → one snapshot (or null) per place
  *   fetchAirQuality(locs, opts)           → one European AQI (or null) per place
+ *   fetchAirQualityDetail(loc, opts)      → the Air Quality map layer's own
+ *                                            richer, single-place reading
  *
  * Several places are always fetched in ONE request by comma-joining their
  * coordinates; Open-Meteo then answers with an array in the same order. */
@@ -16,6 +18,16 @@ export const available = true;
 
 const FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
 const AIR_QUALITY_URL = "https://air-quality-api.open-meteo.com/v1/air-quality";
+
+/* The Air Quality map layer's own fields — the European AQI headline plus
+   the four pollutants most air-quality UIs surface (PM2.5, PM10, NO2, O3).
+   Field names verified against Open-Meteo's Air Quality API docs
+   (https://open-meteo.com/en/docs/air-quality-api); no API key is required
+   for this non-commercial endpoint. Deliberately NOT the same request the
+   forecast's own `_aqi` uses (that one asks only `european_aqi`) — this is
+   a separate, dedicated request for the map layer, kept in its own cache
+   (see weather-cache.js's airQualityDetailCache). */
+const AIR_QUALITY_DETAIL_FIELDS = "european_aqi,pm10,pm2_5,nitrogen_dioxide,ozone";
 
 const FORECAST_PARAMS = {
   /* wind_gusts_10m is what the severe-weather advisory thresholds are
@@ -194,6 +206,50 @@ export function toSnapshot(entry, requires = []) {
 export async function fetchAirQuality(locs, { signal } = {}) {
   const data = await requestJson(airQualityUrl(locs), { signal });
   return asArray(data).map((entry) => entry?.current?.european_aqi ?? null);
+}
+
+export function airQualityDetailUrl(loc) {
+  /* timezone=auto, same as the full forecast — current.time comes back in
+     the PLACE's own local time, not GMT, so "updated at" means what it
+     looks like it means regardless of where the visitor is. */
+  return coordinateUrl(AIR_QUALITY_URL, [loc], {
+    current: AIR_QUALITY_DETAIL_FIELDS,
+    timezone: "auto",
+  });
+}
+
+/* Air-quality payload → the map layer's own reading. Every field the layer
+   displays must be present and numeric, or the response is unusable — a
+   panel reading "—" for a pollutant would look like a real "no data"
+   measurement rather than a malformed response. `units` is read straight
+   from the provider's own `current_units` (never hand-typed), so a label
+   can never disagree with the number it names. */
+export function normalizeAirQualityDetail(d) {
+  const c = d?.current;
+  const u = d?.current_units;
+  const fields = ["european_aqi", "pm10", "pm2_5", "nitrogen_dioxide", "ozone"];
+  if (!c || typeof c.time !== "string" || !fields.every((f) => Number.isFinite(c[f]))) {
+    throw malformed();
+  }
+  return {
+    aqi: c.european_aqi,
+    pm10: c.pm10,
+    pm25: c.pm2_5,
+    no2: c.nitrogen_dioxide,
+    o3: c.ozone,
+    units: {
+      pm10: u?.pm10 ?? "µg/m³",
+      pm25: u?.pm2_5 ?? "µg/m³",
+      no2: u?.nitrogen_dioxide ?? "µg/m³",
+      o3: u?.ozone ?? "µg/m³",
+    },
+    time: c.time,
+  };
+}
+
+export async function fetchAirQualityDetail(loc, { signal } = {}) {
+  const payload = await requestJson(airQualityDetailUrl(loc), { signal });
+  return normalizeAirQualityDetail(payload);
 }
 
 export async function fetchForecast(loc, { signal } = {}) {

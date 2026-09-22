@@ -16,6 +16,7 @@ import {
 import { fmtHour, fmtClock } from "../core/datetime.js";
 import { weatherIcon, METRIC_ICONS } from "../data/icons.js";
 import { wmo, wxDesc } from "../data/weather-codes.js";
+import { classifyAqi } from "../data/air-quality.js";
 import { locName } from "../core/location.js";
 import { precipSummaryText } from "../core/precip-summary.js";
 import { computeFadeVisibility } from "../core/carousel-fade.js";
@@ -91,14 +92,6 @@ const FC_TABS = [
   },
 ];
 
-function aqInfo(aqi) {
-  if (aqi == null) return { label: "—", cls: "" };
-  if (aqi <= 50) return { label: t("aqGood"), cls: "is-good" };
-  if (aqi <= 75) return { label: t("aqModerate"), cls: "is-warn" };
-  if (aqi <= 100) return { label: t("aqPoor"), cls: "is-bad" };
-  return { label: t("aqVeryPoor"), cls: "is-bad" };
-}
-
 export function renderForecastPage() {
   const wx = state.wx,
     loc = state.loc;
@@ -138,7 +131,7 @@ export function renderForecastPage() {
 
   /* today's details */
   const d0 = wx.daily[0];
-  const aq = aqInfo(wx.current.aqi);
+  const aq = classifyAqi(wx.current.aqi);
   $("#dayDetails").innerHTML = `
     <h3 class="info-title">${t("dayDetails")}</h3>
     <div class="dd-grid">

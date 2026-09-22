@@ -9,11 +9,17 @@ import {
   fetchForecast,
   fetchCurrentBatch,
   fetchAirQuality,
+  fetchAirQualityDetail,
 } from "./weather-provider.js";
 import * as openMeteo from "./providers/open-meteo.js";
 import * as schoolApi from "./providers/school-api.js";
 import { __clearWeatherCachesForTests } from "./weather-cache.js";
-import { forecastPayload, batchEntry, aqiEntry } from "./open-meteo.fixtures.js";
+import {
+  forecastPayload,
+  batchEntry,
+  aqiEntry,
+  airQualityDetailPayload,
+} from "./open-meteo.fixtures.js";
 
 const PARIS = { lat: 48.8566, lon: 2.3522 };
 const TOKYO = { lat: 35.6762, lon: 139.6503 };
@@ -53,6 +59,7 @@ describe("provider registry", () => {
       expect(typeof provider.fetchForecast).toBe("function");
       expect(typeof provider.fetchCurrentBatch).toBe("function");
       expect(typeof provider.fetchAirQuality).toBe("function");
+      expect(typeof provider.fetchAirQualityDetail).toBe("function");
     }
   });
 });
@@ -70,6 +77,9 @@ describe("school API placeholder", () => {
       kind: "unavailable",
     });
     await expect(schoolApi.fetchAirQuality([PARIS])).rejects.toMatchObject({
+      kind: "unavailable",
+    });
+    await expect(schoolApi.fetchAirQualityDetail(PARIS)).rejects.toMatchObject({
       kind: "unavailable",
     });
     expect(globalThis.fetch).not.toHaveBeenCalled();
@@ -111,6 +121,64 @@ describe("fetchForecast", () => {
     fail = false;
     await expect(fetchForecast(PARIS)).resolves.toHaveProperty("current");
     expect(forecastCalls(calls)).toHaveLength(2);
+  });
+});
+
+describe("fetchAirQualityDetail", () => {
+  it("serves a second request for the same coordinates from its own cache", async () => {
+    const calls = stubFetch(() => ok(airQualityDetailPayload()));
+    const first = await fetchAirQualityDetail(PARIS);
+    const second = await fetchAirQualityDetail({ ...PARIS, id: "other-id" });
+    expect(second).toBe(first);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("keeps different coordinates apart", async () => {
+    const calls = stubFetch(() => ok(airQualityDetailPayload()));
+    await fetchAirQualityDetail(PARIS);
+    await fetchAirQualityDetail(TOKYO);
+    expect(calls).toHaveLength(2);
+  });
+
+  it("never shares a cache entry with fetchForecast for the same coordinates", async () => {
+    const calls = stubFetch((url) =>
+      url.includes("air-quality") ? ok(airQualityDetailPayload()) : ok(forecastPayload()),
+    );
+    await fetchAirQualityDetail(PARIS);
+    await fetchForecast(PARIS);
+    /* the forecast's own `_aqi` request (european_aqi only) plus this
+       module's separate, richer detail request — two air-quality calls,
+       not one reused between them */
+    expect(calls.filter((u) => u.includes("air-quality"))).toHaveLength(2);
+  });
+
+  it("does not cache a failure", async () => {
+    let fail = true;
+    const calls = stubFetch(() =>
+      fail ? { ok: false, status: 500 } : ok(airQualityDetailPayload()),
+    );
+    await expect(fetchAirQualityDetail(PARIS)).rejects.toMatchObject({ kind: "http" });
+    fail = false;
+    await expect(fetchAirQualityDetail(PARIS)).resolves.toHaveProperty("aqi");
+    expect(calls).toHaveLength(2);
+  });
+
+  it("cancels the request when the only caller leaves", async () => {
+    const pending = [];
+    globalThis.fetch = vi.fn(
+      (url, { signal }) =>
+        new Promise((resolve, reject) => {
+          if (signal.aborted) return reject(signal.reason);
+          signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+          pending.push({ url: String(url), signal });
+        }),
+    );
+    const controller = new AbortController();
+    const request = fetchAirQualityDetail(PARIS, { signal: controller.signal });
+    expect(pending).toHaveLength(1);
+    controller.abort();
+    await expect(request).rejects.toMatchObject({ kind: "aborted" });
+    expect(pending[0].signal.aborted).toBe(true);
   });
 });
 

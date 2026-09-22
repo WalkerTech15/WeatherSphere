@@ -34,7 +34,10 @@ export const URL_VIEWS = [
   "help",
   "privacy",
 ];
-export const URL_LAYERS = ["satellite", "temperature", "rain", "wind", "pressure"];
+export const URL_LAYERS = ["satellite", "temperature", "rain", "wind", "pressure", "airQuality"];
+/* Layers with no forecast-time concept — a shared/bookmarked link never
+   carries a meaningless `t=` for them. */
+const URL_LAYERS_WITHOUT_TIME = ["satellite", "airQuality"];
 export const URL_TIME_OFFSETS = [0, 3, 6];
 
 export const DEFAULT_URL_STATE = {
@@ -125,7 +128,7 @@ export function parseAppUrl(hash) {
   if (panel === "0" || panel === "1") state.panel = panel === "1";
 
   /* a forecast time only means something with a weather layer under it */
-  if (state.layer === "satellite") state.offset = 0;
+  if (URL_LAYERS_WITHOUT_TIME.includes(state.layer)) state.offset = 0;
 
   return state;
 }
@@ -152,7 +155,11 @@ export function buildAppUrl(input = {}) {
 
   if (URL_LAYERS.includes(state.layer) && state.layer !== "satellite") {
     params.set("layer", state.layer);
-    if (URL_TIME_OFFSETS.includes(state.offset) && state.offset !== 0) {
+    if (
+      !URL_LAYERS_WITHOUT_TIME.includes(state.layer) &&
+      URL_TIME_OFFSETS.includes(state.offset) &&
+      state.offset !== 0
+    ) {
       params.set("t", String(state.offset));
     }
   }

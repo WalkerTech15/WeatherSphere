@@ -107,6 +107,18 @@ export function forecastCacheKey(providerId, loc) {
   return `${providerId}:${loc.lat},${loc.lon}`;
 }
 
+/* The Air Quality map layer's own cache — deliberately separate from
+   forecastCache (a different key space, a different Map instance), so an
+   Air Quality request is never confused with, and never evicts or is
+   evicted by, an ordinary forecast for the same coordinates. Same TTL and
+   sharing/cancellation behaviour as forecasts: re-selecting the still-fresh
+   place while switching layers back and forth reuses the one request. */
+export const airQualityDetailCache = createSharedRequestCache(WEATHER_CACHE_TTL_MS);
+
+export function airQualityDetailCacheKey(providerId, loc) {
+  return `${providerId}:${loc.lat},${loc.lon}`;
+}
+
 /* Identity of a batched list: the places' ids, in order. */
 export function batchKey(locs) {
   return locs.map((l) => l.id).join(",");
@@ -147,4 +159,5 @@ export function createBatchLoader() {
 /* Test seam only. */
 export function __clearWeatherCachesForTests() {
   forecastCache.clear();
+  airQualityDetailCache.clear();
 }
