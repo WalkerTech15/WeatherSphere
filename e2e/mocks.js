@@ -49,6 +49,10 @@ const WEATHER_KINDS = {
   /* violent wind, heavy rain, a pressure crash — and NO thunderstorm code:
      the bait for anything that would infer lightning or a tornado */
   gale: { code: 65, temp: 14, feels: 9, gust: 130, visibility: 4000, precip: 6, pressure: 955 },
+  /* Humidity map-layer scenarios — the other fields are irrelevant to it,
+     so they just reuse `calm`'s. */
+  humid: { code: 1, feels: 20.1, gust: 24, visibility: 20000, humidity: 92 },
+  dryAir: { code: 1, feels: 20.1, gust: 24, visibility: 20000, humidity: 12 },
 };
 
 /* `place` distinguishes one entry of a BATCHED (comma-joined coordinates)
@@ -66,7 +70,7 @@ function weatherPayload(kind = "calm", place = 0, timezone = "Europe/Paris") {
     current: {
       time: `${DAY}T00:00`,
       temperature_2m: (w.temp ?? WEATHER_TEMP_C) + dTemp,
-      relative_humidity_2m: 55,
+      relative_humidity_2m: w.humidity ?? 55,
       apparent_temperature: w.feels + dTemp,
       is_day: 1,
       weather_code: w.code,
@@ -703,6 +707,7 @@ export function airQualityDetailPayload() {
 export async function installMocks(page, overrides = {}) {
   const {
     weatherStatus = 200,
+    weatherDelayMs,
     photoProxy,
     wikimediaProxy,
     placesProxy,
@@ -742,7 +747,7 @@ export async function installMocks(page, overrides = {}) {
     return route.abort();
   });
 
-  await page.route("**://api.open-meteo.com/**", (route, request) => {
+  await page.route("**://api.open-meteo.com/**", async (route, request) => {
     if (weatherStatus !== 200)
       return route.fulfill({
         status: weatherStatus,
@@ -764,6 +769,7 @@ export async function installMocks(page, overrides = {}) {
         ),
       );
     }
+    if (weatherDelayMs) await new Promise((resolve) => setTimeout(resolve, weatherDelayMs));
     return route.fulfill(json(weatherPayload(kind, 0, weatherTimezone)));
   });
   await page.route("**://air-quality-api.open-meteo.com/**", async (route, request) => {

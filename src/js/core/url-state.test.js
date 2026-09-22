@@ -68,19 +68,21 @@ describe("parseAppUrl", () => {
     expect(parseAppUrl("#/map?layer=radioactivity").layer).toBe("satellite");
   });
 
-  it("accepts pressure and airQuality, the two working real layers", () => {
+  it("accepts pressure, humidity and airQuality, the working real layers", () => {
     expect(parseAppUrl("#/map?layer=pressure").layer).toBe("pressure");
+    expect(parseAppUrl("#/map?layer=humidity").layer).toBe("humidity");
     expect(parseAppUrl("#/map?layer=airQuality").layer).toBe("airQuality");
   });
 
   it("rejects the disabled placeholder layers — they have no real data source", () => {
-    for (const layer of ["clouds", "humidity", "alerts"]) {
+    for (const layer of ["clouds", "alerts"]) {
       expect(parseAppUrl(`#/map?layer=${layer}`).layer).toBe("satellite");
     }
   });
 
-  it("airQuality has no forecast-time concept, so a t= under it is dropped", () => {
+  it("airQuality and humidity have no forecast-time concept, so a t= under either is dropped", () => {
     expect(parseAppUrl("#/map?layer=airQuality&t=3").offset).toBe(0);
+    expect(parseAppUrl("#/map?layer=humidity&t=3").offset).toBe(0);
   });
 
   it.each(["t=99", "t=-3", "t=1.5", "t=abc"])(
@@ -141,6 +143,11 @@ describe("buildAppUrl", () => {
       "#/map?layer=airQuality",
     );
     expect(parseAppUrl("#/map?layer=airQuality").layer).toBe("airQuality");
+  });
+
+  it("round-trips the humidity layer, with no t= param (it has no forecast time)", () => {
+    expect(buildAppUrl({ view: "map", layer: "humidity", offset: 6 })).toBe("#/map?layer=humidity");
+    expect(parseAppUrl("#/map?layer=humidity").layer).toBe("humidity");
   });
 
   it("writes panel=0 explicitly, since 'closed' is a real shared state", () => {

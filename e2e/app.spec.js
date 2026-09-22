@@ -969,8 +969,8 @@ test.describe("map visual polish", () => {
   test("42. every map-layer button uses an SVG icon, not the old text glyph", async ({ app }) => {
     await app.locator('.side-item[data-view="map"]').click();
     const buttons = app.locator(".map-layer");
-    /* Satellite, Temperature, Rain, Wind, Pressure (working) + Clouds,
-       Humidity, Air quality, Alerts (disabled placeholders) */
+    /* Satellite, Temperature, Rain, Wind, Pressure, Humidity, Air quality
+       (working) + Clouds, Alerts (disabled placeholders) */
     await expect(buttons).toHaveCount(9);
 
     const icons = await buttons.evaluateAll((els) =>
@@ -2363,12 +2363,12 @@ test.describe("map layer switcher: Pressure and the disabled placeholders", () =
     await expect(legend).toContainText("hPa");
   });
 
-  test("Clouds, Humidity and Alerts are disabled and inert", async ({ page }) => {
+  test("Clouds and Alerts are disabled and inert", async ({ page }) => {
     await openMap(page);
     const requests = [];
     page.on("request", (request) => requests.push(request.url()));
 
-    for (const layer of ["clouds", "humidity", "alerts"]) {
+    for (const layer of ["clouds", "alerts"]) {
       const btn = page.locator(`.map-layer[data-map-layer="${layer}"]`);
       await expect(btn).toBeDisabled();
       await expect(btn).toHaveAttribute("aria-disabled", "true");
@@ -2542,6 +2542,135 @@ test.describe("map layer switcher: Air Quality", () => {
     await expect(aqiBtn(page)).toHaveAttribute("role", "radio");
     await page.keyboard.press("Enter");
     await expect(aqiBtn(page)).toHaveAttribute("aria-checked", "true", { timeout: 20000 });
+  });
+});
+
+/* Humidity: also a point reading for the selected place, like Air Quality,
+   but — unlike it — relative humidity is already part of the ordinary
+   forecast every place fetches on selection (Open-Meteo's
+   relative_humidity_2m), so this reuses that instead of a request of its
+   own — see features/humidity-state.js and features/map.js. */
+test.describe("map layer switcher: Humidity", () => {
+  const humidityBtn = (page) => page.locator('.map-layer[data-map-layer="humidity"]');
+  const panel = (page) => page.locator("#mapWeatherControls");
+
+  async function openMap(page, overrides) {
+    await installMocks(page, overrides);
+    await page.goto("/");
+    await expect(page.locator("#heroCityName")).not.toBeEmpty();
+    await page.locator('.side-item[data-view="map"]').click();
+  }
+
+  test("is a real, selectable control — not disabled, no 'coming soon' badge", async ({ page }) => {
+    await openMap(page);
+    await expect(humidityBtn(page)).toBeEnabled();
+    await expect(humidityBtn(page)).not.toHaveAttribute("aria-disabled", "true");
+    await expect(humidityBtn(page).locator(".map-layer-badge")).toHaveCount(0);
+  });
+
+  test("loads and shows the reading immediately — it reuses the already-fetched forecast, not a request of its own", async ({
+    page,
+  }) => {
+    await openMap(page, { weatherKind: "humid" });
+    await humidityBtn(page).click();
+    await expect(humidityBtn(page)).toHaveAttribute("aria-checked", "true", { timeout: 20000 });
+    const humidity = panel(page).locator(".map-humidity");
+    await expect(humidity).toBeVisible();
+    await expect(humidity.locator(".map-aqi-value")).toContainText("92");
+    /* French default; 92% → "humid" band */
+    await expect(humidity.locator(".map-aqi-badge")).toContainText("Humide");
+    await expect(humidity.locator(".map-aqi-meta")).toContainText("Open-Meteo");
+  });
+
+  test("never renders a colour-ramp legend or a forecast-time row — it isn't a map layer", async ({
+    page,
+  }) => {
+    await openMap(page);
+    await humidityBtn(page).click();
+    await expect(panel(page).locator(".map-humidity")).toBeVisible({ timeout: 20000 });
+    await expect(panel(page).locator(".map-legend")).toHaveCount(0);
+    await expect(panel(page).locator(".map-time-row")).toHaveCount(0);
+  });
+
+  test("a failed forecast shows an honest error state, never the fabricated demo number", async ({
+    page,
+  }) => {
+    await openMap(page, { weatherStatus: 500 });
+    await humidityBtn(page).click();
+    await expect(humidityBtn(page)).toHaveAttribute("aria-checked", "true", { timeout: 20000 });
+    await expect(panel(page).locator('[data-state="error"]')).toBeVisible();
+    await expect(panel(page).locator(".map-humidity")).toHaveCount(0);
+  });
+
+  test("offline is reported as offline, not as a generic error", async ({ page }) => {
+    await openMap(page);
+    await humidityBtn(page).click();
+    await expect(panel(page).locator(".map-humidity")).toBeVisible({ timeout: 20000 });
+
+    /* setOffline(true) flips navigator.onLine, which is what the app's own
+       offline classification reads (services/offline.js) — but Playwright's
+       mocked routes still fulfill even while "offline", so the forecast
+       request for the NEW place is also made to fail here, the way a real
+       offline fetch would. */
+    await page.route("**://api.open-meteo.com/**", (route) => route.abort());
+    await page.context().setOffline(true);
+    const card = page.locator("#exploreCarousel .explore-open").nth(1);
+    await card.evaluate((button) => button.click());
+    await expect(panel(page)).toContainText("hors ligne", { timeout: 20000 });
+    await page.context().setOffline(false);
+  });
+
+  test("switching to a new place while active never shows the old place's number", async ({
+    page,
+  }) => {
+    /* first single-location forecast (the default place, at boot) is dry;
+       the second (the newly picked place) is humid — and deliberately
+       slow, so the panel must blank out rather than keep showing 12 */
+    let singleHits = 0;
+    const weatherKind = (url) => {
+      const lat = new URL(url).searchParams.get("latitude") || "";
+      if (lat.includes(",")) return "calm"; /* a batched request — irrelevant here */
+      singleHits++;
+      return singleHits === 1 ? "dryAir" : "humid";
+    };
+    await installMocks(page, { weatherKind, weatherDelayMs: 2000 });
+    await page.goto("/");
+    await expect(page.locator("#heroCityName")).not.toBeEmpty({ timeout: 20000 });
+    await page.locator('.side-item[data-view="map"]').click();
+
+    await humidityBtn(page).click();
+    await expect(panel(page).locator(".map-aqi-value")).toContainText("12", { timeout: 20000 });
+
+    const card = page.locator("#exploreCarousel .explore-open").nth(1);
+    await card.evaluate((button) => button.click());
+    /* the card also navigates to Home (see render-home.js), so the panel
+       itself is legitimately hidden now — toHaveText, unlike toBeVisible,
+       does not require that, matching the Air Quality test above */
+    await expect(panel(page).locator('[data-loading="1"]')).toHaveCount(1);
+    await expect(panel(page)).not.toContainText("12");
+    await page.locator('.side-item[data-view="map"]').click();
+    await expect(panel(page).locator(".map-aqi-value")).toContainText("92", { timeout: 20000 });
+  });
+
+  test("the panel is labelled in English too", async ({ page }) => {
+    await openMap(page, { weatherKind: "dryAir" });
+    await page.locator("#langBtn").click();
+    await page.locator('#langMenu button[data-lang="en"]').click();
+    await expect(humidityBtn(page)).toContainText("Humidity");
+    await humidityBtn(page).click();
+    const humidity = panel(page).locator(".map-humidity");
+    await expect(humidity).toBeVisible({ timeout: 20000 });
+    await expect(humidity.locator(".map-aqi-badge")).toContainText("Dry");
+    await expect(humidity.locator(".map-aqi-meta")).toContainText("Open-Meteo");
+  });
+
+  test("is keyboard-reachable and activatable, with correct radio semantics", async ({ page }) => {
+    await openMap(page);
+    await humidityBtn(page).focus();
+    await expect(humidityBtn(page)).toBeFocused();
+    await expect(humidityBtn(page)).toHaveAttribute("role", "radio");
+    await page.keyboard.press("Enter");
+    await expect(humidityBtn(page)).toHaveAttribute("aria-checked", "true", { timeout: 20000 });
   });
 });
 

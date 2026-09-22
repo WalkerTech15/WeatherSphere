@@ -34,10 +34,18 @@ export const URL_VIEWS = [
   "help",
   "privacy",
 ];
-export const URL_LAYERS = ["satellite", "temperature", "rain", "wind", "pressure", "airQuality"];
+export const URL_LAYERS = [
+  "satellite",
+  "temperature",
+  "rain",
+  "wind",
+  "pressure",
+  "humidity",
+  "airQuality",
+];
 /* Layers with no forecast-time concept — a shared/bookmarked link never
    carries a meaningless `t=` for them. */
-const URL_LAYERS_WITHOUT_TIME = ["satellite", "airQuality"];
+const URL_LAYERS_WITHOUT_TIME = ["satellite", "humidity", "airQuality"];
 export const URL_TIME_OFFSETS = [0, 3, 6];
 
 export const DEFAULT_URL_STATE = {

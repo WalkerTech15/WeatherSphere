@@ -9,10 +9,11 @@
  *
  * Satellite is the plain basemap and carries no weather data, so it gets no
  * legend and no timeline at all — the whole block is emptied and hidden.
- * Air Quality is likewise excluded here: it has no colour ramp and no
- * forecast-time concept (a point reading for the selected place, not a
- * map layer), so it gets its own renderer — ui/render-map-airquality.js,
- * called separately by features/map.js and sharing this same host. */
+ * Air Quality and Humidity are likewise excluded here: neither has a
+ * colour ramp or a forecast-time concept (both are point readings for the
+ * selected place, not a map layer), so each gets its own renderer —
+ * ui/render-map-airquality.js and ui/render-map-humidity.js, called
+ * separately by features/map.js and sharing this same host. */
 import { $, $$, esc } from "../core/dom.js";
 import { t } from "../core/i18n.js";
 import { fmtDateTime } from "../core/datetime.js";
@@ -167,7 +168,12 @@ export function renderWeatherOverlayUI(overlay, { onSelectTime, onToggleAnimatio
   const host = $("#mapWeatherControls");
   if (!host) return;
 
-  if (!overlay || overlay.type === "satellite" || overlay.type === "airQuality") {
+  if (
+    !overlay ||
+    overlay.type === "satellite" ||
+    overlay.type === "airQuality" ||
+    overlay.type === "humidity"
+  ) {
     host.replaceChildren();
     host.hidden = true;
     return;

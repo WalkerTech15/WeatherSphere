@@ -285,6 +285,16 @@ export const I18N = {
     mapAqiUnavailable: "Air quality data is unavailable for this location.",
     mapAqiError: "Air quality data could not be loaded.",
 
+    /* Humidity map layer — a point reading for the selected place, read
+       from the already-fetched forecast, not a rendered map layer (see
+       features/map.js and features/humidity-state.js) */
+    mapHumidityProvider: "Source: Open-Meteo",
+    mapHumidityUpdated: "Updated {time}",
+    mapHumidityLoading: "Loading humidity…",
+    mapHumidityOffline: "You're offline — humidity data is unavailable.",
+    mapHumidityUnavailable: "Humidity data is unavailable for this location.",
+    mapHumidityError: "Humidity data could not be loaded.",
+
     /* expanded map mode */
     mapExpand: "Expand map",
     mapExitExpand: "Exit expanded map",
@@ -297,7 +307,7 @@ export const I18N = {
     tipLayerWind: "Wind speed and direction",
     tipLayerPressure: "Forecast sea-level pressure",
     tipLayerClouds: "Cloud cover — coming soon",
-    tipLayerHumidity: "Humidity — coming soon",
+    tipLayerHumidity: "Humidity at the selected place",
     tipLayerAirQuality: "Air quality at the selected place",
     tipLayerAlerts: "Weather alerts — coming soon",
     tipExpandMap: "Fill the workspace with the map. Press Esc to go back.",
@@ -836,6 +846,16 @@ export const I18N = {
     mapAqiUnavailable: "La qualité de l'air est indisponible pour ce lieu.",
     mapAqiError: "La qualité de l'air n'a pas pu être chargée.",
 
+    /* couche météo Humidité — une mesure ponctuelle pour le lieu
+       sélectionné, lue depuis les prévisions déjà chargées, pas une couche
+       cartographique rendue */
+    mapHumidityProvider: "Source : Open-Meteo",
+    mapHumidityUpdated: "Mis à jour {time}",
+    mapHumidityLoading: "Chargement de l'humidité…",
+    mapHumidityOffline: "Vous êtes hors ligne — humidité indisponible.",
+    mapHumidityUnavailable: "L'humidité est indisponible pour ce lieu.",
+    mapHumidityError: "L'humidité n'a pas pu être chargée.",
+
     /* mode carte agrandie */
     mapExpand: "Agrandir la carte",
     mapExitExpand: "Quitter la carte agrandie",
@@ -848,7 +868,7 @@ export const I18N = {
     tipLayerWind: "Vitesse et direction du vent",
     tipLayerPressure: "Pression atmosphérique prévue",
     tipLayerClouds: "Couverture nuageuse — bientôt disponible",
-    tipLayerHumidity: "Humidité — bientôt disponible",
+    tipLayerHumidity: "Humidité au lieu sélectionné",
     tipLayerAirQuality: "Qualité de l'air au lieu sélectionné",
     tipLayerAlerts: "Alertes météo — bientôt disponible",
     tipExpandMap: "Affiche la carte sur tout l'espace de travail. Échap pour revenir.",

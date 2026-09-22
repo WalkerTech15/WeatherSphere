@@ -16,6 +16,7 @@ import {
 import { fmtHour, fmtClock, fmtDay, fmtDate } from "../core/datetime.js";
 import { weatherIcon, METRIC_ICONS } from "../data/icons.js";
 import { wmo, wxDesc, skyKey } from "../data/weather-codes.js";
+import { classifyHumidity } from "../data/humidity.js";
 import { LOCATIONS, EXPLORE_IDS } from "../data/locations.js";
 import {
   locName,
@@ -198,7 +199,7 @@ const METRICS = [
     tint: "tint-sky",
     simple: true,
     val: (c) => `${Math.round(c.humidity)}<span class="unit">%</span>`,
-    foot: (c) => (c.humidity > 70 ? t("humid") : c.humidity < 35 ? t("dry") : t("comfortable")),
+    foot: (c) => classifyHumidity(c.humidity).label,
   },
   {
     key: "windSpeed",

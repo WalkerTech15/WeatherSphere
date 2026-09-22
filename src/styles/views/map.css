@@ -1563,12 +1563,15 @@ body[data-theme="dark"] .map-panel-loading-coords {
   font-size: 11.5px;
 }
 
-/* ── Air Quality panel ─────────────────────────────────────────────────
+/* ── Air Quality / Humidity panels ───────────────────────────────────────
    Shares #mapWeatherControls's own card chrome (position, width, padding,
    background — see .map-weather-controls above); only the CONTENT is
-   styled here. A point reading for the selected place, not a rendered map
-   layer, so it has no colour-ramp legend or forecast-time row of its own —
-   see ui/render-map-airquality.js. */
+   styled here. Both are point readings for the selected place, not a
+   rendered map layer, so neither has a colour-ramp legend or forecast-time
+   row of its own — see ui/render-map-airquality.js and
+   ui/render-map-humidity.js, which share this same "status line / value +
+   badge / meta line" shape (the `.map-aqi-*` class names predate Humidity
+   reusing them). */
 .map-aqi-status {
   margin: 0;
   color: #64748b;
