@@ -729,60 +729,133 @@
               aria-label="Map layer"
               data-i18n-aria="mapLayer"
             >
-              <span
-                class="map-layer-fade map-layer-fade-left"
-                id="mapLayerFadeLeft"
-                aria-hidden="true"
-              ></span>
-              <span
-                class="map-layer-fade map-layer-fade-right"
-                id="mapLayerFadeRight"
-                aria-hidden="true"
-              ></span>
-              <button
-                class="map-layer is-active"
-                type="button"
-                data-map-layer="satellite"
-                data-i18n-tip="tipLayerSatellite"
-                aria-checked="true"
-                role="radio"
-              >
-                <span class="map-layer-icon" data-layer-icon="satellite" aria-hidden="true"></span
-                ><span data-i18n="mapSatellite">Satellite</span>
-              </button>
-              <button
-                class="map-layer"
-                type="button"
-                data-map-layer="temperature"
-                data-i18n-tip="tipLayerTemperature"
-                aria-checked="false"
-                role="radio"
-              >
-                <span class="map-layer-icon" data-layer-icon="temperature" aria-hidden="true"></span
-                ><span data-i18n="temperature">Temperature</span>
-              </button>
-              <button
-                class="map-layer"
-                type="button"
-                data-map-layer="rain"
-                data-i18n-tip="tipLayerRain"
-                aria-checked="false"
-                role="radio"
-              >
-                <span class="map-layer-icon" data-layer-icon="rain" aria-hidden="true"></span
-                ><span data-i18n="rain">Rain</span>
-              </button>
-              <button
-                class="map-layer"
-                type="button"
-                data-map-layer="wind"
-                data-i18n-tip="tipLayerWind"
-                aria-checked="false"
-                role="radio"
-              >
-                <span class="map-layer-icon" data-layer-icon="wind" aria-hidden="true"></span
-                ><span data-i18n="wind">Wind</span>
-              </button>
+              <div class="map-layer-row">
+                <span class="map-layer-fade map-layer-fade-left" aria-hidden="true"></span>
+                <span class="map-layer-fade map-layer-fade-right" aria-hidden="true"></span>
+                <button
+                  class="map-layer is-active"
+                  type="button"
+                  data-map-layer="satellite"
+                  data-i18n-tip="tipLayerSatellite"
+                  aria-checked="true"
+                  role="radio"
+                >
+                  <span class="map-layer-icon" data-layer-icon="satellite" aria-hidden="true"></span
+                  ><span data-i18n="mapSatellite">Satellite</span>
+                </button>
+                <button
+                  class="map-layer"
+                  type="button"
+                  data-map-layer="temperature"
+                  data-i18n-tip="tipLayerTemperature"
+                  aria-checked="false"
+                  role="radio"
+                >
+                  <span
+                    class="map-layer-icon"
+                    data-layer-icon="temperature"
+                    aria-hidden="true"
+                  ></span
+                  ><span data-i18n="temperature">Temperature</span>
+                </button>
+                <button
+                  class="map-layer"
+                  type="button"
+                  data-map-layer="rain"
+                  data-i18n-tip="tipLayerRain"
+                  aria-checked="false"
+                  role="radio"
+                >
+                  <span class="map-layer-icon" data-layer-icon="rain" aria-hidden="true"></span
+                  ><span data-i18n="rain">Rain</span>
+                </button>
+                <button
+                  class="map-layer"
+                  type="button"
+                  data-map-layer="wind"
+                  data-i18n-tip="tipLayerWind"
+                  aria-checked="false"
+                  role="radio"
+                >
+                  <span class="map-layer-icon" data-layer-icon="wind" aria-hidden="true"></span
+                  ><span data-i18n="wind">Wind</span>
+                </button>
+                <button
+                  class="map-layer is-disabled"
+                  type="button"
+                  data-map-layer="clouds"
+                  data-i18n-tip="tipLayerClouds"
+                  aria-checked="false"
+                  aria-disabled="true"
+                  role="radio"
+                  disabled
+                >
+                  <span class="map-layer-icon" data-layer-icon="clouds" aria-hidden="true"></span
+                  ><span data-i18n="mapClouds">Clouds</span
+                  ><span class="map-layer-badge" data-i18n="mapLayerComingSoon">Coming soon</span>
+                </button>
+              </div>
+              <div class="map-layer-row">
+                <span class="map-layer-fade map-layer-fade-left" aria-hidden="true"></span>
+                <span class="map-layer-fade map-layer-fade-right" aria-hidden="true"></span>
+                <button
+                  class="map-layer"
+                  type="button"
+                  data-map-layer="pressure"
+                  data-i18n-tip="tipLayerPressure"
+                  aria-checked="false"
+                  role="radio"
+                >
+                  <span class="map-layer-icon" data-layer-icon="pressure" aria-hidden="true"></span
+                  ><span data-i18n="pressure">Pressure</span>
+                </button>
+                <button
+                  class="map-layer is-disabled"
+                  type="button"
+                  data-map-layer="humidity"
+                  data-i18n-tip="tipLayerHumidity"
+                  aria-checked="false"
+                  aria-disabled="true"
+                  role="radio"
+                  disabled
+                >
+                  <span class="map-layer-icon" data-layer-icon="humidity" aria-hidden="true"></span
+                  ><span data-i18n="humidity">Humidity</span
+                  ><span class="map-layer-badge" data-i18n="mapLayerComingSoon">Coming soon</span>
+                </button>
+                <button
+                  class="map-layer is-disabled"
+                  type="button"
+                  data-map-layer="airQuality"
+                  data-i18n-tip="tipLayerAirQuality"
+                  aria-checked="false"
+                  aria-disabled="true"
+                  role="radio"
+                  disabled
+                >
+                  <span
+                    class="map-layer-icon"
+                    data-layer-icon="airQuality"
+                    aria-hidden="true"
+                  ></span
+                  ><span data-i18n="airQuality">Air quality</span
+                  ><span class="map-layer-badge" data-i18n="mapLayerComingSoon">Coming soon</span>
+                </button>
+                <button
+                  class="map-layer is-disabled"
+                  type="button"
+                  data-map-layer="alerts"
+                  data-i18n-tip="tipLayerAlerts"
+                  aria-checked="false"
+                  aria-disabled="true"
+                  role="radio"
+                  disabled
+                >
+                  <span class="map-layer-icon" data-layer-icon="alerts" aria-hidden="true"></span
+                  ><span data-i18n="mapAlerts">Alerts</span
+                  ><span class="map-layer-badge" data-i18n="mapLayerComingSoon">Coming soon</span>
+                </button>
+              </div>
             </div>
             <div id="worldMap"></div>
             <!-- Forecast-time selector + weather legend. A sibling of the map

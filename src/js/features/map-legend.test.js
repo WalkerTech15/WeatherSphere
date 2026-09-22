@@ -32,6 +32,16 @@ const WIND_STOPS = [
   { value: 40, color: [253, 231, 37, 255] },
 ];
 
+/* PressureLayer's builtin PRESSURE ramp (hPa), [900, 1080]. */
+const PRESSURE_STOPS = [
+  { value: 900, color: [0, 0, 100, 250] },
+  { value: 950, color: [0, 0, 255, 250] },
+  { value: 980, color: [0, 0, 255, 120] },
+  { value: 1000, color: [255, 255, 255, 0] },
+  { value: 1020, color: [255, 0, 0, 120] },
+  { value: 1080, color: [255, 0, 0, 250] },
+];
+
 /* Stand-in for a Readonly<ColorRamp>: the SDK's ColorRamp extends Array and
    also exposes getRawColorStops(), so both access paths are exercised. */
 function fakeColorRamp(stops) {
@@ -46,11 +56,18 @@ beforeEach(() => {
 });
 
 describe("hasLegend", () => {
-  it("covers the three weather layers and never satellite", () => {
+  it("covers the four working weather layers and never satellite", () => {
     expect(hasLegend("temperature")).toBe(true);
     expect(hasLegend("rain")).toBe(true);
     expect(hasLegend("wind")).toBe(true);
+    expect(hasLegend("pressure")).toBe(true);
     expect(hasLegend("satellite")).toBe(false);
+  });
+
+  it("has no model for the disabled placeholder layers", () => {
+    for (const layer of ["clouds", "humidity", "airQuality", "alerts"]) {
+      expect(hasLegend(layer)).toBe(false);
+    }
   });
 });
 
@@ -170,5 +187,18 @@ describe("legendModel — units follow the user's settings", () => {
 
   it("has no model for satellite", () => {
     expect(legendModel("satellite", TEMPERATURE_STOPS)).toBeNull();
+  });
+
+  it("has no model for a disabled placeholder layer", () => {
+    expect(legendModel("clouds", TEMPERATURE_STOPS)).toBeNull();
+  });
+
+  it("pressure passes hPa through unchanged, regardless of other unit settings", () => {
+    state.unitTemp = "f";
+    state.unitWind = "mph";
+    const legend = legendModel("pressure", PRESSURE_STOPS);
+    expect(legend.unit).toBe("hPa");
+    expect(legend.minLabel).toBe("900");
+    expect(legend.maxLabel).toBe("1080");
   });
 });

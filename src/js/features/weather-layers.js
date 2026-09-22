@@ -7,7 +7,7 @@
 
    Methods used from @maptiler/weather 3.1.1 (all verified against the
    installed typings, none invented):
-     new TemperatureLayer / PrecipitationLayer / WindLayer ({ id, opacity })
+     new TemperatureLayer / PrecipitationLayer / WindLayer / PressureLayer ({ id, opacity })
      layer.onSourceReadyAsync()   resolves once the layer's data source exists
      layer.getColorRamp()         the ramp the shader samples → the legend
      layer.setAnimationTime(s)    forecast time, UNIX SECONDS (see map-timeline)
@@ -20,6 +20,7 @@ export const WEATHER_LAYER_IDS = {
   temperature: "weather-temperature",
   rain: "weather-rain",
   wind: "weather-wind",
+  pressure: "weather-pressure",
 };
 
 /* A weather source that never becomes ready must not leave the legend and
@@ -48,6 +49,7 @@ function makeWeatherLayer(module, type, windOptions = {}) {
   const options = { id: WEATHER_LAYER_IDS[type], opacity: type === "wind" ? 0.8 : 0.68 };
   if (type === "temperature") return new module.TemperatureLayer(options);
   if (type === "rain") return new module.PrecipitationLayer(options);
+  if (type === "pressure") return new module.PressureLayer(options);
   /* the particle budget (features/map-animation.js) applies to wind only */
   return new module.WindLayer({ ...options, ...windOptions });
 }

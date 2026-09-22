@@ -68,6 +68,16 @@ describe("parseAppUrl", () => {
     expect(parseAppUrl("#/map?layer=radioactivity").layer).toBe("satellite");
   });
 
+  it("accepts pressure, the one newly-supported weather layer", () => {
+    expect(parseAppUrl("#/map?layer=pressure").layer).toBe("pressure");
+  });
+
+  it("rejects the disabled placeholder layers — they have no real data source", () => {
+    for (const layer of ["clouds", "humidity", "airQuality", "alerts"]) {
+      expect(parseAppUrl(`#/map?layer=${layer}`).layer).toBe("satellite");
+    }
+  });
+
   it.each(["t=99", "t=-3", "t=1.5", "t=abc"])(
     "resolves an unsupported forecast offset (%s) to now",
     (query) => {

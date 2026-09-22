@@ -658,6 +658,7 @@ function weatherLatestPayload() {
       weatherVariable("precipitation-1h:gfs", "R"),
       /* wind is a two-channel (u/v) variable */
       weatherVariable("wind-10m:gfs", "RG"),
+      weatherVariable("pressure-msl:gfs", "R"),
     ],
   };
 }

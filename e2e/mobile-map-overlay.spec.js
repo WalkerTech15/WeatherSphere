@@ -102,10 +102,11 @@ test.describe("map overlay controls on a phone", () => {
        part of the map on a short phone (the map card can be taller than the
        viewport itself), by design — "half" is sized to leave the map's own
        top portion genuinely tappable, not its exact geometric centre, which
-       can fall under the sheet. Tap near the top of the map, still clearly
-       on it, to exercise the same click-to-select pipeline without relying
-       on a point the sheet may legitimately cover. */
-    await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height * 0.15);
+       can fall under the sheet. Tap below the two-row layer switcher (Phase
+       3), still clearly above where the sheet may legitimately cover, to
+       exercise the same click-to-select pipeline without landing on either
+       floating control. */
+    await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height * 0.35);
 
     await expect(page.locator("#mapWeatherPanel .map-panel-location h2")).toHaveText("Tarbes");
     expect(await docOverflow(page)).toBeLessThanOrEqual(0);

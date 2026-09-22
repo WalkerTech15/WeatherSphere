@@ -85,6 +85,7 @@ function fakeWeatherModule({ sourceReady = "immediate", ramp = null } = {}) {
     TemperatureLayer: class extends FakeLayer {},
     PrecipitationLayer: class extends FakeLayer {},
     WindLayer: class extends FakeLayer {},
+    PressureLayer: class extends FakeLayer {},
   };
 }
 
@@ -112,6 +113,14 @@ describe("applyWeatherLayer", () => {
     await applyWeatherLayer(inst, "wind", { loadWeather: async () => weather });
     expect(inst.weatherLayer).toBeInstanceOf(weather.WindLayer);
     expect(inst.weatherLayer.id).toBe("weather-wind");
+  });
+
+  it("activates a pressure layer", async () => {
+    const inst = fakeMapInstance();
+    const weather = fakeWeatherModule();
+    await applyWeatherLayer(inst, "pressure", { loadWeather: async () => weather });
+    expect(inst.weatherLayer).toBeInstanceOf(weather.PressureLayer);
+    expect(inst.weatherLayer.id).toBe("weather-pressure");
   });
 
   it("returning to satellite removes the active overlay and adds nothing", async () => {

@@ -659,13 +659,22 @@ body[data-theme="dark"] .maplibregl-ctrl button .maplibregl-ctrl-icon {
 }
 
 /* ── Integrated map workspace ───────────────────────────────────────────── */
+/* Two rows (Satellite…Clouds, Pressure…Alerts — index.html), matching the
+   mockup. Each row is its own horizontal-scroll unit, so a row with more
+   controls than fit never grows past its allotted space and never affects
+   the other row's layout. The base `max-width` below just keeps the pill
+   off the card's own right edge; the ≥821px override further down is the
+   one that matters in practice, since .map-weather-panel (below) floats a
+   350px card over the SAME top-right corner of the map at that width. */
 .map-layer-switcher {
   position: absolute;
   z-index: 4;
   top: 28px;
   left: 28px;
+  max-width: calc(100% - 56px);
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 4px;
   padding: 5px;
   border: 1px solid rgba(255, 255, 255, 0.72);
   border-radius: 14px;
@@ -673,12 +682,32 @@ body[data-theme="dark"] .maplibregl-ctrl button .maplibregl-ctrl-icon {
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
   backdrop-filter: blur(12px);
 }
+/* Keeps the switcher from growing into .map-weather-panel, which floats at
+   the same top edge on the right (28px inset, up to 350px wide) whenever
+   it isn't the ≤820px bottom sheet. A row wider than this scrolls instead
+   (.map-layer-row below) rather than sliding under the weather panel. */
+@media (min-width: 821px) {
+  .map-layer-switcher {
+    max-width: calc(100% - 56px - 350px - 16px);
+  }
+}
+.map-layer-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.map-layer-row::-webkit-scrollbar {
+  display: none;
+}
 .map-layer {
   display: inline-flex;
+  flex: 0 0 auto; /* never squeezed by the row's own scroll — see above */
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 38px;
+  min-height: 44px;
   padding: 0 13px;
   border-radius: 10px;
   color: #53627a;
@@ -703,6 +732,30 @@ body[data-theme="dark"] .maplibregl-ctrl button .maplibregl-ctrl-icon {
   cursor: progress;
   opacity: 0.62;
 }
+/* Clouds/Humidity/Air quality/Alerts: no verified real data source is wired
+   up yet (see features/weather-layers.js), so these buttons are permanently
+   disabled — native `disabled` means they never fire a click or a network
+   request — and carry a visible "Coming soon" badge rather than pretending
+   to be a working control. */
+.map-layer.is-disabled {
+  color: #a7b0c0;
+  cursor: not-allowed;
+}
+.map-layer.is-disabled:hover {
+  color: #a7b0c0;
+  background: none;
+}
+.map-layer-badge {
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(83, 98, 122, 0.14);
+  color: #7c8aa0;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
 /* Outline SVG icons (data/icons.js MAP_LAYER_ICONS), matching the sizing and
    stroke weight used everywhere else in the app. currentColor means the icon
    automatically follows .map-layer's own text color — no separate contrast
@@ -719,13 +772,13 @@ body[data-theme="dark"] .maplibregl-ctrl button .maplibregl-ctrl-icon {
 }
 
 /* Edge fades hint that more layer controls exist off-screen (only on the
-   ≤820px scrolling row — see the media query below). Visibility is toggled
-   in JS from actual scroll geometry via the same computeFadeVisibility()
-   helper the forecast day-carousel uses (core/carousel-fade.js), not
-   guessed from viewport width. `pointer-events: none` keeps them purely
-   decorative: dragging, touch scrolling and clicking a layer button all
-   pass straight through. `border-radius: inherit` keeps the fade from
-   squaring off the switcher's own rounded corners. */
+   ≤820px scrolling rows — see the media query below). One pair per
+   `.map-layer-row`, since each row scrolls independently. Visibility is
+   toggled in JS from actual scroll geometry via the same
+   computeFadeVisibility() helper the forecast day-carousel uses
+   (core/carousel-fade.js), not guessed from viewport width. `pointer-events:
+   none` keeps them purely decorative: dragging, touch scrolling and clicking
+   a layer button all pass straight through. */
 .map-layer-fade {
   position: absolute;
   top: 0;
@@ -756,7 +809,9 @@ body[data-theme="dark"] .map-layer-fade-right {
 }
 
 .map-card .maplibregl-ctrl-top-left {
-  top: 72px;
+  /* clears the switcher's own bottom edge (28px top inset + its rendered
+     height, now two rows tall) with a small gap */
+  top: 136px;
   left: 12px;
 }
 
@@ -1670,6 +1725,15 @@ body[data-theme="dark"] .map-layer:hover {
   color: var(--text);
   background: rgba(148, 163, 184, 0.12);
 }
+body[data-theme="dark"] .map-layer.is-disabled,
+body[data-theme="dark"] .map-layer.is-disabled:hover {
+  color: var(--text-3);
+  background: none;
+}
+body[data-theme="dark"] .map-layer-badge {
+  background: rgba(148, 163, 184, 0.16);
+  color: var(--text-3);
+}
 body[data-theme="dark"] .map-panel-current,
 body[data-theme="dark"] .map-hourly {
   border-color: var(--border);
@@ -1733,15 +1797,12 @@ body[data-theme="dark"] .map-hour > span {
   .map-layer-switcher {
     right: 22px;
     left: 22px;
-    overflow-x: auto;
-    /* the four controls fit in one native-scrollbar-free row instead of a
-       thick dark bar sitting on top of the map */
-    scrollbar-width: none;
-  }
-  .map-layer-switcher::-webkit-scrollbar {
-    display: none;
+    max-width: none; /* the explicit right inset already bounds it */
   }
   .map-layer {
+    /* fills the now full-width row evenly, rather than the desktop pill's
+       compact, content-sized buttons (overflow-x/scrollbar-hiding for the
+       row itself is universal — see the base .map-layer-row rule above) */
     flex: 1 0 auto;
   }
   /* ── Draggable bottom sheet ──────────────────────────────────────────────
@@ -1876,7 +1937,8 @@ body[data-theme="dark"] .map-hour > span {
     left: 18px;
   }
   .map-card .maplibregl-ctrl-top-left {
-    top: 68px;
+    /* 18px top inset + the switcher's now two-row height */
+    top: 122px;
     left: 6px;
   }
   #worldMap {
@@ -1950,8 +2012,10 @@ body.map-expanded {
   --mx-gap: 10px;
   /* compact header: 44px controls plus 4px of padding above and below */
   --mx-bar-h: 52px;
-  /* .map-layer-switcher's rendered height (5px padding around 40px buttons) */
-  --mx-pill-h: 50px;
+  /* .map-layer-switcher's rendered height: 5px padding top and bottom
+     around its two 44px-tall rows, plus the 4px gap between them
+     (5 + 44 + 4 + 44 + 5) */
+  --mx-pill-h: 102px;
   /* each map control button, and the gap between control groups */
   --mx-ctrl: 44px;
   --mx-ctrl-gap: 8px;
@@ -2143,6 +2207,17 @@ body.map-expanded .map-layer-switcher {
   right: auto;
   left: var(--mx-left);
 }
+/* At ≥821px the weather drawer floats on the SAME row, to the right (see
+   the drawer rule below) — the base rule's generic max-width only keeps the
+   pill off the viewport edge, not off a 350px drawer sharing its row, so it
+   is tightened here to the space actually left over. Below 821px the drawer
+   drops to a bottom sheet and the pill is free to use the full width again
+   (the ≤820px rule further down restores that). */
+@media (min-width: 821px) {
+  body.map-expanded .map-layer-switcher {
+    max-width: calc(100% - var(--mx-left) - var(--mx-right) - 350px - var(--mx-gap));
+  }
+}
 /* MapLibre spaces its controls with a 10px margin on every side, which put
    this stack 6px out of line with the layer pill above it. Zeroed here and
    restated as an explicit gap, so the left edges line up and the stack's
@@ -2226,6 +2301,7 @@ body.map-expanded .map-show-panel {
      scroll keeps every layer reachable */
   body.map-expanded .map-layer-switcher {
     right: var(--mx-right);
+    max-width: none; /* the explicit left/right insets already bound it */
   }
   /* the sheet is fixed to the viewport's bottom edge: keep its contents
      clear of the home indicator */

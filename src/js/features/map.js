@@ -863,28 +863,32 @@ export async function setMapTime(offsetHours) {
   }
 }
 
-/* Edge-fade visibility for the ≤820px horizontally-scrolling layer row —
+/* Edge-fade visibility for the ≤820px horizontally-scrolling layer rows —
    same computeFadeVisibility() the forecast day-carousel uses, so there's
    one shared implementation of "is there more content past this edge?"
-   rather than a second one reinvented here. On desktop the row never
-   overflows, so this is a harmless no-op (both fades stay hidden). */
+   rather than a second one reinvented here. Each row (Satellite…Clouds,
+   Pressure…Alerts) scrolls independently, so each gets its own fade pair.
+   On desktop neither row overflows, so this is a harmless no-op (every
+   fade stays hidden). */
 export function updateMapLayerFades() {
-  const el = $(".map-layer-switcher");
-  if (!el) return;
-  const { left, right } = computeFadeVisibility({
-    scrollLeft: el.scrollLeft,
-    scrollWidth: el.scrollWidth,
-    clientWidth: el.clientWidth,
+  $$(".map-layer-row").forEach((row) => {
+    const { left, right } = computeFadeVisibility({
+      scrollLeft: row.scrollLeft,
+      scrollWidth: row.scrollWidth,
+      clientWidth: row.clientWidth,
+    });
+    row.querySelector(".map-layer-fade-left")?.classList.toggle("is-visible", left);
+    row.querySelector(".map-layer-fade-right")?.classList.toggle("is-visible", right);
   });
-  $("#mapLayerFadeLeft")?.classList.toggle("is-visible", left);
-  $("#mapLayerFadeRight")?.classList.toggle("is-visible", right);
 }
 
 export function bindMapLayerControls() {
   $$(".map-layer").forEach((button) =>
     button.addEventListener("click", () => setMapLayer(button.dataset.mapLayer)),
   );
-  $(".map-layer-switcher")?.addEventListener("scroll", updateMapLayerFades, { passive: true });
+  $$(".map-layer-row").forEach((row) =>
+    row.addEventListener("scroll", updateMapLayerFades, { passive: true }),
+  );
   updateMapLayerFades();
 }
 

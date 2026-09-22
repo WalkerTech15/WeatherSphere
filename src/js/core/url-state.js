@@ -34,7 +34,7 @@ export const URL_VIEWS = [
   "help",
   "privacy",
 ];
-export const URL_LAYERS = ["satellite", "temperature", "rain", "wind"];
+export const URL_LAYERS = ["satellite", "temperature", "rain", "wind", "pressure"];
 export const URL_TIME_OFFSETS = [0, 3, 6];
 
 export const DEFAULT_URL_STATE = {

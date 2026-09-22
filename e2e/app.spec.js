@@ -969,7 +969,9 @@ test.describe("map visual polish", () => {
   test("42. every map-layer button uses an SVG icon, not the old text glyph", async ({ app }) => {
     await app.locator('.side-item[data-view="map"]').click();
     const buttons = app.locator(".map-layer");
-    await expect(buttons).toHaveCount(4);
+    /* Satellite, Temperature, Rain, Wind, Pressure (working) + Clouds,
+       Humidity, Air quality, Alerts (disabled placeholders) */
+    await expect(buttons).toHaveCount(9);
 
     const icons = await buttons.evaluateAll((els) =>
       els.map((el) => ({
@@ -2214,7 +2216,7 @@ test.describe("map layer switcher: mobile scrolling", () => {
     await expect(app.locator("#mobileSearchBtn")).toBeHidden();
   });
 
-  test("96. the native scrollbar is visually hidden on the layer row", async ({ page }) => {
+  test("96. the native scrollbar is visually hidden on each layer row", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await installMocks(page);
     await page.goto("/");
@@ -2222,13 +2224,17 @@ test.describe("map layer switcher: mobile scrolling", () => {
     await page.locator("#burgerBtn").click();
     await page.locator('.side-item[data-view="map"]').click();
 
-    const scrollbarWidth = await page
-      .locator(".map-layer-switcher")
-      .evaluate((el) => getComputedStyle(el).scrollbarWidth);
-    expect(scrollbarWidth).toBe("none");
+    const rows = page.locator(".map-layer-row");
+    await expect(rows).toHaveCount(2);
+    for (const i of [0, 1]) {
+      const scrollbarWidth = await rows
+        .nth(i)
+        .evaluate((el) => getComputedStyle(el).scrollbarWidth);
+      expect(scrollbarWidth).toBe("none");
+    }
   });
 
-  test("97. the row remains horizontally scrollable and every layer stays reachable and operable", async ({
+  test("97. each row remains horizontally scrollable and every layer stays reachable and operable", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 375, height: 812 });
@@ -2238,31 +2244,32 @@ test.describe("map layer switcher: mobile scrolling", () => {
     await page.locator("#burgerBtn").click();
     await page.locator('.side-item[data-view="map"]').click();
 
-    const switcher = page.locator(".map-layer-switcher");
-    await expect(switcher).toHaveCSS("overflow-x", "auto");
-    const overflowAmount = await switcher.evaluate((el) => el.scrollWidth - el.clientWidth);
+    const firstRow = page.locator(".map-layer-row").nth(0);
+    await expect(firstRow).toHaveCSS("overflow-x", "auto");
+    const overflowAmount = await firstRow.evaluate((el) => el.scrollWidth - el.clientWidth);
     expect(overflowAmount).toBeGreaterThan(0);
 
-    /* the last control ("Vent"/wind) is off-screen until scrolled to, but
-       must still be reachable and keyboard-focusable once it is. Activating
-       a weather overlay depends on live MapTiler weather tiles the e2e
-       mocks don't provide, so reachability — not the resulting map state —
-       is what's asserted here. */
+    /* the last control in row 1 ("Clouds", disabled) is off-screen until
+       scrolled to, but the row itself must still be able to reach it.
+       Activating a weather overlay depends on live MapTiler weather tiles
+       the e2e mocks don't provide, so reachability — not the resulting map
+       state — is what's asserted here. */
     const wind = page.locator('.map-layer[data-map-layer="wind"]');
     await wind.scrollIntoViewIfNeeded();
     await expect(wind).toBeVisible();
     await wind.focus();
     await expect(wind).toBeFocused();
 
-    /* every control, not just the visually-nearest ones, is reachable this way */
-    for (const layer of ["satellite", "temperature", "rain", "wind"]) {
+    /* every enabled control, not just the visually-nearest ones, is
+       reachable this way */
+    for (const layer of ["satellite", "temperature", "rain", "wind", "pressure"]) {
       const btn = page.locator(`.map-layer[data-map-layer="${layer}"]`);
       await btn.scrollIntoViewIfNeeded();
       await expect(btn).toBeVisible();
     }
   });
 
-  test("98. edge fades appear/disappear at the start and end of the scroll range", async ({
+  test("98. edge fades appear/disappear at the start and end of each row's scroll range", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 375, height: 812 });
@@ -2272,16 +2279,16 @@ test.describe("map layer switcher: mobile scrolling", () => {
     await page.locator("#burgerBtn").click();
     await page.locator('.side-item[data-view="map"]').click();
 
-    const left = page.locator("#mapLayerFadeLeft");
-    const right = page.locator("#mapLayerFadeRight");
-    const switcher = page.locator(".map-layer-switcher");
+    const row = page.locator(".map-layer-row").nth(0);
+    const left = row.locator(".map-layer-fade-left");
+    const right = row.locator(".map-layer-fade-right");
 
     await expect(right).toHaveClass(/is-visible/);
     await expect(left).not.toHaveClass(/is-visible/);
     expect(await left.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe("none");
     expect(await right.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe("none");
 
-    await switcher.evaluate((el) => {
+    await row.evaluate((el) => {
       el.scrollLeft = el.scrollWidth;
       el.dispatchEvent(new Event("scroll"));
     });
@@ -2324,6 +2331,64 @@ test.describe("map layer switcher: mobile scrolling", () => {
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );
     expect(overflow).toBeLessThanOrEqual(0);
+  });
+});
+
+test.describe("map layer switcher: Pressure and the disabled placeholders", () => {
+  async function openMap(page) {
+    await installMocks(page);
+    await page.goto("/");
+    await expect(page.locator("#heroCityName")).not.toBeEmpty();
+    await page.locator('.side-item[data-view="map"]').click();
+  }
+
+  /* Only real @maptiler/weather activity hits these two mocked endpoints
+     (see e2e/mocks.js) — the basemap style is deliberately tile-free, and
+     "maptiler" itself contains the substring "tile", so matching on that
+     word alone would false-positive on ordinary MapTiler requests (geocoding,
+     metrics, the style). These two are what a real weather layer needs. */
+  const isWeatherLayerRequest = (url) =>
+    /api\.maptiler\.com\/weather\/latest\.json/i.test(url) ||
+    /api\.maptiler\.com\/tiles\//i.test(url);
+
+  test("Pressure activates like the other real layers and gets a legend", async ({ page }) => {
+    await openMap(page);
+    const pressure = page.locator('.map-layer[data-map-layer="pressure"]');
+    await expect(pressure).toBeEnabled();
+    await pressure.click();
+    await expect(pressure).toHaveAttribute("aria-checked", "true", { timeout: 20000 });
+    await expect(page.locator("#mapWeatherControls")).toBeVisible();
+    const legend = page.locator('.map-legend[data-legend="pressure"]');
+    await expect(legend).toBeVisible();
+    await expect(legend).toContainText("hPa");
+  });
+
+  test("Clouds, Humidity, Air quality and Alerts are disabled and inert", async ({ page }) => {
+    await openMap(page);
+    const requests = [];
+    page.on("request", (request) => requests.push(request.url()));
+
+    for (const layer of ["clouds", "humidity", "airQuality", "alerts"]) {
+      const btn = page.locator(`.map-layer[data-map-layer="${layer}"]`);
+      await expect(btn).toBeDisabled();
+      await expect(btn).toHaveAttribute("aria-disabled", "true");
+      await expect(btn.locator(".map-layer-badge")).toBeVisible();
+      /* a disabled button cannot receive a real click, but force:true still
+         dispatches the event — the assertion is that nothing reacts to it */
+      await btn.click({ force: true }).catch(() => {});
+    }
+
+    await expect(page.locator('.map-layer[data-map-layer="clouds"]')).not.toHaveClass(/is-active/);
+    /* none of the four disabled layers ever requested weather tiles */
+    expect(requests.some(isWeatherLayerRequest)).toBe(false);
+  });
+
+  test("the disabled layers stay disabled and labelled in French", async ({ page }) => {
+    await openMap(page);
+    const alerts = page.locator('.map-layer[data-map-layer="alerts"]');
+    await expect(alerts).toContainText("Alertes");
+    await expect(alerts.locator(".map-layer-badge")).toContainText("Bientôt disponible");
+    await expect(alerts).toBeDisabled();
   });
 });
 
