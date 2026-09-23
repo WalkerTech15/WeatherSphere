@@ -295,6 +295,28 @@ export const I18N = {
     mapHumidityUnavailable: "Humidity data is unavailable for this location.",
     mapHumidityError: "Humidity data could not be loaded.",
 
+    /* Official alerts map layer — published warnings from a weather
+       authority (currently the U.S. National Weather Service). Nothing here
+       is ever derived from forecast values; see services/alert-provider.js */
+    mapAlertsOfficial: "Official NWS alert",
+    mapAlertsSource: "Source: {name}",
+    mapAlertsSeverity: "Severity",
+    mapAlertsUrgency: "Urgency",
+    mapAlertsCertainty: "Certainty",
+    mapAlertsArea: "Affected area",
+    mapAlertsAuthority: "Issued by",
+    mapAlertsStarts: "In effect from",
+    mapAlertsExpires: "Expires",
+    mapAlertsLoading: "Checking official alerts…",
+    mapAlertsNone: "No active official alerts.",
+    /* deliberately not "no tornado" — outside coverage the app knows nothing */
+    mapAlertsNoCoverage: "No official alert coverage available for this location",
+    mapAlertsTimeout: "The official alert service timed out — try again in a moment.",
+    mapAlertsOffline: "You're offline — official alerts could not be checked.",
+    mapAlertsHttpError: "Official alerts could not be loaded.",
+    mapAlertsMalformed: "Official alerts came back in an unexpected format.",
+    mapAlertsError: "Official alerts could not be loaded.",
+
     /* expanded map mode */
     mapExpand: "Expand map",
     mapExitExpand: "Exit expanded map",
@@ -309,7 +331,7 @@ export const I18N = {
     tipLayerClouds: "Cloud cover — coming soon",
     tipLayerHumidity: "Humidity at the selected place",
     tipLayerAirQuality: "Air quality at the selected place",
-    tipLayerAlerts: "Weather alerts — coming soon",
+    tipLayerAlerts: "Official alerts for the selected place (United States)",
     tipExpandMap: "Fill the workspace with the map. Press Esc to go back.",
     tipExitMap: "Back to the normal layout (Esc)",
 
@@ -856,6 +878,27 @@ export const I18N = {
     mapHumidityUnavailable: "L'humidité est indisponible pour ce lieu.",
     mapHumidityError: "L'humidité n'a pas pu être chargée.",
 
+    /* couche Alertes officielles — bulletins publiés par une autorité
+       météorologique (actuellement le National Weather Service américain) */
+    mapAlertsOfficial: "Alerte officielle NWS",
+    mapAlertsSource: "Source : {name}",
+    mapAlertsSeverity: "Gravité",
+    mapAlertsUrgency: "Urgence",
+    mapAlertsCertainty: "Certitude",
+    mapAlertsArea: "Zone concernée",
+    mapAlertsAuthority: "Émise par",
+    mapAlertsStarts: "En vigueur depuis",
+    mapAlertsExpires: "Expire le",
+    mapAlertsLoading: "Vérification des alertes officielles…",
+    mapAlertsNone: "Aucune alerte officielle en cours.",
+    /* surtout pas « pas de tornade » — hors couverture, l'app ne sait rien */
+    mapAlertsNoCoverage: "Aucune couverture d'alertes officielles pour ce lieu",
+    mapAlertsTimeout: "Délai dépassé pour les alertes officielles — réessayez dans un instant.",
+    mapAlertsOffline: "Vous êtes hors ligne — alertes officielles non vérifiables.",
+    mapAlertsHttpError: "Les alertes officielles n'ont pas pu être chargées.",
+    mapAlertsMalformed: "Les alertes officielles ont été reçues dans un format inattendu.",
+    mapAlertsError: "Les alertes officielles n'ont pas pu être chargées.",
+
     /* mode carte agrandie */
     mapExpand: "Agrandir la carte",
     mapExitExpand: "Quitter la carte agrandie",
@@ -870,7 +913,7 @@ export const I18N = {
     tipLayerClouds: "Couverture nuageuse — bientôt disponible",
     tipLayerHumidity: "Humidité au lieu sélectionné",
     tipLayerAirQuality: "Qualité de l'air au lieu sélectionné",
-    tipLayerAlerts: "Alertes météo — bientôt disponible",
+    tipLayerAlerts: "Alertes officielles pour le lieu sélectionné (États-Unis)",
     tipExpandMap: "Affiche la carte sur tout l'espace de travail. Échap pour revenir.",
     tipExitMap: "Retour à la disposition normale (Échap)",
 

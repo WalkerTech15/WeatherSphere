@@ -172,7 +172,8 @@ export function renderWeatherOverlayUI(overlay, { onSelectTime, onToggleAnimatio
     !overlay ||
     overlay.type === "satellite" ||
     overlay.type === "airQuality" ||
-    overlay.type === "humidity"
+    overlay.type === "humidity" ||
+    overlay.type === "alerts"
   ) {
     host.replaceChildren();
     host.hidden = true;

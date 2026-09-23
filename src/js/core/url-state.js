@@ -42,10 +42,11 @@ export const URL_LAYERS = [
   "pressure",
   "humidity",
   "airQuality",
+  "alerts",
 ];
 /* Layers with no forecast-time concept — a shared/bookmarked link never
    carries a meaningless `t=` for them. */
-const URL_LAYERS_WITHOUT_TIME = ["satellite", "humidity", "airQuality"];
+const URL_LAYERS_WITHOUT_TIME = ["satellite", "humidity", "airQuality", "alerts"];
 export const URL_TIME_OFFSETS = [0, 3, 6];
 
 export const DEFAULT_URL_STATE = {

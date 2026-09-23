@@ -1,8 +1,10 @@
-/* Official severe-weather alerts — the seam for a FUTURE tornado overlay.
+/* Official severe-weather alerts — the seam every official issuer plugs into.
  *
- * STATUS: no official alert source is connected. `OFFICIAL_ALERT_PROVIDERS`
- * is empty on purpose, so every function below reports "unavailable" and the
- * app draws NO tornado layer, warning, badge or "no alerts" reassurance.
+ * STATUS: one source is connected — the U.S. National Weather Service
+ * (services/nws-alerts.js). Inside NWS territory the functions below report
+ * real, published alerts (and a genuine "none" when the NWS answers with an
+ * empty list). ANYWHERE ELSE they still report "unavailable", so the app
+ * draws no layer, badge or "no alerts" reassurance outside that coverage.
  *
  * WHAT EXISTS TODAY AND WHY IT IS NOT ENOUGH
  * features/advisories.js derives hazards (thunderstorm, strong gusts, …) from
@@ -42,9 +44,15 @@
  * source attribution — and, ONLY while a source is connected and reachable, a
  * clear "No tornado alerts" state. With no source the honest state is to show
  * nothing at all, which is what tornadoLayerModel() returns. */
+import { nwsProvider } from "./nws-alerts.js";
+import { isWeatherError } from "../weather/weather-errors.js";
 
-/* Verified official issuers. Empty until one is verified — see above. */
-export const OFFICIAL_ALERT_PROVIDERS = [];
+/* Verified official issuers. The U.S. National Weather Service is verified:
+   an official government issuer publishing CAP alerts for its own
+   territory, over a documented keyless endpoint — see services/nws-alerts.js.
+   It covers the United States only, so everywhere else still resolves to
+   "unavailable" and the app says nothing rather than "no tornado". */
+export const OFFICIAL_ALERT_PROVIDERS = [nwsProvider];
 
 export const REQUIRED_ALERT_FIELDS = [
   "type",
@@ -89,6 +97,15 @@ export function normalizeOfficialAlert(raw, provider) {
   if (starts === null || expires === null || expires <= starts) return null;
   return {
     type,
+    /* The issuer's own event name and CAP qualifiers, carried through for
+       renderers that show them. Optional on purpose — they are NOT in
+       REQUIRED_ALERT_FIELDS, so an issuer that does not publish them still
+       produces a valid alert rather than being dropped. Empty string, never
+       invented. */
+    event: text(raw.event) || type,
+    urgency: text(raw.urgency),
+    certainty: text(raw.certainty),
+    headline: text(raw.headline),
     area,
     geometry: raw.area?.geometry ?? null,
     severity,
@@ -126,7 +143,17 @@ export async function fetchOfficialAlerts(
     covering.map(async (p) => ({ provider: p, raw: await p.fetchAlerts(loc, { signal }) })),
   );
   const answered = settled.filter((r) => r.status === "fulfilled").map((r) => r.value);
-  if (answered.length === 0) return { status: "error", alerts: [], sources: [] };
+  if (answered.length === 0) {
+    /* Carry WHY it failed, so the UI can say "you're offline" or "timed
+       out" rather than one shapeless error — but still never "no alerts". */
+    const reason = settled.find((r) => r.status === "rejected")?.reason;
+    return {
+      status: "error",
+      errorKind: isWeatherError(reason) ? reason.kind : "network",
+      alerts: [],
+      sources: [],
+    };
+  }
 
   const alerts = answered.flatMap(({ provider, raw }) =>
     (Array.isArray(raw) ? raw : []).map((a) => normalizeOfficialAlert(a, provider)).filter(Boolean),

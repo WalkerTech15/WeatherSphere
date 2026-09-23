@@ -1655,6 +1655,84 @@ body[data-theme="dark"] .map-panel-loading-coords {
   overflow-wrap: anywhere;
 }
 
+/* ── Official alerts panel ───────────────────────────────────────────────
+   Shares the same card chrome as the readings above. The list scrolls
+   inside the card rather than growing it, so several warnings at once
+   cannot push the map controls off a phone screen. */
+.map-alerts-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+  max-height: 46vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.map-alert {
+  padding: 9px 10px;
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  border-radius: 10px;
+  background: rgba(217, 119, 6, 0.07);
+}
+.map-alert.is-tornado {
+  border-color: rgba(220, 38, 38, 0.4);
+  background: rgba(220, 38, 38, 0.08);
+}
+.map-alert-badge {
+  margin: 0;
+  color: var(--amber);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.map-alert.is-tornado .map-alert-badge {
+  color: var(--rose);
+}
+.map-alert-event {
+  margin: 2px 0 6px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.map-alert-facts {
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+.map-alert-fact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+}
+.map-alert-fact dt {
+  margin: 0;
+  color: #64748b;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+.map-alert-fact dd {
+  margin: 0;
+  font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.map-alert-source {
+  display: inline-block;
+  margin-top: 7px;
+  color: var(--primary);
+  font-size: 10.5px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.map-aqi-status[data-state="unsupported"],
+.map-aqi-status[data-state="clear"] {
+  color: #475569;
+}
+
 body[data-theme="dark"] .map-weather-controls {
   border-color: rgba(148, 163, 184, 0.22);
   background: rgba(17, 24, 39, 0.95);
@@ -1693,6 +1771,11 @@ body[data-theme="dark"] .map-aqi-meta {
 }
 body[data-theme="dark"] .map-aqi-grid {
   border-color: var(--border);
+}
+body[data-theme="dark"] .map-alert-fact dt,
+body[data-theme="dark"] .map-aqi-status[data-state="unsupported"],
+body[data-theme="dark"] .map-aqi-status[data-state="clear"] {
+  color: var(--text-2);
 }
 
 @media (prefers-reduced-motion: reduce) {

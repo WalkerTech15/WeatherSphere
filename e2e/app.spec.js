@@ -10,6 +10,8 @@ import {
   LYON_LABEL,
   reverseCoordsFrom,
   json,
+  nwsAlertFeature,
+  nwsAlertsPayload,
 } from "./mocks.js";
 
 async function searchAndSelect(app, query) {
@@ -2363,12 +2365,12 @@ test.describe("map layer switcher: Pressure and the disabled placeholders", () =
     await expect(legend).toContainText("hPa");
   });
 
-  test("Clouds and Alerts are disabled and inert", async ({ page }) => {
+  test("Clouds is disabled and inert", async ({ page }) => {
     await openMap(page);
     const requests = [];
     page.on("request", (request) => requests.push(request.url()));
 
-    for (const layer of ["clouds", "alerts"]) {
+    for (const layer of ["clouds"]) {
       const btn = page.locator(`.map-layer[data-map-layer="${layer}"]`);
       await expect(btn).toBeDisabled();
       await expect(btn).toHaveAttribute("aria-disabled", "true");
@@ -2379,16 +2381,16 @@ test.describe("map layer switcher: Pressure and the disabled placeholders", () =
     }
 
     await expect(page.locator('.map-layer[data-map-layer="clouds"]')).not.toHaveClass(/is-active/);
-    /* none of the three still-disabled layers ever requested weather tiles */
+    /* the still-disabled layer never requested weather tiles */
     expect(requests.some(isWeatherLayerRequest)).toBe(false);
   });
 
-  test("the disabled layers stay disabled and labelled in French", async ({ page }) => {
+  test("the disabled layer stays disabled and labelled in French", async ({ page }) => {
     await openMap(page);
-    const alerts = page.locator('.map-layer[data-map-layer="alerts"]');
-    await expect(alerts).toContainText("Alertes");
-    await expect(alerts.locator(".map-layer-badge")).toContainText("Bientôt disponible");
-    await expect(alerts).toBeDisabled();
+    const clouds = page.locator('.map-layer[data-map-layer="clouds"]');
+    await expect(clouds).toContainText("Nuages");
+    await expect(clouds.locator(".map-layer-badge")).toContainText("Bientôt disponible");
+    await expect(clouds).toBeDisabled();
   });
 });
 
@@ -2671,6 +2673,284 @@ test.describe("map layer switcher: Humidity", () => {
     await expect(humidityBtn(page)).toHaveAttribute("role", "radio");
     await page.keyboard.press("Enter");
     await expect(humidityBtn(page)).toHaveAttribute("aria-checked", "true", { timeout: 20000 });
+  });
+});
+
+/* Official alerts: real warnings published by the U.S. National Weather
+   Service (services/nws-alerts.js). The distinctions that matter most here
+   are the negative ones — outside NWS coverage, and on any failure, the app
+   must never imply that there is no tornado. */
+test.describe("map layer switcher: official alerts", () => {
+  const alertsBtn = (page) => page.locator('.map-layer[data-map-layer="alerts"]');
+  const panel = (page) => page.locator("#mapWeatherControls");
+
+  /* Paris (cc FR) is the default place — outside NWS coverage. */
+  async function openMap(page, overrides) {
+    await installMocks(page, overrides);
+    await page.goto("/");
+    await expect(page.locator("#heroCityName")).not.toBeEmpty();
+    await page.locator('.side-item[data-view="map"]').click();
+  }
+
+  /* New York (cc US) is inside coverage — picked from the explore carousel,
+     which also returns to Home, so the Map view is re-opened afterwards. */
+  async function selectUnitedStates(page) {
+    await page
+      .locator("#exploreCarousel .explore-open")
+      .nth(1)
+      .evaluate((b) => b.click());
+    await expect(page.locator("#heroCityName")).toContainText("New York");
+    await page.locator('.side-item[data-view="map"]').click();
+  }
+
+  test("is a real, selectable control — not disabled, no 'coming soon' badge", async ({ page }) => {
+    await openMap(page);
+    await expect(alertsBtn(page)).toBeEnabled();
+    await expect(alertsBtn(page)).not.toHaveAttribute("aria-disabled", "true");
+    await expect(alertsBtn(page).locator(".map-layer-badge")).toHaveCount(0);
+  });
+
+  test("outside the United States it says there is no coverage — never 'no tornado'", async ({
+    page,
+  }) => {
+    const requests = [];
+    await openMap(page);
+    page.on("request", (r) => requests.push(r.url()));
+    await alertsBtn(page).click();
+    await expect(alertsBtn(page)).toHaveAttribute("aria-checked", "true", { timeout: 20000 });
+    await expect(panel(page).locator('[data-state="unsupported"]')).toBeVisible();
+    await expect(panel(page)).toContainText("Aucune couverture d'alertes officielles");
+    /* and it must not claim an all-clear, nor mention tornadoes at all */
+    await expect(panel(page)).not.toContainText("Aucune alerte officielle en cours");
+    await expect(panel(page)).not.toContainText(/tornade/i);
+    /* no pointless request is made for a place the NWS does not cover */
+    expect(requests.some((u) => u.includes("api.weather.gov"))).toBe(false);
+  });
+
+  test("shows an active tornado warning with every fact the authority published", async ({
+    page,
+  }) => {
+    await openMap(page, { nwsBody: nwsAlertsPayload([nwsAlertFeature()]) });
+    await selectUnitedStates(page);
+    await alertsBtn(page).click();
+
+    const alert = panel(page).locator(".map-alert").first();
+    await expect(alert).toBeVisible({ timeout: 20000 });
+    await expect(alert.locator(".map-alert-event")).toHaveText("Tornado Warning");
+    await expect(alert).toContainText("Extreme"); /* severity, verbatim */
+    await expect(alert).toContainText("Immediate"); /* urgency */
+    await expect(alert).toContainText("Observed"); /* certainty */
+    await expect(alert).toContainText("Cleveland County, OK"); /* affected area */
+    await expect(alert).toContainText("NWS Norman OK"); /* issuing authority */
+    await expect(alert.locator(".map-alert-badge")).toContainText("Alerte officielle NWS");
+    const source = alert.locator(".map-alert-source");
+    await expect(source).toHaveAttribute("href", /^https:\/\/api\.weather\.gov\/alerts\//);
+    await expect(source).toHaveAttribute("rel", /noopener/);
+  });
+
+  test("shows a tornado watch too — it is a published alert like any other", async ({ page }) => {
+    await openMap(page, {
+      nwsBody: nwsAlertsPayload([
+        nwsAlertFeature({ event: "Tornado Watch", severity: "Severe", urgency: "Future" }),
+      ]),
+    });
+    await selectUnitedStates(page);
+    await alertsBtn(page).click();
+    await expect(panel(page).locator(".map-alert-event")).toHaveText("Tornado Watch", {
+      timeout: 20000,
+    });
+  });
+
+  test("orders several alerts with the most severe first", async ({ page }) => {
+    await openMap(page, {
+      nwsBody: nwsAlertsPayload([
+        nwsAlertFeature({ event: "Flash Flood Warning", severity: "Severe", urgency: "Expected" }),
+        nwsAlertFeature({ event: "Tornado Warning", severity: "Extreme", urgency: "Immediate" }),
+      ]),
+    });
+    await selectUnitedStates(page);
+    await alertsBtn(page).click();
+    const events = panel(page).locator(".map-alert-event");
+    await expect(events).toHaveCount(2, { timeout: 20000 });
+    await expect(events.nth(0)).toHaveText("Tornado Warning");
+    await expect(events.nth(1)).toHaveText("Flash Flood Warning");
+  });
+
+  test("an expired alert is not shown, and that reads as a genuine all-clear", async ({ page }) => {
+    const hour = 3600 * 1000;
+    await openMap(page, {
+      nwsBody: nwsAlertsPayload([
+        nwsAlertFeature({ startsMs: Date.now() - 3 * hour, expiresMs: Date.now() - hour }),
+      ]),
+    });
+    await selectUnitedStates(page);
+    await alertsBtn(page).click();
+    await expect(panel(page).locator('[data-state="clear"]')).toBeVisible({ timeout: 20000 });
+    await expect(panel(page)).toContainText("Aucune alerte officielle en cours");
+    await expect(panel(page).locator(".map-alert")).toHaveCount(0);
+  });
+
+  test("a TEST message from the service never reaches the visitor", async ({ page }) => {
+    await openMap(page, {
+      nwsBody: nwsAlertsPayload([nwsAlertFeature({ status: "Test" })]),
+    });
+    await selectUnitedStates(page);
+    await alertsBtn(page).click();
+    await expect(panel(page).locator('[data-state="clear"]')).toBeVisible({ timeout: 20000 });
+    await expect(panel(page).locator(".map-alert")).toHaveCount(0);
+  });
+
+  test("inside coverage with nothing in force, it says so plainly", async ({ page }) => {
+    await openMap(page);
+    await selectUnitedStates(page);
+    await alertsBtn(page).click();
+    await expect(panel(page).locator('[data-state="clear"]')).toBeVisible({ timeout: 20000 });
+    await expect(panel(page)).toContainText("Aucune alerte officielle en cours");
+  });
+
+  test("an HTTP failure is reported as a failure, never as 'no alerts'", async ({ page }) => {
+    await openMap(page, { nwsStatus: 500 });
+    await selectUnitedStates(page);
+    await alertsBtn(page).click();
+    await expect(panel(page).locator('[data-state="error"]')).toBeVisible({ timeout: 20000 });
+    await expect(panel(page)).not.toContainText("Aucune alerte officielle en cours");
+    await expect(panel(page).locator(".map-alert")).toHaveCount(0);
+  });
+
+  test("a malformed answer is reported honestly, not as an all-clear", async ({ page }) => {
+    await openMap(page, { nwsBody: { nope: true } });
+    await selectUnitedStates(page);
+    await alertsBtn(page).click();
+    await expect(panel(page)).toContainText("format inattendu", { timeout: 20000 });
+    await expect(panel(page)).not.toContainText("Aucune alerte officielle en cours");
+  });
+
+  test("offline is reported as offline, not as an all-clear", async ({ page }) => {
+    await openMap(page);
+    await selectUnitedStates(page);
+    await page.route("**://api.weather.gov/**", (route) => route.abort());
+    await page.context().setOffline(true);
+    await alertsBtn(page).click();
+    await expect(panel(page)).toContainText("hors ligne", { timeout: 20000 });
+    await expect(panel(page)).not.toContainText("Aucune alerte officielle en cours");
+    await page.context().setOffline(false);
+  });
+
+  test("a service that never answers times out, and says so", async ({ page }) => {
+    /* the app gives any weather request 8 s (FETCH_TIMEOUT_MS); this one
+       never answers inside that, so the panel must report a timeout rather
+       than sit on a spinner or, worse, fall back to "no alerts" */
+    await openMap(page, { nwsDelayMs: 20000 });
+    await selectUnitedStates(page);
+    await alertsBtn(page).click();
+    await expect(panel(page).locator('[data-loading="1"]')).toBeVisible();
+    await expect(panel(page)).toContainText("Délai dépassé", { timeout: 25000 });
+    await expect(panel(page)).not.toContainText("Aucune alerte officielle en cours");
+  });
+
+  test("under reduced motion the panel animates nothing", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await openMap(page, { nwsDelayMs: 3000 });
+    await selectUnitedStates(page);
+    await alertsBtn(page).click();
+    const spinner = panel(page).locator('[data-loading="1"]');
+    await expect(spinner).toBeVisible();
+    const animation = await spinner.evaluate((el) => getComputedStyle(el, "::after").animationName);
+    expect(animation).toBe("none");
+  });
+
+  test("changing place while active never shows the previous place's warning", async ({ page }) => {
+    await openMap(page, {
+      nwsBody: nwsAlertsPayload([nwsAlertFeature()]),
+      nwsDelayMs: 1500,
+    });
+    await selectUnitedStates(page);
+    await alertsBtn(page).click();
+    await expect(panel(page).locator(".map-alert-event")).toHaveText("Tornado Warning", {
+      timeout: 20000,
+    });
+
+    /* back to Paris — outside coverage, so the warning must go at once */
+    await page
+      .locator("#exploreCarousel .explore-open")
+      .nth(4)
+      .evaluate((b) => b.click());
+    await expect(panel(page).locator(".map-alert")).toHaveCount(0);
+    await page.locator('.side-item[data-view="map"]').click();
+    await expect(panel(page)).toContainText("Aucune couverture d'alertes officielles", {
+      timeout: 20000,
+    });
+    /* the superseded answer must never land afterwards */
+    await page.waitForTimeout(1800);
+    await expect(panel(page).locator(".map-alert")).toHaveCount(0);
+  });
+
+  test("the panel is labelled in English too", async ({ page }) => {
+    await openMap(page, { nwsBody: nwsAlertsPayload([nwsAlertFeature()]) });
+    await page.locator("#langBtn").click();
+    await page.locator('#langMenu button[data-lang="en"]').click();
+    await selectUnitedStates(page);
+    await alertsBtn(page).click();
+    const alert = panel(page).locator(".map-alert").first();
+    await expect(alert).toBeVisible({ timeout: 20000 });
+    await expect(alert.locator(".map-alert-badge")).toContainText("Official NWS alert");
+    await expect(alert).toContainText("Affected area");
+    await expect(alert).toContainText("Issued by");
+  });
+
+  test("the no-coverage wording is correct in English", async ({ page }) => {
+    await openMap(page);
+    await page.locator("#langBtn").click();
+    await page.locator('#langMenu button[data-lang="en"]').click();
+    await alertsBtn(page).click();
+    await expect(panel(page)).toContainText(
+      "No official alert coverage available for this location",
+      { timeout: 20000 },
+    );
+    await expect(panel(page)).not.toContainText(/tornado/i);
+  });
+
+  test("never renders a colour-ramp legend or a forecast-time row", async ({ page }) => {
+    await openMap(page);
+    await alertsBtn(page).click();
+    await expect(panel(page).locator('[data-state="unsupported"]')).toBeVisible({ timeout: 20000 });
+    await expect(panel(page).locator(".map-legend")).toHaveCount(0);
+    await expect(panel(page).locator(".map-time-row")).toHaveCount(0);
+  });
+
+  test("is keyboard-reachable and activatable, with correct radio semantics", async ({ page }) => {
+    await openMap(page);
+    await alertsBtn(page).focus();
+    await expect(alertsBtn(page)).toBeFocused();
+    await expect(alertsBtn(page)).toHaveAttribute("role", "radio");
+    await page.keyboard.press("Enter");
+    await expect(alertsBtn(page)).toHaveAttribute("aria-checked", "true", { timeout: 20000 });
+  });
+
+  test("the alert's source link is keyboard reachable", async ({ page }) => {
+    await openMap(page, { nwsBody: nwsAlertsPayload([nwsAlertFeature()]) });
+    await selectUnitedStates(page);
+    await alertsBtn(page).click();
+    const source = panel(page).locator(".map-alert-source").first();
+    await expect(source).toBeVisible({ timeout: 20000 });
+    await source.focus();
+    await expect(source).toBeFocused();
+  });
+
+  test("no API key or credential is ever sent to the alert service", async ({ page }) => {
+    const urls = [];
+    await openMap(page, { nwsBody: nwsAlertsPayload([nwsAlertFeature()]) });
+    page.on("request", (r) => urls.push(r.url()));
+    await selectUnitedStates(page);
+    await alertsBtn(page).click();
+    await expect(panel(page).locator(".map-alert")).toHaveCount(1, { timeout: 20000 });
+    const nws = urls.filter((u) => u.includes("api.weather.gov"));
+    expect(nws.length).toBeGreaterThan(0);
+    for (const url of nws) {
+      expect(new URL(url).searchParams.get("point")).toBeTruthy();
+      expect([...new URL(url).searchParams.keys()]).toEqual(["point"]);
+      expect(url).not.toMatch(/key|token|apikey|secret/i);
+    }
   });
 });
 

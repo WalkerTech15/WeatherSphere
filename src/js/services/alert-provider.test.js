@@ -39,21 +39,29 @@ const rawAlert = (over = {}) => ({
   ...over,
 });
 
-describe("with no official source connected (the current state)", () => {
-  it("has no providers registered", () => {
-    expect(OFFICIAL_ALERT_PROVIDERS).toEqual([]);
+/* Outside NWS territory nothing is connected, so the negative assertions
+   still hold there — and they are the ones that matter, because saying
+   "no tornado" to someone the app knows nothing about would be a lie.
+   `ABROAD` carries a country code, so no provider covers it and no request
+   is ever made (these tests touch no network). */
+const ABROAD = { id: "paris", kind: "city", lat: 48.8566, lon: 2.3522, cc: "FR" };
+
+describe("outside any connected source's coverage", () => {
+  it("registers exactly the one verified issuer, the U.S. National Weather Service", () => {
+    expect(OFFICIAL_ALERT_PROVIDERS.map((p) => p.id)).toEqual(["nws-us"]);
+    expect(OFFICIAL_ALERT_PROVIDERS.every((p) => p.official === true)).toBe(true);
   });
 
-  it("reports 'unavailable' for any place", async () => {
-    expect(await fetchOfficialAlerts(PLACE)).toEqual({
+  it("reports 'unavailable' for a place no issuer covers", async () => {
+    expect(await fetchOfficialAlerts(ABROAD)).toEqual({
       status: "unavailable",
       alerts: [],
       sources: [],
     });
   });
 
-  it("draws nothing: no layer, no alert, and no 'no tornado alerts' reassurance", async () => {
-    const model = tornadoLayerModel(await fetchOfficialAlerts(PLACE), NOW);
+  it("draws nothing there: no layer, no alert, and no 'no tornado alerts' reassurance", async () => {
+    const model = tornadoLayerModel(await fetchOfficialAlerts(ABROAD), NOW);
     expect(model).toMatchObject({
       state: "no-source",
       visible: false,
@@ -71,10 +79,21 @@ describe("with no official source connected (the current state)", () => {
   });
 
   it("cannot be handed weather — its only input is what an authority issued", async () => {
-    /* extreme wind, heavy rain and a pressure crash: none of it is an input */
+    /* extreme wind, heavy rain and a pressure crash: none of it is an input,
+       and none of it can conjure a provider where none covers the place */
     const stormy = { wind: 200, gust: 260, code: 99, pressure: 880, rainProb: 100 };
-    const result = await fetchOfficialAlerts({ ...PLACE, ...stormy });
+    const result = await fetchOfficialAlerts({ ...ABROAD, ...stormy });
+    expect(result.status).toBe("unavailable");
     expect(tornadoLayerModel(result, NOW).visible).toBe(false);
+  });
+
+  it("weather values cannot produce an alert even where an issuer does cover", async () => {
+    /* the provider is asked for the place; what it returns is the ONLY
+       source of alerts, so a storm with no published alert stays silent */
+    const stormy = { ...PLACE, wind: 200, gust: 260, code: 99, pressure: 880 };
+    const result = await fetchOfficialAlerts(stormy, { providers: [provider()] });
+    expect(result.status).toBe("ok");
+    expect(tornadoLayerModel(result, NOW)).toMatchObject({ state: "clear", visible: false });
   });
 });
 

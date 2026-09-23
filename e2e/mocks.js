@@ -702,6 +702,41 @@ export function airQualityDetailPayload() {
   };
 }
 
+/* One api.weather.gov alert feature, shaped exactly like the live service's
+   (field names verified against it). Times default to a window around "now"
+   so the alert is genuinely in force while a test runs — an alert outside
+   its own window is dropped by design, which is its own test. */
+export function nwsAlertFeature(over = {}) {
+  const hour = 3600 * 1000;
+  const { startsMs = Date.now() - hour, expiresMs = Date.now() + hour, ...props } = over;
+  return {
+    type: "Feature",
+    geometry: null,
+    properties: {
+      "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.test",
+      id: "urn:oid:2.49.0.1.840.0.test",
+      event: "Tornado Warning",
+      areaDesc: "Cleveland County, OK",
+      severity: "Extreme",
+      certainty: "Observed",
+      urgency: "Immediate",
+      status: "Actual",
+      messageType: "Alert",
+      senderName: "NWS Norman OK",
+      headline: "Tornado Warning issued for Cleveland County",
+      effective: new Date(startsMs).toISOString(),
+      expires: new Date(expiresMs).toISOString(),
+      web: "http://www.weather.gov",
+      ...props,
+    },
+  };
+}
+
+export const nwsAlertsPayload = (features = []) => ({
+  type: "FeatureCollection",
+  features,
+});
+
 /* ── Installer ─────────────────────────────────────────────────────────── */
 
 export async function installMocks(page, overrides = {}) {
@@ -716,6 +751,9 @@ export async function installMocks(page, overrides = {}) {
     airQualityDetailStatus = 200,
     airQualityDetailBody,
     airQualityDetailDelayMs,
+    nwsStatus = 200,
+    nwsBody,
+    nwsDelayMs,
   } = overrides;
   /* "calm" by default. Pass a function to vary the weather per request — the
      URL carries the coordinates, which is how a test gives two cities two
@@ -771,6 +809,20 @@ export async function installMocks(page, overrides = {}) {
     }
     if (weatherDelayMs) await new Promise((resolve) => setTimeout(resolve, weatherDelayMs));
     return route.fulfill(json(weatherPayload(kind, 0, weatherTimezone)));
+  });
+  /* The U.S. National Weather Service. Default: the service answers, with
+     nothing in force — the honest "no active official alerts" case. A test
+     that wants a warning passes `nwsBody`. */
+  await page.route("**://api.weather.gov/**", async (route) => {
+    if (nwsDelayMs) await new Promise((resolve) => setTimeout(resolve, nwsDelayMs));
+    if (nwsStatus !== 200) {
+      return route.fulfill({
+        status: nwsStatus,
+        contentType: "application/problem+json",
+        body: JSON.stringify({ title: "mocked failure", status: nwsStatus }),
+      });
+    }
+    return route.fulfill(json(nwsBody ?? nwsAlertsPayload([])));
   });
   await page.route("**://air-quality-api.open-meteo.com/**", async (route, request) => {
     const url = new URL(request.url());
