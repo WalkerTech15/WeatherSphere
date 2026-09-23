@@ -438,6 +438,128 @@ export function namesConflictingPlace(loc, photo, vocabulary) {
   return false;
 }
 
+/* Accent-folded words joined by single spaces, padded with one space at each
+   end, so a phrase can be matched as WHOLE words: " france " never matches
+   inside "francesca", " oman " never inside "romance". */
+function wordString(value) {
+  const words = normalizeForMatch(value).match(/[a-z0-9]+/g) || [];
+  return words.length ? ` ${words.join(" ")} ` : "";
+}
+
+/* Country names that are also everyday words, first names or parts of other
+   places' names, so finding one in a caption says nothing about which country
+   is pictured: Georgia (a US state), Jersey (New Jersey), Jordan and Chad
+   (first names), Turkey, Chile/Chili, Guinea (guinea pig), and the French
+   Maurice / Dominique / Géorgie. Accent-folded, lower case. */
+const AMBIGUOUS_COUNTRY_NAMES = new Set([
+  "georgia",
+  "georgie",
+  "jersey",
+  "jordan",
+  "chad",
+  "turkey",
+  "chile",
+  "chili",
+  "guinea",
+  "maurice",
+  "dominique",
+]);
+/* US states named after a country: "New Mexico" is not Mexico. Removed from
+   the caption before any country is looked for. */
+const COUNTRY_LOOKALIKE_PHRASES = [" new mexico ", " nouveau mexique ", " new jersey "];
+
+/**
+ * Does the candidate say it shows a DIFFERENT country?
+ *
+ * The rule behind "never silently substitute a different city". A same-named
+ * place is where text matching is weakest: for Paris, Texas a caption reading
+ * "Eiffel Tower, Paris, France" names the place ("Paris") and so passes every
+ * word check, yet it plainly shows another country. So a candidate is
+ * rejected when its own words name some country and name none of the
+ * location's own country, region or place — the evidence then points
+ * elsewhere, not merely nowhere.
+ *
+ * Deliberately one-sided and conservative:
+ *   - a caption naming the location's own country or region is never
+ *     rejected, whatever else it mentions ("the Pyrenees, France and Spain");
+ *   - a country name that is part of the location's own name, region or
+ *     country ("Panama City", "Lebanon, Pennsylvania") is ignored;
+ *   - with no own country known at all, nothing can be compared, so nothing
+ *     is rejected;
+ *   - the photographer is not read: a person called "Jordan" is not a place.
+ *
+ * @param {object} loc
+ * @param {object} photo
+ * @param {string[]} countryNames  every country's name, in any language
+ * @param {string[]} [ownCountryNames]  extra spellings of the location's own
+ *   country (e.g. both languages' names for its ISO code), so a caption in
+ *   the other language never reads as foreign
+ * @returns {boolean} true when the photo should be rejected outright
+ */
+export function namesForeignCountry(loc, photo, countryNames, ownCountryNames = []) {
+  if (!loc || !photo || !Array.isArray(countryNames) || countryNames.length === 0) return false;
+  const ownCountry = [
+    ...localizedVariants(loc.kind === "country" ? loc.name : loc.country),
+    ...ownCountryNames,
+  ]
+    .map(wordString)
+    .filter(Boolean);
+  if (ownCountry.length === 0) return false;
+  let hay = wordString([photo.alt, photo.title, photo.description].filter(Boolean).join(" "));
+  if (!hay) return false;
+  for (const phrase of COUNTRY_LOOKALIKE_PHRASES) hay = hay.split(phrase).join(" ");
+
+  const ownArea = [...ownCountry, ...localizedVariants(loc.region).map(wordString)].filter(Boolean);
+  if (ownArea.some((phrase) => hay.includes(phrase))) return false;
+  const own = [...ownArea, ...localizedVariants(loc.name).map(wordString)].filter(Boolean);
+
+  for (const name of countryNames) {
+    const phrase = wordString(name);
+    if (phrase.trim().length < 4 || AMBIGUOUS_COUNTRY_NAMES.has(phrase.trim())) continue;
+    /* "Panama" inside "Panama City", "Mexico" inside "Mexico City" */
+    if (own.some((mine) => mine.includes(phrase))) continue;
+    if (hay.includes(phrase)) return true;
+  }
+  return false;
+}
+
+/**
+ * Which part of the location a text-matched candidate actually names.
+ *
+ *   "place" — its own name, alias or curated landmark: evidence about the
+ *             place itself.
+ *   "region" / "country" — only the wider area: a photo from somewhere in
+ *             that area, which must never be presented as the place.
+ *   "none"  — nothing at all.
+ *
+ * Used to label text-search results honestly instead of treating a caption
+ * that merely repeats "France" as a photo of a French village.
+ */
+export function textEvidence(loc, photo) {
+  if (!loc || !photo) return "none";
+  const hay = photoHaystack(photo);
+  if (!hay) return "none";
+  const tokens = locationTokens(loc);
+  for (const variant of localizedVariants(loc.name)) {
+    const phrase = normalizeForMatch(variant);
+    if (phrase.length >= 3 && hay.includes(phrase)) return "place";
+  }
+  const hits = (set) => [...set].some((tok) => hay.includes(tok));
+  /* One word of a longer name is not the name: "York Minster" is not New
+     York, "Remy" is not Saint-Rémy-de-Provence. A one-word name has only
+     that word, so it counts; longer names must match as the phrase above.
+     Counted on the name's real words, not its significant tokens: "New" is
+     a stopword, which would otherwise leave New York a one-token name. */
+  const oneWordName = localizedVariants(loc.name).some(
+    (variant) => (normalizeForMatch(variant).match(/[a-z0-9]+/g) || []).length === 1,
+  );
+  if (oneWordName && hits(tokens.name)) return "place";
+  if (hits(tokens.alias) || hits(tokens.landmark)) return "place";
+  if (hits(tokens.region)) return "region";
+  if (hits(tokens.country)) return "country";
+  return "none";
+}
+
 /**
  * Best candidate for a location, or null.
  *

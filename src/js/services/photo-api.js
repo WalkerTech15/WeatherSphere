@@ -53,6 +53,7 @@ import { fetchGooglePlacePhoto, __resetPlacesCacheForTests } from "./places-api.
 import { fetchMapillaryPhoto, __resetMapillaryCacheForTests } from "./mapillary-api.js";
 import {
   photoProvenance,
+  photoConfidence,
   asWaterOverview,
   provenanceLabel,
   provenanceBadge,
@@ -64,12 +65,15 @@ import {
   pickBestPhoto,
   isMarineKind,
   namesConflictingPlace,
+  namesForeignCountry,
+  textEvidence,
   isOpenWaterSubject,
   identityOnly,
   distanceKm,
   scorePhotoForLocation,
 } from "./photo-relevance.js";
 import { LOCATIONS } from "../data/locations.js";
+import { COUNTRY_FLAG_CODES } from "../data/country-flag-codes.js";
 import { isOffline } from "./offline.js";
 
 export function gradBg(loc) {
@@ -284,6 +288,9 @@ export function isRelevantPhoto(loc, photo) {
      photo answering a thin query is the one case where "unconfirmed" really
      does mean "wrong". See namesConflictingPlace. */
   if (namesConflictingPlace(loc, photo, conflictVocabulary())) return false;
+  /* The same idea one level up: a caption placing itself in another country
+     ("Paris, France" answering a search for Paris, Texas). */
+  if (namesForeignCountry(loc, photo, countryNames(), ownCountryNames(loc))) return false;
   const tokens = relevanceKeywords(loc);
   if (tokens.length === 0) return true;
   const haystack = normalizeForMatch(`${photo.alt || ""} ${photo.photographer || ""}`);
@@ -322,6 +329,50 @@ function conflictVocabulary() {
   return CONFLICT_VOCAB;
 }
 
+/* Every country's name in both interface languages, from the browser's own
+   Intl.DisplayNames over the two-letter codes the flag set already lists — no
+   bundled name table. Built once. Where DisplayNames is unavailable the list
+   is empty and the foreign-country check simply never fires. */
+const DISPLAY_NAME_LANGS = ["en", "fr"];
+let COUNTRY_NAMES = null;
+let REGION_NAMERS = null;
+function regionNamers() {
+  if (REGION_NAMERS) return REGION_NAMERS;
+  try {
+    REGION_NAMERS = DISPLAY_NAME_LANGS.map(
+      (lang) => new Intl.DisplayNames([lang], { type: "region" }),
+    );
+  } catch {
+    REGION_NAMERS = [];
+  }
+  return REGION_NAMERS;
+}
+function countryNames() {
+  if (COUNTRY_NAMES) return COUNTRY_NAMES;
+  const namers = regionNamers();
+  const names = new Set();
+  for (const code of COUNTRY_FLAG_CODES) {
+    if (!/^[a-z]{2}$/.test(code)) continue;
+    for (const namer of namers) {
+      const name = namer.of(code.toUpperCase());
+      /* DisplayNames echoes the code back for one it does not know */
+      if (name && name.toUpperCase() !== code.toUpperCase()) names.add(name);
+    }
+  }
+  COUNTRY_NAMES = [...names];
+  return COUNTRY_NAMES;
+}
+/* The location's own country under both languages' names, from its ISO code:
+   a geocoder may have answered "États-Unis" alone, and a caption saying
+   "United States" must still read as the SAME country. */
+function ownCountryNames(loc) {
+  const cc = String(loc?.cc || "").toUpperCase();
+  if (!/^[A-Z]{2}$/.test(cc)) return [];
+  return regionNamers()
+    .map((namer) => namer.of(cc))
+    .filter((name) => name && name.toUpperCase() !== cc);
+}
+
 /* ── Ranking multiple candidates ──────────────────────────────────────────
    Pexels' own search ranking is a decent prior but not authoritative — this
    picks the best of the (up to 8) candidates the proxy now returns, rather
@@ -355,6 +406,30 @@ export function rankPexelsCandidates(loc, candidates) {
   return pickBestPhoto(loc, pool, { requireEvidence: true });
 }
 
+/* How far a TEXT-matched photo's own coordinates may sit from the place
+   before they prove it shows somewhere else — the same per-kind tolerances
+   the Google matcher uses for "is this the same place?" (services/places-
+   api.js). A Commons file titled "Paris" but geotagged 7,000 km away is Paris,
+   France, whatever a search for Paris, Texas matched it on. A country has no
+   gate: its single representative point says nothing about its extent. */
+const TEXT_MATCH_MAX_KM = {
+  city: 60,
+  town: 30,
+  village: 25,
+  address: 12,
+  poi: 12,
+  region: 400,
+  state: 400,
+  province: 400,
+};
+function taggedElsewhere(loc, photo) {
+  const limit = TEXT_MATCH_MAX_KM[loc?.kind];
+  if (!limit) return false;
+  const km = distanceKm(loc.lat, loc.lon, photo?.lat, photo?.lon);
+  /* No coordinate on either side: nothing to measure, so no evidence. */
+  return km !== null && km > limit;
+}
+
 /* Wikimedia equivalent. `trustCoordinates` is set for a geosearch result: the
    candidate was already selected because Commons placed it within a few
    kilometres of the location's own coordinates (see GEOSEARCH_KINDS below),
@@ -373,7 +448,9 @@ export function rankWikimediaCandidates(loc, candidates, { trustCoordinates = fa
   const list = (Array.isArray(candidates) ? candidates : []).filter(
     (c) => c && c.src && (!marine || isOpenWaterSubject(c, loc)),
   );
-  const pool = trustCoordinates ? list : list.filter((c) => isRelevantPhoto(loc, c));
+  const pool = trustCoordinates
+    ? list
+    : list.filter((c) => isRelevantPhoto(loc, c) && !taggedElsewhere(loc, c));
   if (pool.length === 0) return null;
   /* Commons candidates carry real coordinates and pixel dimensions, so the
      shared scorer has more to work with here than for Pexels: proximity to
@@ -558,6 +635,10 @@ function withGeoProvenance(loc, photo) {
   /* An ocean or sea IS the surrounding area, so "nearby" would be a
      distinction without a difference. */
   if (isMarineKind(loc.kind)) return photo;
+  /* A bare coordinate has no identity to be an exact photo OF: whatever is
+     pictured there is, at best, what stands near that point. */
+  if (isCoordinateOnly(loc))
+    return { ...photo, provenance: "nearby", subjectName: subjectName(photo) };
   const limit = EXACT_RADIUS_KM[loc.kind];
   if (!limit) return photo;
   /* Naming the place in the title or description outranks distance: a photo
@@ -569,6 +650,44 @@ function withGeoProvenance(loc, photo) {
      behaviour rather than inventing a downgrade from missing data. */
   if (km === null || km <= limit) return photo;
   return { ...photo, provenance: "nearby", subjectName: subjectName(photo) };
+}
+
+/* The tier a TEXT-matched photo has earned — Commons text search and Pexels
+   alike reached it by words, never by position — decided by WHICH words:
+
+     names the place itself   Commons: exact (its titles and categories name
+                              places encyclopaedically). Pexels: generic —
+                              a stock caption saying "Paris" is plausible,
+                              not proof, so it is shown as illustrative.
+     names only its region    that region's photo, labelled as such — never
+     or country               the town's (a caption that only says "France"
+                              is a photo of somewhere in France)
+     names nothing specific   generic
+
+   Returns a labelled COPY: the photo objects are shared through the caches. */
+export function withTextProvenance(loc, photo, { stock = false } = {}) {
+  if (!loc || !photo) return photo;
+  /* hydrateLocPhoto labels every open-water photo as an overview */
+  if (isMarineKind(loc.kind)) return photo;
+  const evidence = textEvidence(loc, photo);
+  if (evidence === "place") return stock ? { ...photo, provenance: "generic" } : photo;
+  if (evidence === "region" || evidence === "country") {
+    const area = evidence === "region" ? loc.region : loc.country;
+    const name = (area && (area.en || area.fr)) || (evidence === "country" ? locCountry(loc) : "");
+    if (name) return { ...photo, approximate: true, approximateOf: name, areaKind: evidence };
+  }
+  return { ...photo, provenance: "generic" };
+}
+
+/* No name, no region, no country — only a coordinate (core/coord-location.js
+   sets `coordsOnly`). A location saved before that flag existed is
+   recognised by its name being nothing but the coordinate label. */
+const COORDINATE_LABEL = /^-?\d+(\.\d+)?°, -?\d+(\.\d+)?°$/;
+export function isCoordinateOnly(loc) {
+  if (!loc || isMarineKind(loc.kind)) return false;
+  if (loc.coordsOnly === true) return true;
+  const name = (loc.name && (loc.name.en || loc.name.fr)) || "";
+  return COORDINATE_LABEL.test(name.trim());
 }
 
 /* Wikimedia Commons lookup: geosearch first (when eligible — precise
@@ -606,7 +725,10 @@ async function resolveWikimediaPhoto(loc, cacheKey) {
     }
     if (!best) {
       const text = await wikimediaSearch(wikimediaQuery(loc));
-      best = rankWikimediaCandidates(loc, text, { trustCoordinates: false });
+      best = withTextProvenance(
+        loc,
+        rankWikimediaCandidates(loc, text, { trustCoordinates: false }),
+      );
     }
   } catch {
     best = null;
@@ -661,7 +783,10 @@ async function wikimediaTextPhoto(loc) {
   const run = (async () => {
     let best = null;
     try {
-      best = rankWikimediaCandidates(loc, await wikimediaSearch(q), { trustCoordinates: false });
+      best = withTextProvenance(
+        loc,
+        rankWikimediaCandidates(loc, await wikimediaSearch(q), { trustCoordinates: false }),
+      );
     } catch {
       best = null;
     }
@@ -692,8 +817,9 @@ export function areaFallbackTargets(loc) {
   const out = [];
   const region = (loc.region && (loc.region.en || loc.region.fr)) || "";
   const country = (loc.country && (loc.country.en || loc.country.fr)) || locCountry(loc) || "";
-  if (region) out.push({ kind: "region", name: region, country });
-  if (country) out.push({ kind: "country", name: country, country: "" });
+  const cc = loc.cc || "";
+  if (region) out.push({ kind: "region", name: region, country, cc });
+  if (country) out.push({ kind: "country", name: country, country: "", cc });
   return out;
 }
 
@@ -705,6 +831,8 @@ function areaLocation(target) {
   return {
     id: `area-${target.kind}-${target.name}`,
     kind: target.kind === "country" ? "country" : "region",
+    /* both languages' names for the country, for the foreign-country check */
+    cc: target.cc || "",
     name: { en: target.name, fr: target.name },
     region: { en: "", fr: "" },
     country: { en: target.country, fr: target.country },
@@ -768,12 +896,36 @@ async function fetchAreaPhoto(loc) {
    step failing outright (network error, proxy down) falls through to the
    next rather than aborting the whole lookup — the gradient/emoji fallback
    is always the last resort, never a thrown error. */
-export async function fetchBestPhoto(loc) {
+export async function fetchBestPhoto(loc, { isStale = () => false } = {}) {
   /* No network at all while offline: every step below would fail and be
      negative-cached, which would then suppress the real lookup for the rest
      of the session once connectivity returned. The gradient/emoji fallback
      is the correct offline visual. */
-  if (isOffline()) return null;
+  if (!loc || isOffline()) return null;
+
+  /* A bare coordinate (nothing named it) has no identity for a name-based
+     source to match, so a search on its "name" would be a search on digits.
+     Only the two sources that prove WHERE a photo was taken can answer, and
+     both label what they find as nearby, never as the spot itself. */
+  if (isCoordinateOnly(loc)) {
+    try {
+      const geo = await wikimediaGeoPhoto(loc);
+      if (geo) return geo;
+    } catch {
+      /* fall through */
+    }
+    if (isStale()) return null;
+    try {
+      return await fetchMapillaryPhoto(loc);
+    } catch {
+      return null;
+    }
+  }
+
+  /* `isStale` is checked between steps: once the visitor has picked another
+     place, nothing further down the chain is requested for this one. The
+     steps already answered stay cached (they are correct for this place and
+     free to reuse); the ones never asked are simply never asked. */
 
   /* 2. Google Places — a photo attached to the place ENTITY, accepted only
      when the returned place is the right administrative kind AND either
@@ -788,6 +940,7 @@ export async function fetchBestPhoto(loc) {
   } catch {
     /* fall through */
   }
+  if (isStale()) return null;
   /* 3. Commons geosearch — candidates chosen by proximity to the location's
      own coordinates rather than by matching words. A beautiful stock photo
      of the wrong place is the failure this pipeline exists to avoid, and
@@ -798,6 +951,7 @@ export async function fetchBestPhoto(loc) {
   } catch {
     /* fall through */
   }
+  if (isStale()) return null;
   /* 4. Mapillary — geotagged street-level imagery. The last source that can
      prove WHERE a photo was taken, and the only one with any coverage of
      small villages. Returns nothing for regions, countries and open water,
@@ -808,6 +962,7 @@ export async function fetchBestPhoto(loc) {
   } catch {
     /* fall through */
   }
+  if (isStale()) return null;
   /* 5. Commons text search — exact geography stock libraries often lack (a
      named sea, a village, a monument). Text-matched rather than coordinate-
      verified, but Commons titles and categories name PLACES, where a stock
@@ -819,14 +974,19 @@ export async function fetchBestPhoto(loc) {
   } catch {
     /* fall through */
   }
+  if (isStale()) return null;
   /* 6. Pexels' ranked pool — the last source that can show the place itself,
-     and the one most likely to be merely evocative, so it goes last. */
+     and the one most likely to be merely evocative, so it goes last. Stock
+     photography proves nothing about WHERE it was taken, so what it returns
+     is never presented as the place: at best an illustrative photo, and only
+     the area's photo when its caption names nothing more specific. */
   try {
     const ranked = rankPexelsCandidates(loc, await fetchPexelsPhotoCandidates(pexelsQuery(loc)));
-    if (ranked) return ranked;
+    if (ranked) return withTextProvenance(loc, ranked, { stock: true });
   } catch {
     /* fall through */
   }
+  if (isStale()) return null;
   /* 7. A verified photo of the surrounding region, then country, labelled
      honestly as being of the area rather than the place. */
   try {
@@ -943,7 +1103,12 @@ export function prefetchLocPhoto(loc) {
   if (loc.landmark && (loc.landmark.img || loc.landmark.noPhotoSearch)) return;
   if (loc.img) return;
   if (loc.landmark && loc.landmark.pexelsId) fetchPexelsPhotoById(loc.landmark.pexelsId);
-  else fetchBestPhoto(loc);
+  else {
+    /* selectLocation bumps the token just before calling this, so a later
+       selection stops this walk at its next step (see fetchBestPhoto) */
+    const token = photoToken;
+    fetchBestPhoto(loc, { isStale: () => token !== photoToken });
+  }
 }
 
 /* Resolves once `el` is within half a viewport of being scrolled into view.
@@ -996,9 +1161,16 @@ export async function hydrateLocPhoto(el, loc, opts = {}) {
      that show a fixed place of their own — the explore carousel — opt out, or
      picking a location mid-load would leave them stuck on the fallback. */
   const stale = () => opts.raceGuard !== false && token !== photoToken;
-  const done = () => {
-    if (!stale()) el.classList.remove("loading");
+  /* The image model's outcome, on the element itself: what the visible
+     picture can be trusted to show (ui/photo-provenance.js photoConfidence).
+     "none" means the local visual fallback is what stays on screen. */
+  const settle = (confidence) => {
+    if (stale()) return;
+    el.dataset.photoConfidence = confidence;
+    el.classList.remove("loading");
   };
+  const done = () =>
+    settle(el.classList.contains("has-photo") ? el.dataset.photoConfidence || "none" : "none");
   /* `photo` is null for local/curated images — that's what suppresses the credit */
   const swap = (src, photo) => {
     if (stale() || !src) return done();
@@ -1046,7 +1218,9 @@ export async function hydrateLocPhoto(el, loc, opts = {}) {
       img.src = src;
       el.classList.add("has-photo");
       if (photo) renderPhotoCredit(creditHost, photo, opts.creditClass);
-      done();
+      /* A curated local image (photo === null) is a reviewed picture of the
+         place itself. */
+      settle(photo ? photoConfidence(photo) : "exact");
     };
     pre.onerror = done;
     pre.src = src;
@@ -1062,7 +1236,9 @@ export async function hydrateLocPhoto(el, loc, opts = {}) {
   const byId = !!(loc.landmark && loc.landmark.pexelsId);
   let photo;
   try {
-    photo = byId ? await fetchPexelsPhotoById(loc.landmark.pexelsId) : await fetchBestPhoto(loc);
+    photo = byId
+      ? await fetchPexelsPhotoById(loc.landmark.pexelsId)
+      : await fetchBestPhoto(loc, { isStale: stale });
   } catch {
     return done();
   }

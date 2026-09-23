@@ -83,7 +83,14 @@ test.describe("location photos — relevance filtering", () => {
 
     await expect(page.locator("#heroLandmark .has-photo")).toHaveCount(1);
     await expect(page.locator("#heroInner .loc-credit")).toBeVisible();
-    await expect(page.locator("#heroInner .loc-credit")).toHaveText("Pexels ↗");
+    /* Stock photography proves nothing about WHERE it was taken, so even a
+       caption naming the city earns the illustrative label — never the
+       unqualified credit an exact photo gets. The Pexels source stays. */
+    await expect(page.locator("#heroInner .loc-credit")).toHaveText("Illustration · Pexels ↗");
+    await expect(page.locator("#heroInner .loc-credit")).toHaveAttribute(
+      "data-provenance",
+      "generic",
+    );
   });
 
   test("the browser never sends the Pexels key — only the same-origin proxy is called", async ({

@@ -21,17 +21,41 @@
  *   overview  a general image of open water         "Overview of <water> — a
  *             (an ocean or sea has no "exact" photo:  general image, not this
  *             a satellite frame, a map, a seascape)   exact spot"
+ *   generic   a stock photo matched on words only   "Illustrative photo — not
+ *             (Pexels): plausibly the place, but      verified as this exact
+ *             nothing proves it                       place"
  *
  * `exact` deliberately shows no qualifier: adding "exact photo" to the common
  * case would be noise, and an absent qualifier already means "this is the
- * place". The other four are always announced.
+ * place". The other five are always announced.
  *
  * Pure functions only — no DOM, no state — so every wording rule is testable
  * and the renderer in services/photo-api.js stays a renderer.
  */
 import { t } from "../core/i18n.js";
 
-export const PROVENANCE_TIERS = ["exact", "nearby", "regional", "country", "overview"];
+export const PROVENANCE_TIERS = ["exact", "nearby", "regional", "country", "overview", "generic"];
+
+/* The image model's one explicit confidence scale — what a photo can be
+   trusted to show, from strongest to none. The tiers above keep the finer
+   distinctions the WORDING needs (a country photo is a weaker admission than
+   a regional one; open water gets its own sentence); this collapses them to
+   the five outcomes the rest of the app and the tests reason about:
+
+     exact     verified to show the selected place
+     nearby    verified to be taken at or beside it
+     regional  a photo of its region or country, labelled as such
+     generic   representative only — nothing ties it to this exact spot
+     none      no trustworthy photo, so the local visual fallback stays */
+export const PHOTO_CONFIDENCE = ["exact", "nearby", "regional", "generic", "none"];
+
+export function photoConfidence(photo) {
+  const tier = photoProvenance(photo);
+  if (!tier) return "none";
+  if (tier === "exact" || tier === "nearby") return tier;
+  if (tier === "regional" || tier === "country") return "regional";
+  return "generic"; /* overview, generic */
+}
 
 /* An ocean or sea is never photographed "as itself": whatever Commons or
    Pexels returns for it — an astronaut's frame, a locator map, a stretch of
@@ -70,6 +94,7 @@ export function provenanceLabel(photo) {
       ? t("photoOverview").replace("{area}", photo.overviewOf)
       : t("photoOverviewShort");
   }
+  if (tier === "generic") return t("photoGeneric");
   if (tier === "nearby") {
     /* Name the subject when we know it ("Nearby · Tarbes Cathedral"), so the
        visitor can see WHAT they are looking at rather than only being told
@@ -88,6 +113,7 @@ export function provenanceBadge(photo) {
   const tier = photoProvenance(photo);
   if (tier === "nearby") return t("photoNearbyShort");
   if (tier === "overview") return t("photoOverviewShort");
+  if (tier === "generic") return t("photoGenericShort");
   if (tier === "regional" || tier === "country") return photo.approximateOf || "";
   return "";
 }
@@ -110,5 +136,6 @@ export function photoAltText(photo, placeName) {
   const tier = photoProvenance(photo);
   if (tier === "nearby") return t("photoAltNearby").replace("{place}", name);
   if (tier === "overview") return t("photoAltOverview").replace("{place}", name);
+  if (tier === "generic") return t("photoAltGeneric").replace("{place}", name);
   return t("photoAltExact").replace("{place}", name);
 }

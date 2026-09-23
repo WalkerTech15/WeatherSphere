@@ -22,9 +22,12 @@ import {
   fetchBestPhoto,
   areaFallbackTargets,
   bumpPhotoToken,
+  withTextProvenance,
+  isCoordinateOnly,
   __resetPhotoCacheForTests,
 } from "./photo-api.js";
-import { photoProvenance } from "../ui/photo-provenance.js";
+import { photoProvenance, photoConfidence } from "../ui/photo-provenance.js";
+import { coordLocation } from "../core/coord-location.js";
 import { state } from "../core/state.js";
 import { LOCATIONS } from "../data/locations.js";
 import { COUNTRY_FLAG_CODES } from "../data/country-flag-codes.js";
@@ -1693,5 +1696,270 @@ describe("Commons geosearch — provenance reflects distance, not just the radiu
     });
     const photo = await fetchBestPhoto(town({ kind: "city" }));
     expect(photoProvenance(photo)).toBe("exact");
+  });
+});
+
+/* ── Image confidence: what each step of the chain is allowed to claim ── */
+
+const PARIS_TX = {
+  id: "geo-paris-tx",
+  kind: "city",
+  cc: "US",
+  lat: 33.6609,
+  lon: -95.5555,
+  name: { en: "Paris", fr: "Paris" },
+  region: { en: "Texas", fr: "Texas" },
+  country: { en: "United States", fr: "États-Unis" },
+  aliases: [],
+  landmark: null,
+};
+
+describe("Pexels is only ever an illustrative or area photo, never 'exact'", () => {
+  it("labels a stock photo that names the place as generic, not as the place", async () => {
+    stubProviders({ pexels: [pexelsPhoto("Tarbes town centre at dusk")] });
+    const photo = await fetchBestPhoto(town());
+    expect(photo.src).toContain("images.pexels.com");
+    expect(photoProvenance(photo)).toBe("generic");
+    expect(photoConfidence(photo)).toBe("generic");
+  });
+
+  it("labels a stock photo that only names the region as that region's photo", async () => {
+    /* English, like the Pexels filter's own keywords (relevanceKeywords) */
+    stubProviders({ pexels: [pexelsPhoto("Rolling hills of Occitania")] });
+    const photo = await fetchBestPhoto(town());
+    expect(photoConfidence(photo)).toBe("regional");
+    expect(photo.approximate).toBe(true);
+    expect(photo.areaKind).toBe("region");
+    expect(photo.approximateOf).toBe("Occitania");
+  });
+
+  it("never mutates the shared cached candidate when labelling it", async () => {
+    stubProviders({ pexels: [pexelsPhoto("Tarbes town centre at dusk")] });
+    await fetchBestPhoto(town());
+    const again = await fetchBestPhoto(town());
+    expect(photoProvenance(again)).toBe("generic");
+    const pool = await fetchPexelsPhotoCandidates(pexelsQuery(town()));
+    expect(pool[0].provenance).toBeUndefined();
+  });
+
+  it("keeps a curated, manually reviewed Pexels id as the exact photo", async () => {
+    stubFetch(() =>
+      jsonResponse(200, {
+        photo: {
+          src: { large: "https://images.pexels.com/reviewed.jpg" },
+          photographer: "Reviewed",
+          link: "https://www.pexels.com/photo/reviewed-1/",
+          alt: "Pic du Midi observatory",
+        },
+      }),
+    );
+    const photo = await fetchPexelsPhotoById("1234");
+    expect(photoConfidence(photo)).toBe("exact");
+  });
+});
+
+describe("Commons text search — exact only when it names the place", () => {
+  it("keeps a file that names the place itself as exact", async () => {
+    stubProviders({ text: [commonsPage("Tarbes, Jardin Massey")] });
+    const photo = await fetchBestPhoto(town());
+    expect(photo.source).toBe("wikimedia");
+    expect(photoConfidence(photo)).toBe("exact");
+  });
+
+  it("labels a file that only names the country as the country's photo", async () => {
+    stubProviders({ text: [commonsPage("Pyrenees landscape, France")] });
+    const photo = await fetchBestPhoto(town());
+    expect(photo.source).toBe("wikimedia");
+    expect(photoConfidence(photo)).toBe("regional");
+    expect(photo.areaKind).toBe("country");
+    expect(photo.approximateOf).toBe("France");
+  });
+
+  it("does not let one word of a longer name count as the name", () => {
+    const newYork = town({
+      kind: "city",
+      cc: "US",
+      name: { en: "New York", fr: "New York" },
+      region: { en: "New York", fr: "New York" },
+      country: { en: "United States", fr: "États-Unis" },
+    });
+    /* "York Minster" shares "York" with New York and nothing else */
+    const labelled = withTextProvenance(newYork, { src: "x.jpg", alt: "York Minster at dawn" });
+    expect(photoConfidence(labelled)).toBe("generic");
+  });
+});
+
+describe("duplicate place names — never a different city", () => {
+  it("rejects a stock photo that places itself in another country", async () => {
+    stubProviders({
+      pexels: [
+        pexelsPhoto("Eiffel Tower in Paris, France at night"),
+        pexelsPhoto("Downtown Paris, Texas and its water tower"),
+      ],
+    });
+    const photo = await fetchBestPhoto(PARIS_TX);
+    expect(photo.alt).toBe("Downtown Paris, Texas and its water tower");
+    expect(photoConfidence(photo)).toBe("generic");
+  });
+
+  it("shows nothing rather than the other Paris when that is all there is", async () => {
+    stubProviders({ pexels: [pexelsPhoto("Eiffel Tower in Paris, France at night")] });
+    expect(await fetchBestPhoto(PARIS_TX)).toBeNull();
+  });
+
+  it("rejects a Commons file geotagged in the other Paris, whatever its title says", async () => {
+    stubProviders({
+      text: [
+        commonsPage("Paris - Tour Eiffel", { lat: 48.8584, lon: 2.2945 }),
+        commonsPage("Lamar County Courthouse, Paris", { lat: 33.6617, lon: -95.5553 }),
+      ],
+    });
+    const photo = await fetchBestPhoto(PARIS_TX);
+    expect(photo.title).toContain("Lamar County Courthouse");
+    expect(photoConfidence(photo)).toBe("exact");
+  });
+
+  it("falls through to the next source when the only Commons match is the other Paris", async () => {
+    stubProviders({
+      text: [commonsPage("Paris - Tour Eiffel", { lat: 48.8584, lon: 2.2945 })],
+      pexels: [pexelsPhoto("Downtown Paris, Texas and its water tower")],
+    });
+    const photo = await fetchBestPhoto(PARIS_TX);
+    expect(photo.src).toContain("images.pexels.com");
+  });
+
+  it("reads the location's own country in either language", () => {
+    /* the geocoder answered in French only; the caption is in English */
+    const frenchOnly = { ...PARIS_TX, country: { en: "États-Unis", fr: "États-Unis" } };
+    const caption = { alt: "Paris, Texas, United States", photographer: "P" };
+    expect(isRelevantPhoto(frenchOnly, caption)).toBe(true);
+  });
+
+  it("does not mistake a country inside the place's own name for another country", () => {
+    const panamaCity = {
+      ...PARIS_TX,
+      name: { en: "Panama City", fr: "Panama City" },
+      region: { en: "Florida", fr: "Floride" },
+    };
+    const caption = { alt: "Panama City beach at sunset", photographer: "P" };
+    expect(isRelevantPhoto(panamaCity, caption)).toBe(true);
+  });
+
+  it("does not mistake New Mexico for Mexico", () => {
+    const tucson = {
+      ...PARIS_TX,
+      name: { en: "Tucson", fr: "Tucson" },
+      region: { en: "Arizona", fr: "Arizona" },
+    };
+    const caption = { alt: "Tucson desert, near New Mexico", photographer: "P" };
+    expect(isRelevantPhoto(tucson, caption)).toBe(true);
+  });
+});
+
+describe("coordinate-only selections — no identity, so nothing is exact", () => {
+  const SAHARA = () => coordLocation(23.4162, 25.6628, {});
+
+  it("recognises a point nothing could name", () => {
+    expect(isCoordinateOnly(SAHARA())).toBe(true);
+    expect(isCoordinateOnly(town())).toBe(false);
+    /* open water is named by the marine tables, not coordinate-only */
+    expect(isCoordinateOnly(coordLocation(30, -40, {}))).toBe(false);
+    /* a location saved before the flag existed */
+    expect(isCoordinateOnly({ kind: "city", name: { en: "23.42°, 25.66°" } })).toBe(true);
+  });
+
+  it("asks only the coordinate-verified sources, never a search on its digits", async () => {
+    const calls = stubProviders({
+      places: [googlePlace()],
+      text: [commonsPage("23.42 25.66")],
+      pexels: [pexelsPhoto("23.42 25.66 desert")],
+    });
+    expect(await fetchBestPhoto(SAHARA())).toBeNull();
+    expect(calls.some((c) => c.url.includes(PLACES_PATH))).toBe(false);
+    expect(calls.some((c) => c.url.includes(PROXY_PATH))).toBe(false);
+    expect(calls.some((c) => c.url.includes("generator=search"))).toBe(false);
+  });
+
+  it("labels even a very close geotagged photo as nearby, not as the spot", async () => {
+    stubProviders({ geo: [commonsPage("Dune field", { lat: 23.4165, lon: 25.663 })] });
+    const photo = await fetchBestPhoto(SAHARA());
+    expect(photoConfidence(photo)).toBe("nearby");
+  });
+
+  it("falls back to a nearby street-level frame when Commons has nothing", async () => {
+    stubProviders({ mapillary: [mapillaryImage({ lat: 23.4163, lon: 25.6629 })] });
+    const photo = await fetchBestPhoto(SAHARA());
+    expect(photo.source).toBe("mapillary");
+    expect(photoConfidence(photo)).toBe("nearby");
+  });
+});
+
+describe("the complete chain survives every kind of provider failure", () => {
+  const malformed = { ok: true, status: 200, json: async () => JSON.parse("{not json") };
+
+  it("reaches Pexels through a 429, a 404, a timeout and a malformed body", async () => {
+    const calls = stubFetch((url) => {
+      if (url.includes(PLACES_PATH)) return jsonResponse(429, { error: "rate_limited" });
+      if (url.includes(MAPILLARY_PATH)) throw new DOMException("timed out", "TimeoutError");
+      if (url.includes(PROXY_PATH))
+        return jsonResponse(200, { photos: [pexelsPhoto("Tarbes town centre")] });
+      const generator = new URL(url).searchParams.get("generator");
+      if (generator === "geosearch") return jsonResponse(404, {});
+      return malformed;
+    });
+    const photo = await fetchBestPhoto(town());
+    expect(photo.src).toContain("images.pexels.com");
+    /* every earlier source really was asked */
+    for (const part of [PLACES_PATH, MAPILLARY_PATH, "generator=geosearch", "generator=search"]) {
+      expect(calls.some((c) => c.url.includes(part))).toBe(true);
+    }
+  });
+
+  it("treats a missing server key (503) and a denied one (403) as 'no photo', and moves on", async () => {
+    stubFetch((url) => {
+      if (url.includes(PLACES_PATH)) return jsonResponse(503, { error: "unavailable" });
+      if (url.includes(MAPILLARY_PATH)) return jsonResponse(503, { error: "unavailable" });
+      if (url.includes(PROXY_PATH)) return jsonResponse(403, {});
+      const generator = new URL(url).searchParams.get("generator");
+      const pages = generator === "search" ? [commonsPage("Tarbes, Jardin Massey")] : [];
+      return jsonResponse(200, { query: { pages } });
+    });
+    const photo = await fetchBestPhoto(town());
+    expect(photo.source).toBe("wikimedia");
+  });
+
+  it("resolves to null — the local fallback — when every source fails", async () => {
+    stubFetch(() => {
+      throw new TypeError("Failed to fetch");
+    });
+    await expect(fetchBestPhoto(town())).resolves.toBeNull();
+  });
+});
+
+describe("stale selections stop the chain", () => {
+  it("asks nothing further once the selection has moved on", async () => {
+    let stale = false;
+    const calls = stubFetch((url) => {
+      if (url.includes(PLACES_PATH)) {
+        /* the visitor picks another place while Google is answering */
+        stale = true;
+        return jsonResponse(200, { places: [] });
+      }
+      if (url.includes(PROXY_PATH))
+        return jsonResponse(200, { photos: [pexelsPhoto("Tarbes town centre")] });
+      return jsonResponse(200, { query: { pages: [] }, images: [] });
+    });
+    const photo = await fetchBestPhoto(town(), { isStale: () => stale });
+    expect(photo).toBeNull();
+    expect(calls.some((c) => c.url.includes("commons.wikimedia.org"))).toBe(false);
+    expect(calls.some((c) => c.url.includes(MAPILLARY_PATH))).toBe(false);
+    expect(calls.some((c) => c.url.includes(PROXY_PATH))).toBe(false);
+  });
+
+  it("does not cache the aborted walk as 'no photo' for that place", async () => {
+    stubProviders({ pexels: [pexelsPhoto("Tarbes town centre")] });
+    expect(await fetchBestPhoto(town(), { isStale: () => true })).toBeNull();
+    /* a later, current request for the same place still finds its photo */
+    expect(await fetchBestPhoto(town())).not.toBeNull();
   });
 });

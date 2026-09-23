@@ -3,6 +3,8 @@
 import { describe, it, expect, afterEach } from "vitest";
 import {
   PROVENANCE_TIERS,
+  PHOTO_CONFIDENCE,
+  photoConfidence,
   photoProvenance,
   provenanceLabel,
   provenanceBadge,
@@ -30,9 +32,10 @@ describe("photoProvenance — deriving the tier", () => {
   });
 
   it("treats an unmarked photo as exact — it got here by naming the place", () => {
-    /* Pexels and the Commons text search both require positive evidence
-       before they return anything, so an unlabelled photo really is a claim
-       about the place itself. */
+    /* What reaches the UI unlabelled is a curated reviewed photo or a Commons
+       text match that names the place itself — both claims about the place.
+       A Pexels search result never arrives unlabelled: fetchBestPhoto marks
+       it generic (or as its area's photo) before returning it. */
     expect(photoProvenance(photo())).toBe("exact");
   });
 
@@ -45,8 +48,15 @@ describe("photoProvenance — deriving the tier", () => {
     expect(photoProvenance(undefined)).toBe("");
   });
 
-  it("lists exactly the five tiers the UI knows how to render", () => {
-    expect(PROVENANCE_TIERS).toEqual(["exact", "nearby", "regional", "country", "overview"]);
+  it("lists exactly the six tiers the UI knows how to render", () => {
+    expect(PROVENANCE_TIERS).toEqual([
+      "exact",
+      "nearby",
+      "regional",
+      "country",
+      "overview",
+      "generic",
+    ]);
   });
 
   it("honours the overview tier that open water is given", () => {
@@ -212,5 +222,66 @@ describe("photoAltText — no image is left unlabelled", () => {
   it("returns empty rather than a meaningless sentence with no place name", () => {
     expect(photoAltText(photo(), "")).toBe("");
     expect(photoAltText(null, "Tarbes")).toBe("");
+  });
+});
+
+describe("photoConfidence — the image model's explicit fallback type", () => {
+  it("offers exactly five outcomes, strongest first", () => {
+    expect(PHOTO_CONFIDENCE).toEqual(["exact", "nearby", "regional", "generic", "none"]);
+  });
+
+  it("maps every provenance tier onto one of them", () => {
+    expect(photoConfidence(photo({ provenance: "exact" }))).toBe("exact");
+    expect(photoConfidence(photo())).toBe("exact");
+    expect(photoConfidence(photo({ provenance: "nearby" }))).toBe("nearby");
+    expect(photoConfidence(photo({ approximate: true, areaKind: "region" }))).toBe("regional");
+    /* a country photo is a weaker admission in the wording, but the same
+       outcome: a photo of the wider area, labelled as such */
+    expect(photoConfidence(photo({ approximate: true, areaKind: "country" }))).toBe("regional");
+    expect(photoConfidence(photo({ provenance: "generic" }))).toBe("generic");
+    /* open water has no exact photo: an overview is representative only */
+    expect(photoConfidence(photo({ provenance: "overview" }))).toBe("generic");
+  });
+
+  it("is 'none' when there is no photo, so the local fallback stays", () => {
+    expect(photoConfidence(null)).toBe("none");
+    expect(photoConfidence(undefined)).toBe("none");
+  });
+
+  it("only ever answers with a value from the scale", () => {
+    for (const tier of [...PROVENANCE_TIERS, "bogus", undefined]) {
+      expect(PHOTO_CONFIDENCE).toContain(photoConfidence(photo({ provenance: tier })));
+    }
+  });
+});
+
+describe("generic (illustrative) photos — labelled, never passed off as the place", () => {
+  it("says so in English, on the badge, in the full label and in the alt text", () => {
+    state.lang = "en";
+    const p = photo({ provenance: "generic" });
+    expect(provenanceBadge(p)).toBe("Illustrative");
+    expect(provenanceLabel(p)).toBe("Illustrative photo — not verified as this exact place");
+    expect(photoAltText({ ...p, alt: "" }, "Tarbes")).toBe("Illustrative photo for Tarbes");
+  });
+
+  it("says so in French too", () => {
+    state.lang = "fr";
+    const p = photo({ provenance: "generic" });
+    expect(provenanceBadge(p)).toBe("Illustration");
+    expect(provenanceLabel(p)).toBe("Photo d'illustration — lieu exact non vérifié");
+    expect(photoAltText({ ...p, alt: "" }, "Tarbes")).toBe("Photo d'illustration pour Tarbes");
+  });
+
+  it("keeps a provider's own description as the alt text when it has one", () => {
+    expect(photoAltText(photo({ provenance: "generic", alt: "Old town street" }), "Tarbes")).toBe(
+      "Old town street",
+    );
+  });
+
+  it("keeps the badge short enough to sit on a small card", () => {
+    for (const lang of ["en", "fr"]) {
+      state.lang = lang;
+      expect(provenanceBadge(photo({ provenance: "generic" })).length).toBeLessThanOrEqual(14);
+    }
   });
 });
