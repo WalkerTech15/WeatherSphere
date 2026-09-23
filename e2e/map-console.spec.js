@@ -24,6 +24,8 @@ async function collectWarnings(page, path) {
   });
   await installMocks(page);
   await page.goto(path);
+  /* the Home preview is only created once it is scrolled near */
+  if (path === "/") await page.locator("#homeMap").scrollIntoViewIfNeeded();
   await expect(page.locator("#worldMap canvas, #homeMap canvas").first()).toBeVisible({
     timeout: 20000,
   });

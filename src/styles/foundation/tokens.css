@@ -63,7 +63,18 @@
   --s-6: 48px;
   --s-8: 64px;
 
-  --font: "Inter", "InterVariable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* InterVariable only: ONE file (~350 KB) covers every weight. Static
+     "Inter" is a separate ~115 KB file per weight and must not be in the
+     stack at all, not even as a fallback — font fallback is per character,
+     so for every glyph InterVariable lacks (the UI's emoji) the browser
+     downloads each "Inter" weight in use just to find it lacks it too. It
+     is served from the same host, so it never added resilience either.
+     base.css turns optical sizing off so large text keeps the text design,
+     and defines the two metric-matched fallbacks that stand in while it
+     loads (local fonts only, never downloaded). */
+  --font:
+    "InterVariable", "InterVariable Fallback", "InterVariable Fallback Android", system-ui,
+    -apple-system, "Segoe UI", sans-serif;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --topnav-h: 72px;
 

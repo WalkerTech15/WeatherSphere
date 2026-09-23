@@ -40,6 +40,8 @@ test.describe("the map is permanently flat and north-up", () => {
     await installMocks(page);
     await page.goto("/");
     await expect(page.locator("#heroCityName")).not.toBeEmpty();
+    /* the preview is only created once it is scrolled near */
+    await page.locator("#homeMap").scrollIntoViewIfNeeded();
     await expect(page.locator("#homeMap canvas")).toBeVisible({ timeout: MAP_TIMEOUT });
     const o = await orientation(page, "homeMap");
     expect(o.bearing).toBe(0);

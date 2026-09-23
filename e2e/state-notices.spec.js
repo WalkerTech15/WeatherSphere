@@ -160,6 +160,8 @@ test.describe("map unavailable", () => {
     await page.route(SDK_JS, (route) => route.abort());
     await page.goto("/");
     await expect(page.locator("#heroCityName")).not.toBeEmpty();
+    /* the preview only tries to load once it is scrolled near */
+    await page.locator("#homeMap").scrollIntoViewIfNeeded();
     const notice = page.locator("#homeMap .map-offline .notice");
     await expect(notice).toBeVisible({ timeout: 20000 });
     await expect(notice).toHaveAttribute("role", "status");

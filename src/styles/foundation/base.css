@@ -1,8 +1,50 @@
 /* Document-level base styles. */
 
+/* Metric-matched stand-ins for InterVariable while it downloads. Text first
+   paints in a local font; when Inter swaps in (font-display: swap, set by
+   rsms.me) any width difference re-wraps lines — on a phone the Map page's
+   action row went from one line to two and pushed the whole map down (CLS
+   0.19 on every cold load). Scaling the local font to Inter's measured
+   advance widths (size-adjust) and line box (Inter's ascender 1984 and
+   descender 494 per 2048 units, divided by that same size-adjust) makes the
+   swap re-wrap nothing. Arial ships only Regular and Bold, so each gets its
+   own ratio; Roboto covers Android, which has no Arial. Nothing here is
+   downloaded, and once Inter has loaded these faces are not used at all. */
+@font-face {
+  font-family: "InterVariable Fallback";
+  src: local("Arial"), local("ArialMT");
+  font-weight: 100 500;
+  size-adjust: 106%;
+  ascent-override: 91.39%;
+  descent-override: 22.76%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "InterVariable Fallback";
+  src: local("Arial Bold"), local("Arial-BoldMT");
+  font-weight: 600 900;
+  size-adjust: 101.5%;
+  ascent-override: 95.44%;
+  descent-override: 23.77%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "InterVariable Fallback Android";
+  src: local("Roboto");
+  size-adjust: 107.5%;
+  ascent-override: 90.12%;
+  descent-override: 22.44%;
+  line-gap-override: 0%;
+}
+
 body {
   margin: 0;
   font-family: var(--font);
+  /* InterVariable has an optical-size axis the browser would otherwise set
+     from each font-size, redrawing large text (the hero temperature) in
+     Inter's display cut; "none" keeps the default text cut the static Inter
+     files always drew. Inherited, and `font: inherit` on controls keeps it. */
+  font-optical-sizing: none;
   font-size: 16px;
   line-height: 1.5;
   color: var(--text);

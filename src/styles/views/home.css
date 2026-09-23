@@ -359,7 +359,7 @@
 .metrics-heading span {
   color: var(--ink-emerald);
   font-size: 11px;
-  font-weight: 650;
+  font-weight: 700;
 }
 .metrics-grid {
   display: grid;
@@ -806,6 +806,45 @@ body[data-mode="detailed"] .home-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: var(--s-2);
+}
+
+/* First-load space reservation. These three containers stay empty until the
+   first forecast lands (every later selection repaints over the previous
+   place, and a failed fetch still renders demo weather), and filling them
+   pushed everything below down at once — CLS 0.14 on a tablet. While :empty
+   they hold the height their content is measured to take at each breakpoint
+   (Simple mode, FR and EN), so the page is already the right shape. Nothing
+   shows in the reserved space; :empty stops matching the moment content
+   arrives. Above 1080px the metrics sit beside the taller hero, so theirs
+   moves nothing and needs no reservation. */
+.home-hourly-block .hourly-strip:empty {
+  min-height: 115px;
+}
+.forecast-row:empty {
+  min-height: 255px;
+}
+@media (max-width: 1080px) {
+  body[data-mode="simple"] .metrics-grid:empty {
+    min-height: 283px;
+  }
+  .forecast-row:empty {
+    min-height: 273px;
+  }
+}
+@media (max-width: 720px) {
+  .forecast-row:empty {
+    min-height: 269px;
+  }
+}
+@media (max-width: 480px) {
+  body[data-mode="simple"] .metrics-grid:empty {
+    min-height: 293px;
+  }
+}
+@media (max-width: 374px) {
+  body[data-mode="simple"] .metrics-grid:empty {
+    min-height: 373px;
+  }
 }
 
 /* ── Insights + home mini-map ── */

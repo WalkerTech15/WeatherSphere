@@ -720,7 +720,7 @@ body[data-theme="dark"] .maplibregl-ctrl button .maplibregl-ctrl-icon {
   border-radius: 10px;
   color: #53627a;
   font-size: 12.5px;
-  font-weight: 650;
+  font-weight: 700;
   white-space: nowrap;
   transition:
     color 0.18s,
@@ -955,7 +955,7 @@ body[data-theme="dark"] .map-weather-panel {
   background: var(--geo-chip-bg);
   color: var(--geo-chip-text);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 700;
 }
 .geo-chip span {
   overflow: hidden;
@@ -1120,7 +1120,7 @@ body[data-theme="dark"] .geo-hierarchy {
   margin: 5px 0 0;
   color: #172033;
   font-size: 12.5px;
-  font-weight: 750;
+  font-weight: 800;
   white-space: nowrap;
 }
 .map-forecast-button {
@@ -1264,7 +1264,7 @@ body[data-theme="dark"] .map-panel-nearby {
   margin: 0 0 10px;
   color: #172033;
   font-size: 13px;
-  font-weight: 750;
+  font-weight: 800;
 }
 body[data-theme="dark"] .map-panel-nearby-title {
   color: var(--text);
@@ -1438,7 +1438,7 @@ body[data-theme="dark"] .map-nearby-stats span {
   gap: 9px;
   margin: 0;
   font-size: 14px;
-  font-weight: 650;
+  font-weight: 700;
 }
 .map-panel-loading-coords {
   margin: 0;
@@ -1493,7 +1493,7 @@ body[data-theme="dark"] .map-panel-loading-coords {
   border-radius: 8px;
   color: #53627a;
   font-size: 12.5px;
-  font-weight: 650;
+  font-weight: 700;
   white-space: nowrap;
   transition:
     color 0.18s,
@@ -1903,7 +1903,7 @@ body[data-theme="dark"] .map-aqi-status[data-state="clear"] {
 .map-recent-kind {
   color: var(--text-3);
   font-size: 11px;
-  font-weight: 650;
+  font-weight: 700;
   white-space: nowrap;
 }
 .map-recents-clear {

@@ -70,15 +70,40 @@ function loadMapLibre() {
   return maplibreglPromise;
 }
 
+/* Resolves once `el` is within HOME_MAP_LEAD_PX of being scrolled into view.
+   Used once, below, for the Home mini-map: its first creation pulls in the
+   whole MapTiler SDK chunk (~320 KB gzipped, ~1.2 MB to parse) and ~20
+   style/tile/glyph requests (~1.1 MB), and it starts 540–1100px below the
+   fold on phones and tablets — so a visitor who never scrolls that far never
+   pays for it, and one who does finds it already on its way. 400px is about
+   half a phone screen: a full screen would already cover the map at first
+   load on most phones and defer nothing. A fixed lead rather than a viewport
+   percentage, for the reason given in photo-api.js's whenPhotoNearViewport().
+   An explicit visit to the full Map page is never delayed by this (see the
+   `id === "homeMap"` check at the call site). Resolves immediately where
+   IntersectionObserver is unavailable, so eager creation is the fallback. */
+const HOME_MAP_LEAD_PX = 400;
+function whenMapNearViewport(el) {
+  if (typeof IntersectionObserver !== "function") return Promise.resolve();
+  return new Promise((resolve) => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer.disconnect();
+        resolve();
+      },
+      { rootMargin: `${HOME_MAP_LEAD_PX}px 0px` },
+    );
+    observer.observe(el);
+  });
+}
+
 /* Resolves on the next idle moment (or after `timeout`, whichever comes
    first) — Safari has no requestIdleCallback, so it just resolves on the next
-   tick there instead. Used once, below, to keep the Home mini-map's very
-   first load (which pulls in the whole MapTiler SDK chunk) from competing
-   with the hero photo and weather fetch for bandwidth and main-thread time
-   right after first paint — measured with Lighthouse as one of the largest
-   transfers happening inside the LCP window. An explicit visit to the full
-   Map page is never delayed by this (see the `id === "homeMap"` check at the
-   call site) — only the automatic, below-the-fold Home preview is. */
+   tick there instead. Chained after whenMapNearViewport(): on a wide screen
+   the preview is near the fold from the start, and creating it on the first
+   frame would put the SDK's download and ~1.2 MB parse inside the window
+   where the hero photo and first forecast are still landing. */
 function idle(timeout = 300) {
   return new Promise((resolve) => {
     if (typeof requestIdleCallback === "function")
@@ -517,8 +542,7 @@ async function createMapInstance(id, el, cfg) {
 }
 
 async function updateMap(id) {
-  const loc = state.loc,
-    cfg = MAP_CONFIG[id];
+  const cfg = MAP_CONFIG[id];
   const el = $("#" + id);
   /* only touch a map while its container is visible; the view becomes
      display:block one frame after switchView, so retry on the next frame */
@@ -533,18 +557,16 @@ async function updateMap(id) {
     }
     el.classList.add("is-loading");
     if (!CREATING[id]) {
-      /* Only the Home preview's own first creation waits a tick — the Map
-         page (id "worldMap") is always an explicit visit and never deferred.
-
-         Deliberately still idle()-gated rather than gated on scrolling into
-         view: the preview is a rendered part of the homepage that other
-         behaviour depends on (it re-measures on a Simple/Détaillé switch and
-         on window resize, both of which can happen before anyone scrolls to
-         it), so withholding the map until it is approached would change what
-         the page IS, not just when it loads. idle() already keeps the SDK
-         out of the first-paint and LCP window, which is what this deferral
-         is for. */
-      const kickoff = id === "homeMap" ? idle() : Promise.resolve();
+      /* Only the Home preview's own first creation waits — until it is
+         approached, then for an idle moment (see whenMapNearViewport and
+         idle above) — the Map page (id "worldMap") is always an explicit
+         visit and never deferred. Nothing else needs the preview to exist
+         before then: a Simple/Détaillé switch or a window resize only
+         re-measures maps that exist (resizeMaps), and the map measures its
+         container afresh whenever it is created. Meanwhile the container
+         keeps its reserved size and its is-loading state. */
+      const kickoff =
+        id === "homeMap" ? whenMapNearViewport(el).then(() => idle()) : Promise.resolve();
       CREATING[id] = kickoff
         .then(() => createMapInstance(id, el, cfg))
         .finally(() => {
@@ -559,6 +581,11 @@ async function updateMap(id) {
     }
     if (!MAPS[id]) return; /* container disappeared mid-creation */
   }
+  /* Read only now: creation can wait (the Home preview waits to be scrolled
+     near), and every call queued behind it must apply the CURRENT selection
+     — not the one it was made for — or the new map would fly through each
+     stale place in turn before settling on the right one. */
+  const loc = state.loc;
   const inst = MAPS[id];
   inst.map.resize();
   /* re-apply the "you are here" overlay on a map that was created after a fix */

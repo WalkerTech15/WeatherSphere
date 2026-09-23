@@ -23,6 +23,8 @@ async function freshAt(page, viewport) {
   await installMocks(page);
   await page.goto("/");
   await expect(page.locator("#heroCityName")).not.toBeEmpty();
+  /* the preview is only created once it is scrolled near (features/map.js) */
+  await page.locator("#homeMap").scrollIntoViewIfNeeded();
   await expect(page.locator("#homeMap canvas")).toBeVisible({ timeout: MAP_TIMEOUT });
 }
 
