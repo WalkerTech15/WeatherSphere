@@ -363,6 +363,9 @@ test.describe("no tornado is ever shown without an official alert source", () =>
   test("nothing is requested from any alert source", async ({ page }) => {
     const alertRequests = [];
     page.on("request", (request) => {
+      /* the app's own modules (render-map-alerts.js, nws-alerts.js…) are
+         served as separate scripts in dev; they are code, not an alert feed */
+      if (request.resourceType() === "script") return;
       if (/alerts?\.|\/alerts|cap\b|weather\.gov|meteoalarm|warnings/i.test(request.url()))
         alertRequests.push(request.url());
     });

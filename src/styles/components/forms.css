@@ -42,6 +42,9 @@
 }
 .search-bar input {
   flex: 1;
+  /* fills the pill's full 44px height, so a tap anywhere on the bar's text
+     area focuses it — not just the ~25px line of text in the middle */
+  align-self: stretch;
   min-width: 0;
   border: 0;
   outline: 0;

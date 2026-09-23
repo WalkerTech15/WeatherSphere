@@ -31,6 +31,7 @@
   position: absolute;
   inset: 0;
   background:
+    var(--hero-text-scrim, linear-gradient(transparent, transparent)),
     radial-gradient(120% 90% at 85% -10%, rgba(255, 255, 255, 0.28), transparent 55%),
     radial-gradient(90% 70% at 10% 110%, rgba(2, 6, 23, 0.38), transparent 60%);
 }
@@ -308,6 +309,27 @@
 }
 .hero-bg[data-sky="fog"] {
   background: linear-gradient(150deg, #94a3b8 0%, #64748b 90%);
+}
+/* Three skies start LIGHT at the top-left, exactly where the place name and
+   temperature sit: measured on the rendered pixels with no photo, the city
+   name was 2.48:1 on clear-day (white on #38bdf8 is 2.1:1) — under the 3:1
+   that large text needs. The same idea as the dark overlay real photos get
+   (see .loc-photo.hero-photo.has-photo::after), much lighter: it deepens the
+   sky only behind the text and fades out by three-quarters across, so the
+   sky keeps its colour. It keeps a light floor rather than fading out: on a
+   phone a long place name ("Saint-Jean-de-Luz") runs to the right edge,
+   under the corner highlight, and dipped to 2.75:1 there when the overlay
+   faded to nothing. A photo covers .hero-bg completely, so this never
+   stacks with the photo's own overlay. */
+.hero-bg[data-sky="clear-day"],
+.hero-bg[data-sky="snow"],
+.hero-bg[data-sky="fog"] {
+  --hero-text-scrim: linear-gradient(
+    to right,
+    rgba(2, 6, 23, 0.26) 0%,
+    rgba(2, 6, 23, 0.2) 50%,
+    rgba(2, 6, 23, 0.14) 100%
+  );
 }
 
 /* ── Metrics ── */

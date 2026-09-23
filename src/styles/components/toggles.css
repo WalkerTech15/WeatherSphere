@@ -85,7 +85,7 @@ body[data-theme="dark"] .seg-thumb {
 }
 .seg-icons button[aria-checked="true"] {
   background: var(--primary-soft);
-  color: var(--primary-600);
+  color: var(--ink-primary);
 }
 
 .switch {

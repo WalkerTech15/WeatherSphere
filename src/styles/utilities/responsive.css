@@ -204,9 +204,6 @@
     flex-basis: 180px;
     height: 220px;
   }
-  .lang-menu {
-    right: -60px;
-  }
 }
 
 /* Hide the horizontal scrollbar on carousels — mouse/touch/keyboard scrolling
@@ -252,5 +249,25 @@
   .topnav-start,
   .topnav-actions {
     gap: 8px;
+  }
+}
+
+/* The metric tiles (Simple) and grouped cards (Detailed) stay a 2-column
+   grid on phones (see the 640px block above), but on the narrowest phones
+   each card's content box shrinks to ~86px, and an icon sitting BESIDE the
+   title leaves the title too little room for a single unbreakable word —
+   "Humidité", "Température", "Précipitations" ran up to 22px past the card's
+   own border at 320px (and still 1.6px at 360px for "Précipitations"), while
+   multi-word labels wrapped to 3–4 lines and made the tiles ~200px tall.
+   Stacking the icon above the title gives the title the card's full width.
+   Same grid, same icon, same type — only the header row stacks. One
+   breakpoint for both so a slightly longer translation cannot reintroduce
+   the overflow; 375px (the standard phone width) fits side by side. */
+@media (max-width: 374px) {
+  .metric-head,
+  .mg-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
   }
 }

@@ -723,11 +723,13 @@ test.describe("the normal Map page is left exactly as it was", () => {
     await expect.poll(() => isExpanded(page)).toBe(false);
 
     expect(await stable()).toEqual(before);
-    /* and on the normal page the locate control is still where it always
-       was, in the map's top-right corner — only the mode moves it */
+    /* and on the normal page the locate control sits at the foot of the
+       zoom stack (left column) rather than the SDK's top-right corner,
+       where the details panel covered it */
     const card = before["#mapCard"];
-    expect(before["#worldMap .maplibregl-ctrl-top-right"][0]).toBeGreaterThan(
-      card[0] + card[2] / 2,
-    );
+    const locate = before["#worldMap .maplibregl-ctrl-top-right"];
+    const zoom = before["#worldMap .maplibregl-ctrl-top-left"];
+    expect(locate[0]).toBeLessThan(card[0] + card[2] / 2);
+    expect(locate[1]).toBeGreaterThanOrEqual(zoom[1] + zoom[3]);
   });
 });

@@ -7,8 +7,14 @@
   --bg: #f8fafc;
   --card: #ffffff;
   --text: #0f172a;
-  --text-2: #64748b;
-  --text-3: #94a3b8;
+  /* Each grey is the lightest step that still reaches WCAG AA (4.5:1) where
+     it is actually used: --text-2 on every tinted surface it sits on (the
+     darkest being #e7eefb, 4.51:1) and --text-3 on white and --bg (4.76 /
+     4.55:1). They were #64748b / #94a3b8, which left secondary text at ~4.1
+     on tints and tertiary text at 2.56:1 on white. Both moved exactly one
+     notch darker, so text > text-2 > text-3 is still a three-step ladder. */
+  --text-2: #5e6d84;
+  --text-3: #64748b;
   --border: rgba(15, 23, 42, 0.08);
   --primary: #2563eb;
   --primary-600: #1d4ed8;
@@ -30,10 +36,12 @@
   --ink-primary: #1d4ed8;
   --ink-sky: #0369a1;
   --ink-emerald: #047857;
+  --ink-amber: #b45309;
+  --ink-rose: #be123c;
 
-  /* Chart ink */
+  /* Chart ink — the axis tick labels are 12px SVG text, so they need 4.5:1 */
   --grid-line: #edf1f6;
-  --axis-ink: #94a3b8;
+  --axis-ink: #64748b;
 
   /* Elevation */
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 8px rgba(15, 23, 42, 0.04);
@@ -83,8 +91,10 @@ body[data-theme="dark"] {
   --ink-primary: #93c5fd;
   --ink-sky: #7dd3fc;
   --ink-emerald: #6ee7b7;
+  --ink-amber: #fcd34d;
+  --ink-rose: #fda4af;
   --grid-line: #22304b;
-  --axis-ink: #64748b;
+  --axis-ink: #8b99ae; /* was #64748b: 3.5:1 on the dark card, now 5.8:1 */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.25);
   --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.3), 0 12px 32px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.35), 0 24px 56px rgba(0, 0, 0, 0.5);

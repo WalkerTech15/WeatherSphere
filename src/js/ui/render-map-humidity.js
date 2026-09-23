@@ -47,6 +47,17 @@ function readyHtml(data) {
     </div>`;
 }
 
+/* One short sentence for the panel's live region (features/map.js). */
+export function humidityAnnouncement(humidityState) {
+  if (!humidityState || humidityState.status === "idle") return "";
+  if (humidityState.status === "loading") return t("mapHumidityLoading");
+  if (humidityState.status === "ready") {
+    const cat = classifyHumidity(humidityState.data.humidity);
+    return `${t("humidity")}, ${Math.round(humidityState.data.humidity)}%, ${cat.label}`;
+  }
+  return t(ERROR_MESSAGE_KEYS[humidityState.errorKind] || "mapHumidityError");
+}
+
 /**
  * Repaint the Humidity panel.
  * @param {{status: "idle"|"loading"|"ready"|"error", data: object|null,

@@ -527,7 +527,7 @@
               </h2>
               <p class="section-sub" id="forecastSub"></p>
             </div>
-            <div class="forecast-row" id="forecastRow"><!-- rendered by JS --></div>
+            <div class="forecast-row" id="forecastRow" tabindex="0"><!-- rendered by JS --></div>
           </section>
 
           <!-- Charts (detailed) -->
@@ -861,6 +861,19 @@
               role="group"
               hidden
             ></div>
+            <!-- Announces the point-reading layers' results (Air Quality,
+                 Humidity, official alerts) — loading, the reading, or the
+                 failure. A separate, always-present region: the panel above
+                 is rebuilt on every repaint, and a live region created in the
+                 same moment as its text is not reliably announced. Written
+                 only when the message changes, so repaints stay silent. -->
+            <p
+              class="sr-only"
+              id="mapLayerStatus"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            ></p>
             <aside class="map-weather-panel" id="mapWeatherPanel" aria-live="polite"></aside>
             <button class="map-show-panel" id="mapShowPanel" type="button" hidden>
               <span aria-hidden="true">☁</span><span data-i18n="showMapDetails">Show details</span>
@@ -1188,7 +1201,7 @@
                   <circle cx="12" cy="12" r="3.5" />
                   <circle cx="12" cy="12" r=".8" fill="currentColor" /></svg
               ></span>
-              <h3 data-i18n="feat1T">Accurate data</h3>
+              <h2 data-i18n="feat1T">Accurate data</h2>
               <p data-i18n="feat1X"></p>
             </div>
             <div class="card feature-card">
@@ -1204,7 +1217,7 @@
                 >
                   <path d="M13 2 4.5 13.5H11l-1 8.5L18.5 10.5H12L13 2z" /></svg
               ></span>
-              <h3 data-i18n="feat2T">Real-time updates</h3>
+              <h2 data-i18n="feat2T">Real-time updates</h2>
               <p data-i18n="feat2X"></p>
             </div>
             <div class="card feature-card">
@@ -1225,7 +1238,7 @@
                   <circle cx="11" cy="7.5" r="1.2" fill="currentColor" stroke="none" />
                   <circle cx="15.8" cy="8.6" r="1.2" fill="currentColor" stroke="none" /></svg
               ></span>
-              <h3 data-i18n="feat3T">Elegant interface</h3>
+              <h2 data-i18n="feat3T">Elegant interface</h2>
               <p data-i18n="feat3X"></p>
             </div>
             <div class="card feature-card">
@@ -1242,7 +1255,7 @@
                   <path d="M12 3 5 5.5v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10v-5L12 3z" />
                   <path d="m9.3 12 2 2 3.6-4" stroke-linecap="round" /></svg
               ></span>
-              <h3 data-i18n="feat4T">Privacy</h3>
+              <h2 data-i18n="feat4T">Privacy</h2>
               <p data-i18n="feat4X"></p>
             </div>
           </div>

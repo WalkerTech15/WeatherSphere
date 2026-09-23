@@ -48,7 +48,7 @@
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   background: var(--card);
-  color: var(--primary-600);
+  color: var(--ink-primary);
   font-size: 13px;
   font-weight: 600;
   transition:
@@ -136,7 +136,8 @@ body[data-theme="dark"] .notice-action {
   font-size: 44px;
   margin-bottom: 12px;
 }
-.empty-state h3 {
+/* h2: it is the first content under the page's h1 (an h3 skipped a level) */
+.empty-state h2 {
   color: var(--text);
   font-size: 17px;
   margin-bottom: 4px;
@@ -260,7 +261,7 @@ body[data-theme="dark"] .forecast-card.is-today {
   gap: 5px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--sky);
+  color: var(--ink-sky);
   background: var(--sky-soft);
   border-radius: 999px;
   padding: 3px 10px;

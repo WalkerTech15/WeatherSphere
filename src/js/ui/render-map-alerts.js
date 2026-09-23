@@ -60,7 +60,7 @@ function alertHtml(alert) {
   return `
     <li class="map-alert${tornado ? " is-tornado" : ""}" data-alert-type="${esc(alert.type)}">
       <p class="map-alert-badge">${esc(t("mapAlertsOfficial"))}</p>
-      <h4 class="map-alert-event">${esc(alert.event)}</h4>
+      <h2 class="map-alert-event">${esc(alert.event)}</h2>
       <dl class="map-alert-facts">
         ${factRow("mapAlertsSeverity", alert.severity)}
         ${factRow("mapAlertsUrgency", alert.urgency)}
@@ -84,6 +84,20 @@ function readyHtml(alertsState) {
     </div>`;
 }
 
+/* One short sentence for the panel's live region (features/map.js): which
+   official alerts are in force, or exactly why there is nothing to show —
+   never merely silence, and never "no tornado" outside coverage. */
+export function alertsAnnouncement(alertsState) {
+  if (!alertsState || alertsState.status === "idle") return "";
+  if (alertsState.status === "loading") return t("mapAlertsLoading");
+  if (alertsState.status === "active") {
+    return `${t("mapAlertsOfficial")}, ${alertsState.alerts.map((a) => a.event).join(", ")}`;
+  }
+  if (alertsState.status === "clear") return t("mapAlertsNone");
+  if (alertsState.status === "unsupported") return t("mapAlertsNoCoverage");
+  return t(ERROR_MESSAGE_KEYS[alertsState.errorKind] || "mapAlertsError");
+}
+
 /**
  * Repaint the Alerts panel.
  * @param {{status:"idle"|"loading"|"active"|"clear"|"unsupported"|"error",
@@ -100,8 +114,9 @@ export function renderAlertsUI(alertsState) {
   }
 
   host.hidden = false;
-  /* A newly-arrived warning is announced, but politely — the app's own
-     convention for serious-but-not-alarming news (see ui/notice.js). */
+  /* Screen readers hear the result through #mapLayerStatus, a polite live
+     region features/map.js fills from alertsAnnouncement() above — this
+     markup is rebuilt on every repaint, so it cannot announce itself. */
   host.innerHTML =
     alertsState.status === "active"
       ? readyHtml(alertsState)

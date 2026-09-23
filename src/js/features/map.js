@@ -38,9 +38,9 @@ import {
 import { normalizeOffset, availableOffsets } from "./map-timeline.js";
 import { createMapAnimator, planMapAnimation, windLayerOptions } from "./map-animation.js";
 import { renderWeatherOverlayUI, updateTimeStatus } from "../ui/render-map-weather.js";
-import { renderAirQualityUI } from "../ui/render-map-airquality.js";
-import { renderHumidityUI } from "../ui/render-map-humidity.js";
-import { renderAlertsUI } from "../ui/render-map-alerts.js";
+import { renderAirQualityUI, airQualityAnnouncement } from "../ui/render-map-airquality.js";
+import { renderHumidityUI, humidityAnnouncement } from "../ui/render-map-humidity.js";
+import { renderAlertsUI, alertsAnnouncement } from "../ui/render-map-alerts.js";
 import { noticeHtml } from "../ui/notice.js";
 import { fetchAirQualityDetail } from "../weather/weather-provider.js";
 import { isWeatherError } from "../weather/weather-errors.js";
@@ -478,6 +478,11 @@ async function createMapInstance(id, el, cfg) {
 
   const pin = document.createElement("div");
   pin.className = "map-pin-icon";
+  /* MapLibre makes a marker with a popup focusable (tabindex 0) and opens the
+     popup on Enter — it IS a button, and says so. Without the role, the
+     translated aria-label MapLibre sets is not allowed on a plain div, so
+     screen readers dropped it and announced nothing on focus. */
+  pin.setAttribute("role", "button");
   pin.innerHTML =
     '<span class="map-focus-ring"></span><span class="map-ping"></span><span class="map-dot"></span>';
   /* anchor "bottom" = popup always above the marker; the flyTo offset below
@@ -663,6 +668,9 @@ function setLayerButtonState(active) {
     button.classList.toggle("is-active", on);
     button.classList.remove("is-loading");
     button.setAttribute("aria-checked", String(on));
+    /* roving tabindex: the checked layer is the group's single Tab stop —
+       see bindMapLayerControls() */
+    if (!button.disabled) button.tabIndex = on ? 0 : -1;
   });
 }
 
@@ -755,6 +763,26 @@ function refreshHumidityState() {
   );
 }
 
+/* The point-reading layers' results reach screen readers through the polite
+   #mapLayerStatus region (see index.html). Written only when the sentence
+   actually changes, so the many silent repaints — a language switch, a unit
+   change, a replay tick — never re-announce the same reading; switching to
+   a non-reading layer clears it, so coming back announces afresh. */
+let lastLayerStatus = "";
+function announceLayerStatus(text) {
+  if (text === lastLayerStatus) return;
+  lastLayerStatus = text;
+  const region = $("#mapLayerStatus");
+  if (region) region.textContent = text;
+}
+
+function pointReadingAnnouncement() {
+  if (overlay.type === "airQuality") return airQualityAnnouncement(airQualityState);
+  if (overlay.type === "humidity") return humidityAnnouncement(humidityState);
+  if (overlay.type === "alerts") return alertsAnnouncement(alertsState);
+  return "";
+}
+
 function renderWeatherOverlay() {
   overlay.animation = animator.snapshot();
   renderWeatherOverlayUI(overlay, {
@@ -767,6 +795,7 @@ function renderWeatherOverlay() {
     renderHumidityUI(humidityState);
   }
   if (overlay.type === "alerts") renderAlertsUI(alertsState);
+  announceLayerStatus(pointReadingAnnouncement());
 }
 
 /* Optional animation of the active overlay — the rain forecast playing through,
@@ -1045,6 +1074,7 @@ export function bindAirQuality() {
     airQualityState.data = null;
     airQualityState.errorKind = null;
     renderAirQualityUI(airQualityState);
+    announceLayerStatus(airQualityAnnouncement(airQualityState));
     loadAirQualityFor(loc, requestId, isStale, $('.map-layer[data-map-layer="airQuality"]'));
   });
 }
@@ -1248,6 +1278,7 @@ export function bindAlerts() {
     alertsState.errorKind = null;
     clearAlertAreas();
     renderAlertsUI(alertsState);
+    announceLayerStatus(alertsAnnouncement(alertsState));
     loadAlertsFor(loc, requestId, isStale, $('.map-layer[data-map-layer="alerts"]'));
   });
 }
@@ -1264,6 +1295,7 @@ export function bindHumidity() {
     humidityState.data = null;
     humidityState.errorKind = null;
     renderHumidityUI(humidityState);
+    announceLayerStatus(humidityAnnouncement(humidityState));
   });
 }
 
@@ -1319,9 +1351,37 @@ export function updateMapLayerFades() {
 }
 
 export function bindMapLayerControls() {
-  $$(".map-layer").forEach((button) =>
+  const layers = $$(".map-layer");
+  layers.forEach((button) =>
     button.addEventListener("click", () => setMapLayer(button.dataset.mapLayer)),
   );
+  /* The switcher is a role="radiogroup" of role="radio" buttons, which tells
+     assistive tech to expect the radio pattern: ONE Tab stop for the group,
+     arrow keys to move between layers and select as they go. Every layer
+     used to be its own Tab stop and the arrows did nothing — the one radio
+     group in the app that didn't match the forecast timeline beside it
+     (ui/render-map-weather.js's bindTimeline()). Disabled layers are skipped. */
+  const usable = () => layers.filter((button) => !button.disabled);
+  const checked = usable().find((b) => b.getAttribute("aria-checked") === "true") || usable()[0];
+  usable().forEach((button) => (button.tabIndex = button === checked ? 0 : -1));
+  $(".map-layer-switcher")?.addEventListener("keydown", (event) => {
+    const options = usable();
+    const index = options.indexOf(document.activeElement);
+    if (index === -1) return;
+    let next = null;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown")
+      next = (index + 1) % options.length;
+    else if (event.key === "ArrowLeft" || event.key === "ArrowUp")
+      next = (index - 1 + options.length) % options.length;
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = options.length - 1;
+    if (next === null) return;
+    event.preventDefault();
+    options.forEach((button) => (button.tabIndex = -1));
+    options[next].tabIndex = 0;
+    options[next].focus();
+    setMapLayer(options[next].dataset.mapLayer);
+  });
   $$(".map-layer-row").forEach((row) =>
     row.addEventListener("scroll", updateMapLayerFades, { passive: true }),
   );

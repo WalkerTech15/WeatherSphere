@@ -75,25 +75,62 @@
     min-height: 44px;
   }
   .chip,
-  .uchips button {
+  .compare-chip,
+  .uchips button,
+  .btn-primary {
     min-height: 44px;
   }
+  /* unit chips ("°C" / "°F") are short enough to come out 42px wide */
+  .uchips button {
+    min-width: 44px;
+  }
   .seg-icons button {
-    min-width: 40px;
+    min-width: 44px;
     min-height: 38px;
+  }
+  /* Stacked vertically with only a 2px gap, so a transparent hit area would
+     overlap the next link — the box itself grows instead. The text stays
+     left-aligned, so the extra width of a short word ("Aide") is invisible. */
+  .footer-col button,
+  .footer-col a {
+    display: inline-flex;
+    align-items: center;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  /* The "Ma position" row sits right under its own refresh button, whose hit
+     area already extends toward it — so this one grows its box, not a
+     ::before, to avoid the two overlapping. */
+  .side-pos-body {
+    min-height: 44px;
+    justify-content: center;
+  }
+  /* Favourite / share / close in the map panel: 5px apart is too close for
+     three 44px hit areas; 8px is the smallest gap at which none overlap
+     (the close button is 34px, so its area reaches 5px either side). */
+  .map-panel-actions {
+    gap: 8px;
   }
   .switch,
   .favx-star,
   .fav-remove-s,
   .hero-fav-btn,
-  .side-pos-refresh {
+  .side-pos-refresh,
+  .map-panel-favorite,
+  .map-panel-share,
+  .map-panel-close,
+  .map-recents-link {
     position: relative;
   }
   .switch::before,
   .favx-star::before,
   .fav-remove-s::before,
   .hero-fav-btn::before,
-  .side-pos-refresh::before {
+  .side-pos-refresh::before,
+  .map-panel-favorite::before,
+  .map-panel-share::before,
+  .map-panel-close::before,
+  .map-recents-link::before {
     content: "";
     position: absolute;
     top: 50%;
@@ -102,15 +139,17 @@
     height: max(100%, 44px);
     transform: translate(-50%, -50%);
   }
-  /* Segmented controls (Simple/Detailed, unit chips, grid/list): the segments
-     are horizontal neighbours, so the hit area may only grow vertically —
-     widening it would overlap the adjacent segment. */
+  /* Segmented controls (Simple/Detailed, unit chips, grid/list) and the
+     chart tabs: the segments are horizontal neighbours, so the hit area may
+     only grow vertically — widening it would overlap the adjacent segment. */
   .seg-toggle button,
-  .seg-icons button {
+  .seg-icons button,
+  .chart-tabs button {
     position: relative;
   }
   .seg-toggle button::before,
-  .seg-icons button::before {
+  .seg-icons button::before,
+  .chart-tabs button::before {
     content: "";
     position: absolute;
     top: 50%;

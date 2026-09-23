@@ -41,7 +41,7 @@ body[data-theme="dark"] .side-item:hover {
 }
 .side-item.is-active {
   background: var(--primary-soft);
-  color: var(--primary-600);
+  color: var(--ink-primary);
   font-weight: 600;
 }
 .side-ico {
@@ -87,7 +87,7 @@ body[data-theme="dark"] .ico-settings {
   margin-left: auto;
   font-size: 11.5px;
   font-weight: 700;
-  color: var(--primary-600);
+  color: var(--ink-primary);
   background: var(--primary-soft);
   border-radius: 999px;
   padding: 2px 8px;
@@ -149,7 +149,7 @@ body[data-theme="dark"] .ico-settings {
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.02em;
-  color: var(--primary-600);
+  color: var(--ink-primary);
 }
 .side-pos-refresh {
   margin-left: auto;
@@ -165,7 +165,7 @@ body[data-theme="dark"] .ico-settings {
 }
 .side-pos-refresh:hover {
   background: var(--primary-soft);
-  color: var(--primary-600);
+  color: var(--ink-primary);
 }
 .side-pos-refresh:disabled {
   opacity: 0.45;

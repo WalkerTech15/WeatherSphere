@@ -91,6 +91,12 @@
   width: 40px;
   height: 40px;
 }
+/* Each fact is a real term/description pair (it was a <dt>/<dd> inside a
+   plain <div>, which assistive tech cannot read as one). The reset does not
+   cover <dl>, so its default block margins are removed here. */
+.dd-item dl {
+  margin: 0;
+}
 .dd-item dt {
   font-size: 12px;
   font-weight: 600;
@@ -107,16 +113,18 @@
   margin-top: 1px;
   font-size: 12px;
   font-weight: 700;
+  /* it now sits inside the <dd>, whose tighter tracking would otherwise inherit */
+  letter-spacing: normal;
   color: var(--text-2);
 }
 .dd-badge.is-good {
-  color: var(--emerald);
+  color: var(--ink-emerald);
 }
 .dd-badge.is-warn {
-  color: var(--amber);
+  color: var(--ink-amber);
 }
 .dd-badge.is-bad {
-  color: var(--rose);
+  color: var(--ink-rose);
 }
 
 .sum-text {
@@ -181,7 +189,7 @@
   color: var(--text-2);
 }
 .hour-cell.is-now .h-time {
-  color: var(--primary-600);
+  color: var(--ink-primary);
 }
 .hour-cell .h-icon {
   width: 34px;

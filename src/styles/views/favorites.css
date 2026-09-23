@@ -302,11 +302,11 @@
   flex-shrink: 0;
 }
 .ft-hi {
-  color: var(--rose);
+  color: var(--ink-rose);
   font-weight: 700;
 }
 .ft-lo {
-  color: var(--primary);
+  color: var(--ink-primary);
   font-weight: 700;
 }
 .ft-ago {
@@ -392,7 +392,7 @@
 .compare-chip[aria-pressed="true"] {
   border-color: var(--primary);
   background: var(--primary-soft);
-  color: var(--primary-600);
+  color: var(--ink-primary);
 }
 /* The cap is a limit, not an error — a disabled chip stays legible rather
    than fading to near-invisible. */

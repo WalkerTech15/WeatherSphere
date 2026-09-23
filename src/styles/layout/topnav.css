@@ -82,6 +82,12 @@ body[data-theme="dark"] .topnav {
   font-style: normal;
   color: var(--primary);
 }
+/* The brand blue stays as-is on light surfaces (5.2:1), but on the dark
+   card it is only 3.2:1 — the dark theme's lighter ink step keeps it legible
+   there without touching the light-theme brand colour. */
+body[data-theme="dark"] .logo-text em {
+  color: var(--ink-primary);
+}
 .logo-text.sm {
   font-size: 16px;
 }
@@ -195,7 +201,7 @@ body[data-theme="dark"] .topnav {
 }
 .menu button[aria-checked="true"] {
   background: var(--primary-soft);
-  color: var(--primary-600);
+  color: var(--ink-primary);
   font-weight: 600;
 }
 

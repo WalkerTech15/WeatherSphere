@@ -195,7 +195,7 @@ export function renderFavorites() {
     grid.innerHTML = `
       <div class="empty-state">
         <div class="big" aria-hidden="true">⭐</div>
-        <h3>${t("favEmptyTitle")}</h3>
+        <h2>${t("favEmptyTitle")}</h2>
         <p>${t("favEmptyText")}</p>
         <button class="btn-primary empty-action" type="button" data-empty-action="search">${t("favEmptyAction")}</button>
       </div>`;

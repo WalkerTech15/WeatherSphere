@@ -61,6 +61,19 @@ function readyHtml(data) {
     </div>`;
 }
 
+/* One short sentence for the panel's live region (features/map.js): the
+   state a screen-reader user needs, without the whole pollutant grid. */
+export function airQualityAnnouncement(aqiState) {
+  if (!aqiState || aqiState.status === "idle") return "";
+  if (aqiState.status === "loading") return t("mapAqiLoading");
+  if (aqiState.status === "ready") {
+    const aq = classifyAqi(aqiState.data.aqi);
+    /* commas, not a colon: colon spacing differs between French and English */
+    return `${t("mapAqiIndex")}, ${Math.round(aqiState.data.aqi)}, ${aq.label}`;
+  }
+  return t(ERROR_MESSAGE_KEYS[aqiState.errorKind] || "mapAqiError");
+}
+
 /**
  * Repaint the Air Quality panel.
  * @param {{status: "idle"|"loading"|"ready"|"error", data: object|null,

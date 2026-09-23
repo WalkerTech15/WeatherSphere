@@ -28,7 +28,7 @@
   flex-wrap: wrap;
 }
 .pill-heart {
-  color: var(--primary-600);
+  color: var(--ink-primary);
   border-color: rgba(37, 99, 235, 0.25);
   background: var(--primary-soft);
 }
@@ -133,7 +133,8 @@
   height: 44px;
   border-radius: 14px;
 }
-.feature-card h3 {
+/* h2: the feature cards sit directly under the page h1 (an h3 skipped a level) */
+.feature-card h2 {
   font-size: 15px;
   font-weight: 700;
   margin-top: 14px;
@@ -297,7 +298,7 @@ body[data-theme="dark"] .tech-logo {
   padding: 7px 13px;
   border-radius: 999px;
   background: var(--primary-soft);
-  color: var(--primary-600);
+  color: var(--ink-primary);
   font-size: 13px;
   font-weight: 600;
   text-decoration: none;

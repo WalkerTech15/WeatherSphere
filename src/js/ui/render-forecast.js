@@ -137,19 +137,19 @@ export function renderForecastPage() {
     <div class="dd-grid">
       <div class="dd-item">
         <span class="metric-ico tint-amber" aria-hidden="true">${METRIC_ICONS.sunrise}</span>
-        <div><dt>${t("sunrise")}</dt><dd>${fmtClock(d0.sunrise)}</dd></div>
+        <dl><dt>${t("sunrise")}</dt><dd>${fmtClock(d0.sunrise)}</dd></dl>
       </div>
       <div class="dd-item">
         <span class="metric-ico tint-violet" aria-hidden="true">${METRIC_ICONS.sunset}</span>
-        <div><dt>${t("sunset")}</dt><dd>${fmtClock(d0.sunset)}</dd></div>
+        <dl><dt>${t("sunset")}</dt><dd>${fmtClock(d0.sunset)}</dd></dl>
       </div>
       <div class="dd-item">
         <span class="metric-ico tint-amber" aria-hidden="true">${METRIC_ICONS.uv}</span>
-        <div><dt>${t("uvIndex")}</dt><dd>${Math.round(d0.uvMax)}</dd><span class="dd-badge is-warn">${uvLabel(d0.uvMax)}</span></div>
+        <dl><dt>${t("uvIndex")}</dt><dd>${Math.round(d0.uvMax)}<span class="dd-badge is-warn">${uvLabel(d0.uvMax)}</span></dd></dl>
       </div>
       <div class="dd-item">
         <span class="metric-ico tint-emerald" aria-hidden="true">${METRIC_ICONS.visibility}</span>
-        <div><dt>${t("airQuality")}</dt><dd>${wx.current.aqi ?? "—"}</dd><span class="dd-badge ${aq.cls}">${aq.label}</span></div>
+        <dl><dt>${t("airQuality")}</dt><dd>${wx.current.aqi ?? "—"}<span class="dd-badge ${aq.cls}">${aq.label}</span></dd></dl>
       </div>
     </div>`;
 
@@ -165,8 +165,8 @@ export function renderForecastPage() {
     <h3 class="info-title">${t("summaryTitle")}</h3>
     <p class="sum-text">${summary}</p>
     <div class="sum-rows">
-      <div class="sum-row"><span class="metric-ico tint-rose" aria-hidden="true">${METRIC_ICONS.temperature}</span> ${t("maxLabel")} <b style="color:var(--rose)">${fmtTemp(d0.hi)}${tempUnit()}</b></div>
-      <div class="sum-row"><span class="metric-ico tint-blue" aria-hidden="true">${METRIC_ICONS.temperature}</span> ${t("minLabel")} <b style="color:var(--primary)">${fmtTemp(d0.lo)}${tempUnit()}</b></div>
+      <div class="sum-row"><span class="metric-ico tint-rose" aria-hidden="true">${METRIC_ICONS.temperature}</span> ${t("maxLabel")} <b style="color:var(--ink-rose)">${fmtTemp(d0.hi)}${tempUnit()}</b></div>
+      <div class="sum-row"><span class="metric-ico tint-blue" aria-hidden="true">${METRIC_ICONS.temperature}</span> ${t("minLabel")} <b style="color:var(--ink-primary)">${fmtTemp(d0.lo)}${tempUnit()}</b></div>
       <div class="sum-row"><span class="metric-ico tint-emerald" aria-hidden="true">${METRIC_ICONS.wind}</span> ${t("avgWind")} <b>${fmtWind(avgWind)} ${windUnit()}</b></div>
     </div>`;
 }

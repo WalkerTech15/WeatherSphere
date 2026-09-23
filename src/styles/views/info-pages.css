@@ -30,7 +30,7 @@
   place-items: center;
   border-radius: 50%;
   background: var(--primary-soft);
-  color: var(--primary-600);
+  color: var(--ink-primary);
   font-size: 14px;
   font-weight: 800;
 }
@@ -66,7 +66,7 @@
   padding: var(--s-3) 0 0;
   border: 0;
   background: transparent;
-  color: var(--primary-600);
+  color: var(--ink-primary);
   cursor: pointer;
   font: inherit;
   font-weight: 750;
@@ -118,7 +118,7 @@
 
 .privacy-kicker {
   margin: 0;
-  color: var(--primary-600);
+  color: var(--ink-primary);
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.06em;

@@ -62,7 +62,7 @@
 }
 .footer-col button:hover,
 .footer-col a:hover {
-  color: var(--primary-600);
+  color: var(--ink-primary);
 }
 .footer-bottom {
   display: flex;
