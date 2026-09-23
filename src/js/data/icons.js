@@ -156,4 +156,5 @@ export const MAP_LAYER_ICONS = {
   humidity: METRIC_ICONS.humidity,
   airQuality: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h9.5a2.75 2.75 0 1 0-2.65-3.5"/><path d="M3 16h13a2.75 2.75 0 1 1-2.65 3.5"/><path d="M3 12h6.5a2.25 2.25 0 1 1-2.17 2.83"/></svg>`,
   alerts: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 3 19.5h18z"/><path d="M12 10v4"/><circle cx="12" cy="17" r="0.9" fill="currentColor" stroke="none"/></svg>`,
+  lightning: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m13 2-8 11h6l-1 9 8-12h-6z"/></svg>`,
 };

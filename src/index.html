@@ -846,6 +846,17 @@
                   <span class="map-layer-icon" data-layer-icon="alerts" aria-hidden="true"></span
                   ><span data-i18n="mapAlerts">Alerts</span>
                 </button>
+                <button
+                  class="map-layer"
+                  type="button"
+                  data-map-layer="lightning"
+                  data-i18n-tip="tipLayerLightning"
+                  aria-checked="false"
+                  role="radio"
+                >
+                  <span class="map-layer-icon" data-layer-icon="lightning" aria-hidden="true"></span
+                  ><span data-i18n="mapLightning">Lightning</span>
+                </button>
               </div>
             </div>
             <div id="worldMap"></div>
@@ -862,7 +873,7 @@
               hidden
             ></div>
             <!-- Announces the point-reading layers' results (Air Quality,
-                 Humidity, official alerts) — loading, the reading, or the
+                 Humidity, official alerts, lightning) — loading, the reading, or the
                  failure. A separate, always-present region: the panel above
                  is rebuilt on every repaint, and a live region created in the
                  same moment as its text is not reliably announced. Written

@@ -1682,6 +1682,63 @@ body[data-theme="dark"] .map-panel-loading-coords {
    Shares the same card chrome as the readings above. The list scrolls
    inside the card rather than growing it, so several warnings at once
    cannot push the map controls off a phone screen. */
+.map-lightning-status,
+.map-lightning-count,
+.map-lightning-meta {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.map-lightning-status[data-state="clear"],
+.map-lightning-status[data-state="unsupported"] {
+  color: var(--text-muted);
+}
+
+.map-lightning-status[data-state="error"] {
+  color: var(--danger, #fca5a5);
+}
+
+.map-lightning-status[data-loading]::after {
+  content: "";
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-left: 0.45rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  vertical-align: -0.12rem;
+  animation: map-control-spin 0.8s linear infinite;
+}
+
+.map-lightning-list {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.55rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.map-lightning-strike {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: 0.45rem;
+  background: color-mix(in srgb, #facc15 12%, transparent);
+  font-size: 0.78rem;
+}
+
+.map-lightning-strike strong {
+  color: #fde68a;
+  font-variant-numeric: tabular-nums;
+}
+
+body[data-theme="light"] .map-lightning-strike strong {
+  color: #a16207;
+}
+
 .map-alerts-list {
   margin: 0;
   padding: 0;

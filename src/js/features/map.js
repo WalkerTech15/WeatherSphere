@@ -41,12 +41,14 @@ import { renderWeatherOverlayUI, updateTimeStatus } from "../ui/render-map-weath
 import { renderAirQualityUI, airQualityAnnouncement } from "../ui/render-map-airquality.js";
 import { renderHumidityUI, humidityAnnouncement } from "../ui/render-map-humidity.js";
 import { renderAlertsUI, alertsAnnouncement } from "../ui/render-map-alerts.js";
+import { renderLightningUI, lightningAnnouncement } from "../ui/render-map-lightning.js";
 import { noticeHtml } from "../ui/notice.js";
 import { fetchAirQualityDetail } from "../weather/weather-provider.js";
 import { isWeatherError } from "../weather/weather-errors.js";
 import { computeHumidityState } from "./humidity-state.js";
 import { computeAlertsState } from "./alerts-state.js";
 import { fetchOfficialAlerts } from "../services/alert-provider.js";
+import { fetchXweatherLightning } from "../services/xweather-lightning.js";
 import { isOffline } from "../services/offline.js";
 
 /* The SDK's stylesheet is imported HERE, inside the dynamic import, rather
@@ -754,6 +756,12 @@ const alertsState = {
   errorKind: null /* a WeatherError kind, set only when status is "error" */,
 };
 
+const lightningState = {
+  status: "idle" /* idle | loading | ready | empty | error | unsupported */,
+  data: null,
+  errorKind: null,
+};
+
 /* Set by bindHumidity() the instant a new place is chosen, to the wx object
  * that was current just before that choice — i.e. the wrong one for the
  * place now in state.loc. features/location.js reassigns state.loc
@@ -807,6 +815,7 @@ function pointReadingAnnouncement() {
   if (overlay.type === "airQuality") return airQualityAnnouncement(airQualityState);
   if (overlay.type === "humidity") return humidityAnnouncement(humidityState);
   if (overlay.type === "alerts") return alertsAnnouncement(alertsState);
+  if (overlay.type === "lightning") return lightningAnnouncement(lightningState);
   return "";
 }
 
@@ -822,6 +831,7 @@ function renderWeatherOverlay() {
     renderHumidityUI(humidityState);
   }
   if (overlay.type === "alerts") renderAlertsUI(alertsState);
+  if (overlay.type === "lightning") renderLightningUI(lightningState);
   announceLayerStatus(pointReadingAnnouncement());
 }
 
@@ -927,6 +937,12 @@ function resetOverlay(type) {
     alertsState.errorKind = null;
     clearAlertAreas();
   }
+  if (type !== "lightning") {
+    lightningState.status = "idle";
+    lightningState.data = null;
+    lightningState.errorKind = null;
+    clearLightningStrikes();
+  }
 }
 
 /* Fold a weather-layers report into the overlay description. */
@@ -953,6 +969,7 @@ export async function setMapLayer(type, { offset = overlay.offset } = {}) {
   if (type === "airQuality") return setAirQualityLayer();
   if (type === "humidity") return setHumidityLayer();
   if (type === "alerts") return setAlertsLayer();
+  if (type === "lightning") return setLightningLayer();
   const requested = WEATHER_LAYER_IDS[type] ? type : "satellite";
   const requestId = ++layerRequestId;
   const isStale = () => requestId !== layerRequestId;
@@ -1215,6 +1232,130 @@ function clearAlertAreas() {
   } catch {
     /* style torn down or map removed — nothing to clear */
   }
+}
+
+const LIGHTNING_SOURCE = "xweather-lightning-strikes";
+const LIGHTNING_LAYER = "xweather-lightning-points";
+
+function lightningPointData(strikes) {
+  return {
+    type: "FeatureCollection",
+    features: (strikes || [])
+      .filter((strike) => Number.isFinite(strike.lat) && Number.isFinite(strike.lon))
+      .map((strike) => ({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [strike.lon, strike.lat] },
+        properties: { type: strike.type || "strike" },
+      })),
+  };
+}
+
+function applyLightningStrikes(strikes) {
+  const map = MAPS.worldMap?.map;
+  if (!map?.isStyleLoaded()) return;
+  const data = lightningPointData(strikes);
+  const source = map.getSource(LIGHTNING_SOURCE);
+  if (source) {
+    source.setData(data);
+    return;
+  }
+  if (!data.features.length) return;
+  map.addSource(LIGHTNING_SOURCE, { type: "geojson", data });
+  map.addLayer({
+    id: LIGHTNING_LAYER,
+    type: "circle",
+    source: LIGHTNING_SOURCE,
+    paint: {
+      "circle-color": "#facc15",
+      "circle-radius": 6,
+      "circle-stroke-color": "#fff7ed",
+      "circle-stroke-width": 1.5,
+      "circle-opacity": 0.9,
+    },
+  });
+}
+
+function clearLightningStrikes() {
+  const map = MAPS.worldMap?.map;
+  if (!map) return;
+  try {
+    const source = map.getSource(LIGHTNING_SOURCE);
+    if (source) source.setData(lightningPointData([]));
+  } catch {
+    /* style torn down or map removed */
+  }
+}
+
+let lightningController = null;
+
+async function loadLightningFor(loc, requestId, isStale, button) {
+  lightningController?.abort();
+  const controller = new AbortController();
+  lightningController = controller;
+  try {
+    const data = await fetchXweatherLightning(loc, { signal: controller.signal });
+    if (isStale()) return;
+    lightningState.data = data;
+    lightningState.status = data.strikes.length ? "ready" : "empty";
+    lightningState.errorKind = null;
+    applyLightningStrikes(data.strikes);
+  } catch (err) {
+    if (isStale()) return;
+    lightningState.status = "error";
+    lightningState.data = null;
+    lightningState.errorKind = isWeatherError(err) ? err.kind : "network";
+    clearLightningStrikes();
+  } finally {
+    if (lightningController === controller) lightningController = null;
+    if (isStale()) button?.classList.remove("is-loading");
+  }
+  if (isStale()) return;
+  setLayerButtonState("lightning");
+  renderWeatherOverlay();
+  emit("map:layer", getMapOverlayState());
+}
+
+async function setLightningLayer() {
+  const requestId = ++layerRequestId;
+  const isStale = () => requestId !== layerRequestId;
+  const button = $('.map-layer[data-map-layer="lightning"]');
+  button?.classList.add("is-loading");
+  animator.detach({ silent: true });
+  resetOverlay("lightning");
+  lightningState.status = "loading";
+  lightningState.data = null;
+  lightningState.errorKind = null;
+  renderWeatherOverlay();
+  try {
+    await updateMap("worldMap");
+    if (isStale()) return;
+    removeWeatherLayer(MAPS.worldMap);
+  } catch {
+    /* The map's own error UI covers basemap failures; still report the API state. */
+  }
+  if (isStale()) return;
+  if (!state.loc) {
+    lightningState.status = "unsupported";
+    setLayerButtonState("lightning");
+    renderWeatherOverlay();
+    return;
+  }
+  await loadLightningFor(state.loc, requestId, isStale, button);
+}
+
+export function bindLightning() {
+  on("location:selecting", (loc) => {
+    if (overlay.type !== "lightning") return;
+    const requestId = ++layerRequestId;
+    const isStale = () => requestId !== layerRequestId;
+    lightningState.status = "loading";
+    lightningState.data = null;
+    lightningState.errorKind = null;
+    clearLightningStrikes();
+    renderLightningUI(lightningState);
+    announceLayerStatus(lightningAnnouncement(lightningState));
+    loadLightningFor(loc, requestId, isStale, $('.map-layer[data-map-layer="lightning"]'));
+  });
 }
 
 /* Cancels the previous alert request's actual network fetch the moment a
