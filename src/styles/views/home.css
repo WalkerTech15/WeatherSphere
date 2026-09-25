@@ -121,6 +121,7 @@
 }
 .hero-head {
   margin-top: 6px;
+  text-align: center;
 }
 .hero-main {
   margin-top: auto;
@@ -189,6 +190,11 @@
   text-shadow: 0 2px 24px rgba(2, 6, 23, 0.25);
 }
 .hero-region {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 6px;
   margin-top: 8px;
   font-size: 15px;
   font-weight: 500;
