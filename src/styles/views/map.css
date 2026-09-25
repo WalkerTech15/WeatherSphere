@@ -1678,10 +1678,7 @@ body[data-theme="dark"] .map-panel-loading-coords {
   overflow-wrap: anywhere;
 }
 
-/* ── Official alerts panel ───────────────────────────────────────────────
-   Shares the same card chrome as the readings above. The list scrolls
-   inside the card rather than growing it, so several warnings at once
-   cannot push the map controls off a phone screen. */
+/* ── Lightning panel (Xweather) ─────────────────────────────────────────── */
 .map-lightning-status,
 .map-lightning-count,
 .map-lightning-meta {
@@ -1739,6 +1736,10 @@ body[data-theme="light"] .map-lightning-strike strong {
   color: #a16207;
 }
 
+/* ── Official alerts panel ───────────────────────────────────────────────
+   Shares the same card chrome as the readings above. The list scrolls
+   inside the card rather than growing it, so several warnings at once
+   cannot push the map controls off a phone screen. */
 .map-alerts-list {
   margin: 0;
   padding: 0;
@@ -1861,7 +1862,8 @@ body[data-theme="dark"] .map-aqi-status[data-state="clear"] {
 @media (prefers-reduced-motion: reduce) {
   .map-panel-spinner,
   .map-time-status[data-loading]::after,
-  .map-aqi-status[data-loading]::after {
+  .map-aqi-status[data-loading]::after,
+  .map-lightning-status[data-loading]::after {
     animation: none;
   }
 }

@@ -1,5 +1,5 @@
 /**
- * Fails the build if a Pexels, Google Places or Mapillary credential — or any sign that
+ * Fails the build if a Pexels, Google Places, Mapillary or Xweather credential — or any sign that
  * one was expected in client code — can be found in dist/.
  *
  * Run after `npm run build` (it is part of `npm run check`).
@@ -88,7 +88,38 @@ const RULES = [
     name: "OAuth token in client code",
     test: /["'\s:]OAuth\s+[A-Za-z0-9|_-]{16,}/,
   },
+  /* Xweather. "Xweather" itself is expected (the attribution line); the rules
+     target the credential names and the direct-from-browser calling pattern. */
+  {
+    name: "XWEATHER_CLIENT_ID / XWEATHER_CLIENT_SECRET reference in client code",
+    test: /XWEATHER_CLIENT_(ID|SECRET)/,
+  },
+  {
+    name: "VITE_XWEATHER reference",
+    test: /VITE_XWEATHER/,
+  },
+  {
+    name: "direct call to the Xweather API from the browser",
+    // all lightning traffic must go through the same-origin proxy
+    test: /(data|maps)\.api\.xweather\.com|aerisapi\.com/,
+  },
+  {
+    name: "Xweather client_secret parameter in client code",
+    test: /client_secret=/,
+  },
 ];
+
+/* `npm run verify:secrets` is usually run without the keys exported, so the
+   local .env.local is read too, where Node supports it. Existing environment
+   variables win; nothing loaded here is ever printed. */
+const ENV_FILE = join(ROOT, ".env.local");
+if (existsSync(ENV_FILE) && typeof process.loadEnvFile === "function") {
+  try {
+    process.loadEnvFile(ENV_FILE);
+  } catch {
+    /* unreadable env file — the static rules still run */
+  }
+}
 
 /* If a key is configured in this environment, also check for that exact value.
    Compared, never printed. */
@@ -96,6 +127,11 @@ const LIVE_KEYS = [
   ["the configured Pexels key itself", (process.env.PEXELS_API_KEY || "").trim()],
   ["the configured Google Places key itself", (process.env.GOOGLE_PLACES_API_KEY || "").trim()],
   ["the configured Mapillary token itself", (process.env.MAPILLARY_ACCESS_TOKEN || "").trim()],
+  ["the configured Xweather client ID itself", (process.env.XWEATHER_CLIENT_ID || "").trim()],
+  [
+    "the configured Xweather client secret itself",
+    (process.env.XWEATHER_CLIENT_SECRET || "").trim(),
+  ],
 ];
 
 function walk(dir) {
@@ -140,5 +176,5 @@ if (findings.length > 0) {
 }
 
 console.log(
-  "verify-no-secrets: OK — no Pexels, Google Places or Mapillary credential, and no direct API call, found in dist/.",
+  "verify-no-secrets: OK — no Pexels, Google Places, Mapillary or Xweather credential, and no direct API call, found in dist/.",
 );

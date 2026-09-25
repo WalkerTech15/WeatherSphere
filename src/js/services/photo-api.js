@@ -71,6 +71,7 @@ import {
   identityOnly,
   distanceKm,
   scorePhotoForLocation,
+  isNonPhotographic,
 } from "./photo-relevance.js";
 import { LOCATIONS } from "../data/locations.js";
 import { COUNTRY_FLAG_CODES } from "../data/country-flag-codes.js";
@@ -445,8 +446,11 @@ export function rankWikimediaCandidates(loc, candidates, { trustCoordinates = fa
      near the point (a beach, a ship, a marine animal) is not evidence about
      the water itself: the candidate has to say it is about water. */
   const marine = isMarineKind(loc?.kind);
+  /* Before anything else, it must be a photograph: a chart, map, flag or
+     scanned report "about" the place is not a picture of it, whichever path
+     found it — a geosearch trusts position, not subject matter. */
   const list = (Array.isArray(candidates) ? candidates : []).filter(
-    (c) => c && c.src && (!marine || isOpenWaterSubject(c, loc)),
+    (c) => c && c.src && !isNonPhotographic(c, loc) && (!marine || isOpenWaterSubject(c, loc)),
   );
   const pool = trustCoordinates
     ? list

@@ -1,4 +1,7 @@
 import { defineConfig, loadEnv } from "vite";
+import { lightningResponse } from "./api/xweather-lightning.js";
+
+const XWEATHER_LIGHTNING_ENDPOINT = "/api/xweather-lightning";
 
 /* Development stand-in for the production Pexels proxy.
  *
@@ -457,6 +460,51 @@ function mapillaryDevProxy(token) {
   };
 }
 
+/* Development stand-in for the Xweather lightning proxy. Unlike the three
+ * above, it does not re-implement the route: it calls the same
+ * lightningResponse() that api/xweather-lightning.js serves on Vercel, so
+ * validation, error mapping and the response contract cannot drift apart.
+ *
+ * Without this, `vite dev` has no /api/xweather-lightning route and its SPA
+ * fallback answers with index.html — which the client then reports as a
+ * malformed lightning response.
+ *
+ * XWEATHER_CLIENT_ID / XWEATHER_CLIENT_SECRET are unprefixed, so Vite never
+ * compiles them into the client bundle; they stay in this Node process.
+ */
+export function xweatherLightningDevProxy(clientId, clientSecret) {
+  const handler = async (req, res, next) => {
+    const url = new URL(req.url, "http://localhost");
+    if (url.pathname !== XWEATHER_LIGHTNING_ENDPOINT) return next();
+
+    if (req.method !== "GET") {
+      res.setHeader("Allow", "GET");
+      return sendJson(res, 405, { error: "method_not_allowed" });
+    }
+
+    const result = await lightningResponse(Object.fromEntries(url.searchParams), {
+      clientId,
+      clientSecret,
+    });
+    res.statusCode = result.status;
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    for (const [name, value] of Object.entries(result.headers)) res.setHeader(name, value);
+    res.end(JSON.stringify(result.body));
+  };
+
+  return {
+    name: "weathersphere-xweather-lightning-dev-proxy",
+    apply: "serve",
+    configureServer(server) {
+      server.middlewares.use(handler);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(handler);
+    },
+  };
+}
+
 // The app has no client-side router (views are shown/hidden with JS, not
 // URLs), so a relative base lets the same build work unmodified whether it's
 // served from a domain root (current Hostinger deploy) or a GitHub Pages
@@ -470,6 +518,8 @@ export default defineConfig(({ mode }) => {
   const pexelsKey = process.env.PEXELS_API_KEY ?? env.PEXELS_API_KEY ?? "";
   const placesKey = process.env.GOOGLE_PLACES_API_KEY ?? env.GOOGLE_PLACES_API_KEY ?? "";
   const mapillaryToken = process.env.MAPILLARY_ACCESS_TOKEN ?? env.MAPILLARY_ACCESS_TOKEN ?? "";
+  const xweatherId = process.env.XWEATHER_CLIENT_ID ?? env.XWEATHER_CLIENT_ID ?? "";
+  const xweatherSecret = process.env.XWEATHER_CLIENT_SECRET ?? env.XWEATHER_CLIENT_SECRET ?? "";
 
   return {
     root: "src",
@@ -480,6 +530,7 @@ export default defineConfig(({ mode }) => {
       pexelsDevProxy(pexelsKey),
       placesDevProxy(placesKey),
       mapillaryDevProxy(mapillaryToken),
+      xweatherLightningDevProxy(xweatherId, xweatherSecret),
     ],
     build: {
       outDir: "../dist",

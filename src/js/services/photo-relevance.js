@@ -590,3 +590,123 @@ export function pickBestPhoto(loc, candidates, { requireEvidence = false } = {})
   }
   return best;
 }
+
+/* ── Is this file a photograph at all? ─────────────────────────────────────
+   Wikimedia Commons holds far more than photographs: population pyramids,
+   locator maps, flags, coats of arms, logos, scanned reports, and orbital or
+   aerial survey tiles — all openly licensed, all attributed, and all
+   categorised under the very place they describe. That is how selecting
+   McKinley County, New Mexico came to show "USA McKinley County, New Mexico
+   age pyramid.svg" as the exact place photo: every text check passed,
+   because the chart really is ABOUT McKinley County. It is just not a
+   picture of it.
+
+   So a Commons candidate must first be a photograph, judged two ways:
+     1. its file type — only JPEG and WebP. SVG, PNG and GIF are almost
+        always drawings, charts or maps; TIFF and PDF/DjVu are scans and
+        survey tiles; audio and video are not stills. Rejecting the odd PNG
+        photo only costs a step down the fallback chain;
+     2. its own words (title, description, categories) naming a non-photo
+        subject, in English or French.
+   A false rejection moves on to the next source; a false acceptance shows a
+   chart as a place, so these lean towards rejecting. Accent-folded,
+   space-padded phrases, matched as whole words. */
+const PHOTO_MIME_TYPES = new Set(["image/jpeg", "image/webp"]);
+const NON_PHOTO_EXTENSION =
+  /\.(svg|png|gif|tiff?|pdf|djvu|webm|ogv|ogg|oga|mp3|wav|flac|mid|stl)$/i;
+const NON_PHOTO_PHRASES = [
+  /* charts and statistics */
+  "age pyramid",
+  "age pyramids",
+  "population pyramid",
+  "population pyramids",
+  "pyramide des ages",
+  "chart",
+  "charts",
+  "graph",
+  "graphs",
+  "diagram",
+  "diagrams",
+  "diagramme",
+  "graphique",
+  "infographic",
+  "histogram",
+  "climate chart",
+  "climograph",
+  "climogramme",
+  "census data",
+  "demographics",
+  "demographie",
+  "statistics",
+  "statistiques",
+  "election results",
+  /* maps */
+  "map",
+  "maps",
+  "locator",
+  "location map",
+  "carte",
+  "cartes",
+  "topographic",
+  "topographique",
+  /* symbols */
+  "flag of",
+  "flags of",
+  "drapeau",
+  "coat of arms",
+  "coats of arms",
+  "blason",
+  "armoiries",
+  "logo",
+  "logos",
+  "icon",
+  "icons",
+  "emblem",
+  "seal of",
+  "insignia",
+  /* documents */
+  "scan of",
+  "scans from",
+  "manuscript",
+  "newspaper",
+  "screenshot",
+];
+
+/* Orbital and survey imagery: not a view a visitor would recognise of a town
+   or a county. Open water is the exception — an astronaut's view of the ocean
+   IS an honest overview of it (see isOpenWaterSubject), so these apply on
+   land only. */
+const ORBITAL_PHRASES = [
+  "iss expedition",
+  "view of earth",
+  "satellite image",
+  "satellite images",
+  "satellite picture",
+  "satellite pictures",
+  "landsat",
+  "sentinel 2",
+  "naip",
+  "orthophoto",
+  "orthophotos",
+];
+
+/**
+ * True when a Commons candidate is not a photograph of a scene: a chart, a
+ * map, a flag or other symbol, a scanned document, or orbital/survey imagery.
+ * A phrase that is part of the place's own name is not held against it —
+ * Chart Sutton's photos say "Chart" because that is where they were taken.
+ * @param {{mime?: string, title?: string, alt?: string, categories?: string}} photo
+ * @param {object} [loc] the selected location
+ */
+export function isNonPhotographic(photo, loc) {
+  if (!photo) return true;
+  const mime = String(photo.mime || "").toLowerCase();
+  if (mime && !PHOTO_MIME_TYPES.has(mime)) return true;
+  if (NON_PHOTO_EXTENSION.test(String(photo.title || "").trim())) return true;
+  const text = wordString([photo.title, photo.alt, photo.categories].filter(Boolean).join(" "));
+  const ownName = localizedVariants(loc?.name).map(wordString).join(" ");
+  const phrases = isMarineKind(loc?.kind)
+    ? NON_PHOTO_PHRASES
+    : [...NON_PHOTO_PHRASES, ...ORBITAL_PHRASES];
+  return phrases.some((phrase) => text.includes(` ${phrase} `) && !ownName.includes(` ${phrase} `));
+}

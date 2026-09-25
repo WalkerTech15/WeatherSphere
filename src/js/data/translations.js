@@ -331,6 +331,9 @@ export const I18N = {
     mapLightningHttpError: "Lightning data could not be loaded.",
     mapLightningMalformed: "Lightning data came back in an unexpected format.",
     mapLightningError: "Lightning data could not be loaded.",
+    mapLightningRateLimited: "Too many lightning requests — try again in a minute.",
+    mapLightningCloudGround: "Cloud-to-ground",
+    mapLightningInCloud: "In-cloud",
 
     /* expanded map mode */
     mapExpand: "Expand map",
@@ -929,6 +932,9 @@ export const I18N = {
     mapLightningHttpError: "Les données de foudre n'ont pas pu être chargées.",
     mapLightningMalformed: "Les données de foudre ont été reçues dans un format inattendu.",
     mapLightningError: "Les données de foudre n'ont pas pu être chargées.",
+    mapLightningRateLimited: "Trop de requêtes de foudre — réessayez dans une minute.",
+    mapLightningCloudGround: "Nuage-sol",
+    mapLightningInCloud: "Intra-nuage",
 
     /* mode carte agrandie */
     mapExpand: "Agrandir la carte",

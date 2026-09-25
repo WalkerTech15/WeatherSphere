@@ -64,6 +64,11 @@ function toCandidate(page) {
   if (!artist || !descriptionUrl) return null;
   const title = String(page.title || "").replace(/^File:/, "");
   const description = stripHtml(value("ImageDescription") || value("ObjectName")) || title;
+  /* Carried so photo-api can refuse what is not a photograph (charts, maps,
+     flags, scans — see isNonPhotographic): the file's type, and the
+     categories that say "Population pyramids of …" or "Maps of …" even when
+     its title does not. Categories are never shown and never scored. */
+  const categories = stripHtml(value("Categories")).slice(0, 600);
   const coords = page.coordinates?.[0];
   return {
     src: thumb,
@@ -72,6 +77,8 @@ function toCandidate(page) {
     link: descriptionUrl,
     alt: description,
     title,
+    mime: typeof info.mime === "string" ? info.mime : "",
+    categories,
     license: licenseShort,
     source: "wikimedia",
     lat: typeof coords?.lat === "number" ? coords.lat : null,
@@ -96,7 +103,7 @@ async function runQuery(params) {
     formatversion: "2",
     origin: "*",
     prop: "imageinfo|coordinates",
-    iiprop: "url|extmetadata|size",
+    iiprop: "url|extmetadata|size|mime",
     iiurlwidth: String(THUMB_WIDTH),
     ...params,
   })}`;
