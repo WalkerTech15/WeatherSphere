@@ -20,10 +20,13 @@ import { fmtDateTime } from "../core/datetime.js";
 import { TIME_OFFSETS } from "../features/map-timeline.js";
 import { legendModel, normalizeRampStops, hasLegend } from "../features/map-legend.js";
 
-const LEGEND_TITLE_KEYS = {
+/* One entry per layer in LEGEND_LAYERS (features/map-legend.js) — a layer
+   without one would be titled by t(undefined), i.e. the word "undefined". */
+export const LEGEND_TITLE_KEYS = {
   temperature: "temperature",
   rain: "precipitation",
   wind: "windSpeed",
+  pressure: "pressure",
 };
 
 const OFFSET_LABEL_KEYS = { 0: "mapTimeNow", 3: "mapTimePlus3", 6: "mapTimePlus6" };
