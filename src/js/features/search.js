@@ -11,13 +11,15 @@
 import { state } from "../core/state.js";
 import { $, $$, esc } from "../core/dom.js";
 import { t } from "../core/i18n.js";
-import { findLocations, normalize, LOCATIONS } from "../data/locations.js";
+import { findLocations, LOCATIONS } from "../data/locations.js";
 import { maptilerGeocode, geocode } from "../services/geocoding-api.js";
 import { locVisual } from "../services/photo-api.js";
 import { locName, locRegion, locCountry, locKindLabel, flagsHtml } from "../core/location.js";
 import { selectLocation } from "./location.js";
+import { geoState } from "./geolocation.js";
 import { recentToLocation } from "./recent-locations.js";
 import { buildSuggestions } from "./search-suggestions.js";
+import { rankSearchResults, rankingContext, mergeSearchResults } from "./search-ranking.js";
 import { switchView } from "../ui/navigation.js";
 
 let searchIndex = -1;
@@ -25,23 +27,28 @@ let searchResults = [];
 let geoTimer = null;
 let searchAbort = null; // cancels the in-flight geocoding request when the query changes
 
-/* Merge curated hits (rich landmarks/facts) on top of remote MapTiler results,
-   then collapse duplicates by name + country + region so a place that MapTiler
-   returns several times (e.g. Tarbes as municipality + place + POI) shows once,
-   while genuine same-name places in different regions (Paris FR/TX/ON) stay. */
-function dedupKey(l) {
-  return `${normalize(l.name.en)}|${l.cc}|${normalize(l.region.en || "")}`;
-}
-function mergeResults(curated, remote) {
-  const seen = new Set();
-  const out = [];
-  for (const l of curated.concat(remote)) {
-    const k = dedupKey(l);
-    if (seen.has(k)) continue;
-    seen.add(k);
-    out.push(l);
-  }
-  return out.slice(0, 8);
+/* How many places one query can list, and how many show before "More results".
+   Five rows fit the panel without scrolling on a phone; the rest are one
+   keystroke away rather than hidden. */
+const MAX_RESULTS = 8;
+const VISIBLE_RESULTS = 5;
+let showAll = false;
+
+/* Curated hits (rich landmarks, a reviewed photo) and the provider's own
+   results as one list: a place both know about shows once, while genuine
+   same-name places (Paris in France, Texas and Ontario) stay separate. */
+function rankedResults(query, curated, remote = []) {
+  const context = rankingContext({
+    /* only a fix the visitor already gave — search never asks for one */
+    userPoint:
+      geoState.status === "success" && geoState.loc
+        ? { lat: geoState.loc.lat, lon: geoState.loc.lon }
+        : null,
+    favorites: state.favorites,
+    recents: state.saveRecents ? state.recents : [],
+  });
+  const ranked = rankSearchResults(query, mergeSearchResults(curated, remote), context);
+  return { ...ranked, results: ranked.results.slice(0, MAX_RESULTS) };
 }
 
 function openSearchPanel() {
@@ -59,7 +66,9 @@ function closeSearchPanel() {
 
 /* The status line under the list: "" clears it, "loading" is a lookup in
    flight, "error" is every lookup failed with nothing to show, "partial" is
-   the online lookups failed but built-in places are still listed. */
+   the online lookups failed but built-in places are still listed, and
+   "ambiguous" is several places sharing the typed name with nothing to tell
+   them apart — the list stays open and the visitor chooses. */
 function setStatus(kind) {
   const el = $("#searchStatus");
   if (!kind) {
@@ -67,6 +76,11 @@ function setStatus(kind) {
     return;
   }
   const text = document.createElement("span");
+  if (kind === "ambiguous") {
+    text.textContent = t("searchAmbiguous");
+    el.replaceChildren(text);
+    return;
+  }
   if (kind === "loading") {
     const spinner = document.createElement("span");
     spinner.className = "map-panel-spinner";
@@ -143,29 +157,77 @@ function optionHtml(loc, i) {
     </li>`;
 }
 
+/* The "More results" row: the last option, reachable by arrow key like any
+   other, and a plain button for a tap. */
+function moreHtml(i, hidden) {
+  const label = esc(t("searchMore").replace("{n}", hidden));
+  return `
+    <li role="option" id="sr-${i}" aria-selected="${i === searchIndex}">
+      <button type="button" class="search-item search-more" data-i="${i}" tabindex="-1">
+        <span class="si-name">${label}</span>
+      </button>
+    </li>`;
+}
+
 function bindOptionClicks(ul) {
   $$(".search-item", ul).forEach((btn) => {
+    /* keeps focus in the input, so the arrow keys still work after a tap on
+       "More results" (an option that picks a place closes the panel anyway) */
+    btn.addEventListener("mousedown", (event) => event.preventDefault());
     btn.addEventListener("click", () => pickSearchResult(+btn.dataset.i));
   });
 }
 
-function renderSearchResults(list) {
-  searchResults = list;
-  searchIndex = -1;
-  $("#searchInput").removeAttribute(
-    "aria-activedescendant",
-  ); /* it pointed into the list just replaced */
+const optionCount = () => $$("#searchResults [role=option]").length;
+
+/* Rows for the typed query: the best few, then "More results" while any are
+   hidden. `active` is the row to highlight — the clear best answer, or none. */
+function paintResults(active = -1) {
+  searchIndex = active;
+  const shown = showAll ? searchResults : searchResults.slice(0, VISIBLE_RESULTS);
+  const hidden = searchResults.length - shown.length;
   const ul = $("#searchResults");
-  if (!list.length) {
+  ul.innerHTML = shown.map(optionHtml).join("") + (hidden ? moreHtml(shown.length, hidden) : "");
+  bindOptionClicks(ul);
+  announce(t("searchCount").replace("{n}", shown.length));
+  const input = $("#searchInput");
+  if (active >= 0) input.setAttribute("aria-activedescendant", `sr-${active}`);
+  else input.removeAttribute("aria-activedescendant"); /* it pointed into the list just replaced */
+}
+
+function renderSearchResults(ranked) {
+  searchResults = ranked.results;
+  const ul = $("#searchResults");
+  if (!searchResults.length) {
+    searchIndex = -1;
+    $("#searchInput").removeAttribute("aria-activedescendant");
     ul.innerHTML = `<li class="search-empty" role="presentation">${t("searchNoResult")}</li>`;
     announce(t("searchNoResult"));
     openSearchPanel();
     return;
   }
-  ul.innerHTML = list.map(optionHtml).join("");
-  bindOptionClicks(ul);
-  announce(t("searchCount").replace("{n}", list.length));
+  /* Only a clearly best answer is highlighted — that highlight is exactly what
+     Enter will pick. With several equally likely places nothing is chosen for
+     the visitor: the list says so and waits. */
+  paintResults(ranked.best ? 0 : -1);
+  if (ranked.ambiguous) setStatus("ambiguous");
   openSearchPanel();
+}
+
+/* Enter with several equally likely places and nothing arrowed to: no guess,
+   just a reason. */
+function askToChoose() {
+  setStatus("ambiguous");
+  announce(t("searchAmbiguous"));
+  openSearchPanel();
+}
+
+/* "More results" pressed: everything, with the first newly listed row active. */
+function showAllResults() {
+  const revealed = Math.min(VISIBLE_RESULTS, searchResults.length);
+  showAll = true;
+  paintResults(revealed);
+  highlightSearch();
 }
 
 /* The "popular" list is its own short, mixed one — cities, a region and a
@@ -218,6 +280,11 @@ function showSuggestions() {
 }
 
 function pickSearchResult(i) {
+  /* the "More results" row sits one past the places it hides */
+  if (!showAll && i === VISIBLE_RESULTS && searchResults.length > VISIBLE_RESULTS) {
+    showAllResults();
+    return;
+  }
   const loc = searchResults[i];
   if (!loc) return;
   /* full place name in the input so the chosen result is unambiguous */
@@ -238,6 +305,7 @@ function onSearchInput() {
     searchAbort.abort();
     searchAbort = null;
   }
+  showAll = false; /* a new query starts from its best few again */
   if (!q) {
     /* cleared the field: back to the where-to-next menu rather than a shut panel */
     setStatus("");
@@ -246,7 +314,7 @@ function onSearchInput() {
   }
 
   const curated = findLocations(q, state.lang);
-  if (curated.length) renderSearchResults(curated);
+  if (curated.length) renderSearchResults(rankedResults(q, curated));
   else {
     /* Whatever is on screen belongs to an earlier query — the empty-field
        suggestions, or the previous keystroke's results. Leaving it under a
@@ -274,7 +342,7 @@ function onSearchInput() {
       const remote = await maptilerGeocode(q, signal);
       if (!isCurrent()) return; /* stale */
       setStatus("");
-      renderSearchResults(mergeResults(curated, remote)); /* empty list → "no result" */
+      renderSearchResults(rankedResults(q, curated, remote)); /* empty list → "no result" */
     } catch (e) {
       if (e.name === "AbortError" || signal.aborted) return;
       /* MapTiler unreachable/misconfigured → keyless Open-Meteo fallback */
@@ -282,7 +350,7 @@ function onSearchInput() {
         const geo = await geocode(q);
         if (!isCurrent()) return;
         setStatus("");
-        renderSearchResults(mergeResults(curated, geo));
+        renderSearchResults(rankedResults(q, curated, geo));
       } catch {
         if (!isCurrent()) return;
         /* Both lookups failed. With built-in matches on screen they stay and
@@ -303,7 +371,7 @@ function onSearchInput() {
 }
 
 function onSearchKey(e) {
-  const max = searchResults.length - 1;
+  const max = optionCount() - 1;
   if (e.key === "ArrowDown") {
     e.preventDefault();
     searchIndex = Math.min(max, searchIndex + 1);
@@ -315,9 +383,12 @@ function onSearchKey(e) {
   } else if (e.key === "Enter") {
     e.preventDefault();
     if (searchIndex >= 0) pickSearchResult(searchIndex);
-    /* with nothing typed the menu is a menu, not an answer — Enter needs an
-       arrowed-to row, so it can't select the first recent by accident */
-    else if ($("#searchInput").value.trim() && searchResults.length) pickSearchResult(0);
+    /* Nothing highlighted. With nothing typed the menu is a menu, not an
+       answer, so Enter can't select the first recent by accident. With a query
+       the best result was already highlighted when it was clear — so what is
+       left here is several equally likely places, and Enter asks instead of
+       guessing. */
+    else if ($("#searchInput").value.trim() && searchResults.length) askToChoose();
   } else if (e.key === "Escape") {
     /* on mobile this moves focus to #mobileSearchBtn; on desktop that
        button is display:none and can't receive focus, so blur() below

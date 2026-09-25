@@ -55,6 +55,7 @@ import {
   photoProvenance,
   photoConfidence,
   asWaterOverview,
+  asAreaLandmark,
   provenanceLabel,
   provenanceBadge,
   photoAltText,
@@ -1250,6 +1251,15 @@ export async function hydrateLocPhoto(el, loc, opts = {}) {
   /* Open water has no "exact" photo, whichever provider answered: say so. */
   if (photo && isMarineKind(loc.kind)) {
     photo = asWaterOverview(photo, (loc.name && (loc.name[state.lang] || loc.name.en)) || "");
+  }
+  /* A curated landmark photo on a state, province or country shows the
+     landmark, not the area: labelled as such rather than as an exact photo. */
+  if (photo && byId && (REGION_KINDS.has(loc.kind) || loc.kind === "country")) {
+    photo = asAreaLandmark(
+      photo,
+      loc.landmark.en && (loc.landmark[state.lang] || loc.landmark.en),
+      loc.kind,
+    );
   }
   /* A by-ID photo is a manually reviewed, exact match — never re-checked. A
      Wikimedia result was already filtered by fetchBestPhoto/resolveWikimedia-

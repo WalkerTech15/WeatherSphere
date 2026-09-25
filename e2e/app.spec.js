@@ -972,8 +972,8 @@ test.describe("map visual polish", () => {
     await app.locator('.side-item[data-view="map"]').click();
     const buttons = app.locator(".map-layer");
     /* Satellite, Temperature, Rain, Wind, Pressure, Humidity, Air quality
-       (working) + Clouds, Alerts (disabled placeholders) */
-    await expect(buttons).toHaveCount(9);
+       (working) + Clouds (a disabled placeholder), Alerts and Lightning */
+    await expect(buttons).toHaveCount(10);
 
     const icons = await buttons.evaluateAll((els) =>
       els.map((el) => ({
@@ -1587,10 +1587,10 @@ test.describe("explore carousel photos", () => {
 
     const credit = paris.locator("a.explore-credit");
     await expect(credit).toBeVisible();
-    await expect(credit).toHaveText("Pexels ↗");
+    await expect(credit).toHaveText("Photo exacte du lieu · Pexels ↗");
     await expect(credit).toHaveAttribute(
       "aria-label",
-      `Photo de ${PEXELS_PHOTOGRAPHER} sur Pexels`,
+      `Photo exacte du lieu — Photo de ${PEXELS_PHOTOGRAPHER} sur Pexels`,
     );
     await expect(credit).toHaveAttribute("target", "_blank");
     await expect(credit).toHaveAttribute("rel", "noopener noreferrer");
@@ -1740,10 +1740,10 @@ test.describe("favorites", () => {
     await expect(card.locator("img.loc-photo-img")).toHaveCount(1);
     await expect(card.locator("img.loc-photo-img")).toHaveAttribute("alt", "");
     await expect(card.locator("a.favx-credit")).toBeVisible();
-    await expect(card.locator("a.favx-credit")).toHaveText("Pexels ↗");
+    await expect(card.locator("a.favx-credit")).toHaveText("Photo exacte du lieu · Pexels ↗");
     await expect(card.locator("a.favx-credit")).toHaveAttribute(
       "aria-label",
-      `Photo de ${PEXELS_PHOTOGRAPHER} sur Pexels`,
+      `Photo exacte du lieu — Photo de ${PEXELS_PHOTOGRAPHER} sur Pexels`,
     );
 
     /* the card is a plain <article>: the open control and the remove control
@@ -1824,10 +1824,10 @@ test.describe("photo attribution", () => {
   test("9a. a Pexels photo renders a compact, linked source", async ({ app }) => {
     const credit = app.locator("#heroInner .loc-credit");
     await expect(credit).toBeVisible();
-    await expect(credit).toHaveText("Pexels ↗");
+    await expect(credit).toHaveText("Photo exacte du lieu · Pexels ↗");
     await expect(credit).toHaveAttribute(
       "aria-label",
-      `Photo de ${PEXELS_PHOTOGRAPHER} sur Pexels`,
+      `Photo exacte du lieu — Photo de ${PEXELS_PHOTOGRAPHER} sur Pexels`,
     );
     await expect(credit).toHaveAttribute("target", "_blank");
     await expect(credit).toHaveAttribute("rel", "noopener noreferrer");
@@ -1839,15 +1839,15 @@ test.describe("photo attribution", () => {
   test("9b. the full accessible credit switches with the interface language", async ({ app }) => {
     await expect(app.locator("#heroInner .loc-credit")).toHaveAttribute(
       "aria-label",
-      `Photo de ${PEXELS_PHOTOGRAPHER} sur Pexels`,
+      `Photo exacte du lieu — Photo de ${PEXELS_PHOTOGRAPHER} sur Pexels`,
     );
 
     await app.locator("#langBtn").click();
     await app.locator('#langMenu button[data-lang="en"]').click();
-    await expect(app.locator("#heroInner .loc-credit")).toHaveText("Pexels ↗");
+    await expect(app.locator("#heroInner .loc-credit")).toHaveText("Exact place photo · Pexels ↗");
     await expect(app.locator("#heroInner .loc-credit")).toHaveAttribute(
       "aria-label",
-      `Photo by ${PEXELS_PHOTOGRAPHER} on Pexels`,
+      `Exact place photo — Photo by ${PEXELS_PHOTOGRAPHER} on Pexels`,
     );
   });
 
@@ -2973,10 +2973,10 @@ test.describe("map detail panel — photo, subtitle, share", () => {
     await expect(photo.locator("img.loc-photo-img")).toHaveCount(1);
     const credit = photo.locator("a.loc-credit");
     await expect(credit).toBeVisible();
-    await expect(credit).toHaveText("Pexels ↗");
+    await expect(credit).toHaveText("Photo exacte du lieu · Pexels ↗");
     await expect(credit).toHaveAttribute(
       "aria-label",
-      `Photo de ${PEXELS_PHOTOGRAPHER} sur Pexels`,
+      `Photo exacte du lieu — Photo de ${PEXELS_PHOTOGRAPHER} sur Pexels`,
     );
   });
 

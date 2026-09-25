@@ -155,6 +155,16 @@ body[data-theme="dark"] .search-kbd {
   border-radius: 999px;
   padding: 4px 10px;
 }
+/* "More results (n)" — the last option of a long list. Same row chrome and
+   44px tap height as a place, but plain text: it is a control, not a result. */
+.search-item.search-more {
+  justify-content: center;
+  min-height: 44px;
+}
+.search-item.search-more .si-name {
+  font-size: 14px;
+  color: var(--primary);
+}
 .search-empty {
   padding: 24px;
   text-align: center;

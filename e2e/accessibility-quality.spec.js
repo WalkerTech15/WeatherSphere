@@ -80,11 +80,11 @@ test.describe("map layers behave as one radio group", () => {
     await expect(layer(page, "pressure")).toBeFocused();
 
     await page.keyboard.press("End");
-    await expect(layer(page, "alerts")).toBeFocused();
+    await expect(layer(page, "lightning")).toBeFocused(); /* the last layer */
     await page.keyboard.press("ArrowRight");
     await expect(layer(page, "satellite")).toBeFocused(); /* wraps */
     await page.keyboard.press("ArrowLeft");
-    await expect(layer(page, "alerts")).toBeFocused(); /* and back */
+    await expect(layer(page, "lightning")).toBeFocused(); /* and back */
     await page.keyboard.press("Home");
     await expect(layer(page, "satellite")).toBeFocused();
   });

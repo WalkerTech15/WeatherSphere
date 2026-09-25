@@ -10,6 +10,7 @@ import {
   provenanceBadge,
   photoAltText,
   asWaterOverview,
+  asAreaLandmark,
 } from "./photo-provenance.js";
 import { state } from "../core/state.js";
 
@@ -99,9 +100,14 @@ describe("asWaterOverview — open water has no exact photo", () => {
 });
 
 describe("provenanceLabel — what the credit admits", () => {
-  it("says nothing for an exact photo — silence already means 'this place'", () => {
-    expect(provenanceLabel(photo())).toBe("");
-    expect(provenanceLabel(photo({ provenance: "exact" }))).toBe("");
+  it("says plainly that an exact photo is one — silence would look like 'unchecked'", () => {
+    state.lang = "en";
+    expect(provenanceLabel(photo())).toBe("Exact place photo");
+    expect(provenanceLabel(photo({ provenance: "exact" }))).toBe("Exact place photo");
+  });
+
+  it("has no label at all when there is no photo", () => {
+    expect(provenanceLabel(null)).toBe("");
   });
 
   it("names the subject of a nearby photo when it knows it", () => {
@@ -168,8 +174,10 @@ describe("provenanceLabel — what the credit admits", () => {
 });
 
 describe("provenanceBadge — the few words shown on the image", () => {
-  it("is empty for an exact photo, so the common case stays uncluttered", () => {
-    expect(provenanceBadge(photo())).toBe("");
+  it("says 'Exact place photo' for an exact photo, and is empty only without a photo", () => {
+    state.lang = "en";
+    expect(provenanceBadge(photo())).toBe("Exact place photo");
+    expect(provenanceBadge(null)).toBe("");
   });
 
   it("is a short word for a nearby photo, not the full sentence", () => {
@@ -184,10 +192,14 @@ describe("provenanceBadge — the few words shown on the image", () => {
     expect(badge.length).toBeLessThan(20);
   });
 
-  it("names the area for a regional or country photo", () => {
-    expect(
-      provenanceBadge(photo({ approximate: true, areaKind: "region", approximateOf: "Occitanie" })),
-    ).toBe("Occitanie");
+  it("says 'Regional photo' or 'Country photo' — the area itself is in the full label", () => {
+    state.lang = "en";
+    const region = photo({ approximate: true, areaKind: "region", approximateOf: "Occitanie" });
+    const country = photo({ approximate: true, areaKind: "country", approximateOf: "France" });
+    expect(provenanceBadge(region)).toBe("Regional photo");
+    expect(provenanceBadge(country)).toBe("Country photo");
+    expect(provenanceLabel(region)).toContain("Occitanie");
+    expect(provenanceLabel(country)).toContain("France");
   });
 });
 
@@ -259,17 +271,17 @@ describe("generic (illustrative) photos — labelled, never passed off as the pl
   it("says so in English, on the badge, in the full label and in the alt text", () => {
     state.lang = "en";
     const p = photo({ provenance: "generic" });
-    expect(provenanceBadge(p)).toBe("Illustrative");
-    expect(provenanceLabel(p)).toBe("Illustrative photo — not verified as this exact place");
-    expect(photoAltText({ ...p, alt: "" }, "Tarbes")).toBe("Illustrative photo for Tarbes");
+    expect(provenanceBadge(p)).toBe("Generic image");
+    expect(provenanceLabel(p)).toBe("Generic image — not verified as this exact place");
+    expect(photoAltText({ ...p, alt: "" }, "Tarbes")).toBe("Generic image for Tarbes");
   });
 
   it("says so in French too", () => {
     state.lang = "fr";
     const p = photo({ provenance: "generic" });
-    expect(provenanceBadge(p)).toBe("Illustration");
-    expect(provenanceLabel(p)).toBe("Photo d'illustration — lieu exact non vérifié");
-    expect(photoAltText({ ...p, alt: "" }, "Tarbes")).toBe("Photo d'illustration pour Tarbes");
+    expect(provenanceBadge(p)).toBe("Image générique");
+    expect(provenanceLabel(p)).toBe("Image générique — lieu exact non vérifié");
+    expect(photoAltText({ ...p, alt: "" }, "Tarbes")).toBe("Image générique pour Tarbes");
   });
 
   it("keeps a provider's own description as the alt text when it has one", () => {
@@ -281,7 +293,59 @@ describe("generic (illustrative) photos — labelled, never passed off as the pl
   it("keeps the badge short enough to sit on a small card", () => {
     for (const lang of ["en", "fr"]) {
       state.lang = lang;
-      expect(provenanceBadge(photo({ provenance: "generic" })).length).toBeLessThanOrEqual(14);
+      expect(provenanceBadge(photo({ provenance: "generic" })).length).toBeLessThanOrEqual(15);
     }
+  });
+});
+
+describe("the five requested labels, in both languages", () => {
+  const tiers = {
+    exact: photo({ provenance: "exact" }),
+    nearby: photo({ provenance: "nearby" }),
+    regional: photo({ approximate: true, areaKind: "region", approximateOf: "Occitanie" }),
+    country: photo({ approximate: true, areaKind: "country", approximateOf: "France" }),
+    generic: photo({ provenance: "generic" }),
+  };
+
+  it("English: Exact place photo / Nearby photo / Regional photo / Country photo / Generic image", () => {
+    state.lang = "en";
+    expect(Object.values(tiers).map(provenanceBadge)).toEqual([
+      "Exact place photo",
+      "Nearby photo",
+      "Regional photo",
+      "Country photo",
+      "Generic image",
+    ]);
+  });
+
+  it("French: the same five, translated", () => {
+    state.lang = "fr";
+    expect(Object.values(tiers).map(provenanceBadge)).toEqual([
+      "Photo exacte du lieu",
+      "Photo à proximité",
+      "Photo régionale",
+      "Photo du pays",
+      "Image générique",
+    ]);
+  });
+
+  it("never gives two tiers the same badge, so none can pass for another", () => {
+    for (const lang of ["en", "fr"]) {
+      state.lang = lang;
+      const badges = Object.values(tiers).map(provenanceBadge);
+      expect(new Set(badges).size).toBe(badges.length);
+    }
+  });
+
+  it("says which landmark a state or country photo shows, without calling it the area", () => {
+    state.lang = "en";
+    const alamo = asAreaLandmark(photo(), "The Alamo", "state");
+    expect(photoProvenance(alamo)).toBe("regional");
+    expect(provenanceLabel(alamo)).toBe("Photo of The Alamo, not of this place itself");
+    expect(photoProvenance(asAreaLandmark(photo(), "Eiffel Tower", "country"))).toBe("country");
+    /* a labelled copy, and total on a missing photo or landmark */
+    expect(alamo).not.toBe(photo());
+    expect(asAreaLandmark(null, "X", "state")).toBeNull();
+    expect(photoProvenance(asAreaLandmark(photo(), "", "state"))).toBe("exact");
   });
 });

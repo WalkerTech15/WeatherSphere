@@ -74,7 +74,7 @@ test.describe("provenance — an exact photo makes no excuses", () => {
     await expect(credit(page)).toHaveAttribute("data-provenance", "exact");
     /* French default — must not be apologising for anything. */
     await expect(credit(page)).not.toContainText("environs");
-    await expect(credit(page)).not.toContainText("À proximité");
+    await expect(credit(page)).not.toContainText(/à proximité/i);
   });
 });
 
@@ -87,7 +87,7 @@ test.describe("provenance — a nearby photo says so", () => {
     await expect(credit(page)).toHaveAttribute("data-provenance", "nearby");
     /* The short badge is on the image; the full sentence is the accessible
        name, and it must name what is actually pictured. */
-    await expect(credit(page)).toContainText("À proximité");
+    await expect(credit(page)).toContainText(/à proximité/i);
     await expect(credit(page)).toHaveAttribute("aria-label", /Hallgrímskirkja/);
   });
 
@@ -99,7 +99,7 @@ test.describe("provenance — a nearby photo says so", () => {
     await expect(heroPhoto(page)).toHaveCount(1);
 
     /* Default language is French; the badge is localized. */
-    await expect(credit(page)).toContainText(/À proximité|Nearby/);
+    await expect(credit(page)).toContainText(/à proximité|Nearby/i);
     await expect(credit(page)).toHaveAttribute("aria-label", /not a photo of the place itself/i);
   });
 
@@ -394,7 +394,7 @@ test.describe("provenance — a distant coordinate match is labelled, not disgui
 
     await expect(credit(page)).toHaveAttribute("data-provenance", "nearby");
     await expect(credit(page)).not.toHaveAttribute("data-provenance", "exact");
-    await expect(credit(page)).toContainText(/À proximité|Nearby/);
+    await expect(credit(page)).toContainText(/à proximité|Nearby/i);
     /* Names the actual subject, so the visitor can see WHAT they are looking
        at rather than only being told what it is not. */
     await expect(credit(page)).toHaveAttribute("aria-label", new RegExp(FAR_TITLE, "i"));

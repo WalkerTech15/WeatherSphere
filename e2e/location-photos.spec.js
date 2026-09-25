@@ -86,7 +86,7 @@ test.describe("location photos — relevance filtering", () => {
     /* Stock photography proves nothing about WHERE it was taken, so even a
        caption naming the city earns the illustrative label — never the
        unqualified credit an exact photo gets. The Pexels source stays. */
-    await expect(page.locator("#heroInner .loc-credit")).toHaveText("Illustration · Pexels ↗");
+    await expect(page.locator("#heroInner .loc-credit")).toHaveText("Image générique · Pexels ↗");
     await expect(page.locator("#heroInner .loc-credit")).toHaveAttribute(
       "data-provenance",
       "generic",
@@ -244,7 +244,7 @@ test.describe("location photos — hybrid strategy: Wikimedia fallback, attribut
     );
     const credit = page.locator("#heroInner .loc-credit");
     await expect(credit).toBeVisible();
-    await expect(credit).toHaveText("Wikimedia Commons ↗");
+    await expect(credit).toHaveText("Photo exacte du lieu · Wikimedia Commons ↗");
     /* the license travels with the credit, and the description page — never
        the raw upload.wikimedia.org thumbnail — is what the link opens */
     await expect(credit).toHaveAttribute("title", /CC BY-SA 4\.0/);
@@ -404,7 +404,7 @@ test.describe("location photos — fallback order and honest labelling", () => {
 
     await expect(page.locator("#heroLandmark .has-photo")).toHaveCount(1);
     const credit = page.locator("#heroInner .loc-credit");
-    await expect(credit).toHaveText("Wikimedia Commons ↗");
+    await expect(credit).toHaveText("Photo exacte du lieu · Wikimedia Commons ↗");
     /* Commons requires the licence to travel with the credit */
     await expect(credit).toHaveAttribute("aria-label", /CC BY-SA/i);
     /* Pexels was never consulted — geosearch already answered accurately */
@@ -430,7 +430,7 @@ test.describe("location photos — fallback order and honest labelling", () => {
     const credit = page.locator("#heroInner .loc-credit");
     /* the visible credit names the area, so the image never reads as the
        city's own; the accessible name spells the caveat out in full */
-    await expect(credit).toHaveText(`${AREA_REGION} · Pexels ↗`);
+    await expect(credit).toHaveText("Photo régionale · Pexels ↗");
     await expect(credit).toHaveAttribute("data-approximate", "true");
     await expect(credit).toHaveAttribute("aria-label", new RegExp(AREA_REGION));
     /* default interface language is French (see e2e/mocks.js) */

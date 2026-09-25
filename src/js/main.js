@@ -106,8 +106,16 @@ function closeLanguageMenu({ focusTrigger = false } = {}) {
 /* ── Overlays: click-outside and Escape close whichever is open ── */
 document.addEventListener("click", (e) => {
   /* Search triggers sit outside #searchWrap — exclude them so the same click
-     that opens/focuses search is not also read as "outside" and closed. */
-  if (!e.target.closest("#searchWrap, #mobileSearchBtn, #favAddBtn")) closeMobileSearch();
+     that opens/focuses search is not also read as "outside" and closed.
+     Read from the event's path, not e.target: a control inside the list
+     ("More results", "Try again") re-renders the list from its own click
+     handler, so by the time the click reaches here its target has been
+     replaced and is no longer inside #searchWrap — yet it was. The path is
+     fixed when the event is dispatched. */
+  const insideSearch = e
+    .composedPath()
+    .some((node) => node.matches?.("#searchWrap, #mobileSearchBtn, #favAddBtn"));
+  if (!insideSearch) closeMobileSearch();
   if (!e.target.closest(".lang-wrap")) closeLanguageMenu();
   if (!e.target.closest(".theme-wrap")) closeThemeMenu();
 });

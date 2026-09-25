@@ -13,8 +13,8 @@
  *
  * So every photo carries a `provenance`, and the credit says which:
  *
- *   exact     this IS the selected place            (no qualifier shown)
- *   nearby    taken at or beside it                 "Nearby · <landmark>"
+ *   exact     this IS the selected place            "Exact place photo"
+ *   nearby    taken at or beside it                 "Nearby photo"
  *   regional  somewhere in the surrounding region   "Photo of <region>, not
  *                                                    of this place itself"
  *   country   somewhere in the country              same, with the country
@@ -25,9 +25,9 @@
  *             (Pexels): plausibly the place, but      verified as this exact
  *             nothing proves it                       place"
  *
- * `exact` deliberately shows no qualifier: adding "exact photo" to the common
- * case would be noise, and an absent qualifier already means "this is the
- * place". The other five are always announced.
+ * Every tier is announced, `exact` included: an absent label cannot be told
+ * apart from a photo nobody has checked, so the picture says "Exact place
+ * photo" when it is one, and the reader never has to infer it from silence.
  *
  * Pure functions only — no DOM, no state — so every wording rule is testable
  * and the renderer in services/photo-api.js stays a renderer.
@@ -66,6 +66,22 @@ export function asWaterOverview(photo, waterName) {
   return { ...photo, provenance: "overview", overviewOf: waterName || "" };
 }
 
+/* A reviewed photo of a landmark standing IN a state, province or country —
+   the Alamo for Texas, the CN Tower for Ontario. The picture is genuine and
+   correctly identified, but it is not a picture of the whole area, and
+   calling it an exact photo of "Texas" would say otherwise. Labelled as a
+   regional (or country) photo of the landmark it shows. Returns a labelled
+   COPY, for the same reason as asWaterOverview. */
+export function asAreaLandmark(photo, landmarkName, kind) {
+  if (!photo || !landmarkName) return photo;
+  return {
+    ...photo,
+    approximate: true,
+    approximateOf: landmarkName,
+    areaKind: kind === "country" ? "country" : "region",
+  };
+}
+
 /* The one place that decides a photo's tier, so no caller has to re-derive it
    from a mix of `source`, `approximate` and `approximateOf`. Providers set
    `provenance` directly (Google, Mapillary); the older ones are mapped from
@@ -82,13 +98,15 @@ export function photoProvenance(photo) {
 }
 
 /**
- * The qualifier shown before the source, or "" for an exact match.
+ * The sentence naming what the photo is, shown in the credit's accessible
+ * name and tooltip, or "" when there is no photo.
  *
  * @returns {string} already-localized, NOT html-escaped (callers escape).
  */
 export function provenanceLabel(photo) {
   const tier = photoProvenance(photo);
-  if (tier === "exact" || tier === "") return "";
+  if (tier === "") return "";
+  if (tier === "exact") return t("photoExact");
   if (tier === "overview") {
     return photo.overviewOf
       ? t("photoOverview").replace("{area}", photo.overviewOf)
@@ -107,15 +125,22 @@ export function provenanceLabel(photo) {
   return t("photoApproximate").replace("{area}", photo.approximateOf || "");
 }
 
-/* The short text that sits ON the image. Kept to a few words: the full
-   sentence lives in the link's accessible name and tooltip. */
+/* One short label per tier, in the visitor's language. */
+const BADGE_KEYS = {
+  exact: "photoExactShort",
+  nearby: "photoNearbyShort",
+  regional: "photoRegionalShort",
+  country: "photoCountryShort",
+  overview: "photoOverviewShort",
+  generic: "photoGenericShort",
+};
+
+/* The short text that sits ON the image: what kind of picture this is, in a
+   few words. The full sentence — including WHICH area a regional photo shows
+   — lives in the link's accessible name and tooltip. */
 export function provenanceBadge(photo) {
-  const tier = photoProvenance(photo);
-  if (tier === "nearby") return t("photoNearbyShort");
-  if (tier === "overview") return t("photoOverviewShort");
-  if (tier === "generic") return t("photoGenericShort");
-  if (tier === "regional" || tier === "country") return photo.approximateOf || "";
-  return "";
+  const key = BADGE_KEYS[photoProvenance(photo)];
+  return key ? t(key) : "";
 }
 
 /**

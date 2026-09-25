@@ -325,6 +325,12 @@ body[data-theme="dark"] .forecast-card.is-today {
   right: 0;
   bottom: 0;
   z-index: 2;
+  /* The badge now names what the picture is ("Exact place photo · A Name ·
+     Google ↗") and a contributor's name has no length limit, so on a narrow
+     card the credit wraps inside the photo instead of running past it. */
+  max-width: 100%;
+  text-align: right;
+  overflow-wrap: anywhere;
   padding: 3px 7px;
   font-size: 11px;
   line-height: 1.2;
