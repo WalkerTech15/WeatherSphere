@@ -1,5 +1,5 @@
 /**
- * Fails the build if a Pexels, Google Places, Mapillary or Xweather credential — or any sign that
+ * Fails the build if a Pexels, Google Places, Mapillary, Xweather or OpenWeatherMap credential — or any sign that
  * one was expected in client code — can be found in dist/.
  *
  * Run after `npm run build` (it is part of `npm run check`).
@@ -107,6 +107,19 @@ const RULES = [
     name: "Xweather client_secret parameter in client code",
     test: /client_secret=/,
   },
+  {
+    name: "OPENWEATHER_API_KEY / VITE_OPENWEATHER reference in client code",
+    test: /OPENWEATHER_API_KEY|VITE_OPENWEATHER/,
+  },
+  {
+    name: "direct call to the OpenWeatherMap API from the browser",
+    // all cloud-tile traffic must go through the same-origin proxy
+    test: /(tile|api)\.openweathermap\.org/,
+  },
+  {
+    name: "OpenWeatherMap appid parameter in client code",
+    test: /[?&]appid=/,
+  },
 ];
 
 /* `npm run verify:secrets` is usually run without the keys exported, so the
@@ -132,6 +145,7 @@ const LIVE_KEYS = [
     "the configured Xweather client secret itself",
     (process.env.XWEATHER_CLIENT_SECRET || "").trim(),
   ],
+  ["the configured OpenWeatherMap key itself", (process.env.OPENWEATHER_API_KEY || "").trim()],
 ];
 
 function walk(dir) {
@@ -176,5 +190,5 @@ if (findings.length > 0) {
 }
 
 console.log(
-  "verify-no-secrets: OK — no Pexels, Google Places, Mapillary or Xweather credential, and no direct API call, found in dist/.",
+  "verify-no-secrets: OK — no Pexels, Google Places, Mapillary, Xweather or OpenWeatherMap credential, and no direct API call, found in dist/.",
 );

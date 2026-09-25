@@ -740,11 +740,10 @@ body[data-theme="dark"] .maplibregl-ctrl button .maplibregl-ctrl-icon {
   cursor: progress;
   opacity: 0.62;
 }
-/* Clouds/Humidity/Air quality/Alerts: no verified real data source is wired
-   up yet (see features/weather-layers.js), so these buttons are permanently
-   disabled — native `disabled` means they never fire a click or a network
-   request — and carry a visible "Coming soon" badge rather than pretending
-   to be a working control. */
+/* Clouds is disabled until /api/openweather-clouds reports that its key is
+   configured (features/map.js probeClouds). Native `disabled` means it never
+   fires a click or a tile request meanwhile, and the visible "Unavailable"
+   badge says why rather than pretending to be a working control. */
 .map-layer.is-disabled {
   color: #a7b0c0;
   cursor: not-allowed;
@@ -1707,6 +1706,11 @@ body[data-theme="dark"] .map-panel-loading-coords {
   border-radius: 50%;
   vertical-align: -0.12rem;
   animation: map-control-spin 0.8s linear infinite;
+}
+
+.map-clouds-meta a {
+  color: inherit;
+  text-decoration: underline;
 }
 
 .map-lightning-list {

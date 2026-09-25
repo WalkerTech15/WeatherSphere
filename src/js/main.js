@@ -31,6 +31,7 @@ import {
   bindHumidity,
   bindAlerts,
   bindLightning,
+  bindClouds,
   bindCountryFilters,
   updateMapLayerFades,
 } from "./features/map.js";
@@ -310,6 +311,7 @@ bindAirQuality();
 bindHumidity();
 bindAlerts();
 bindLightning();
+bindClouds();
 $("#mapShareBtn")?.addEventListener("click", () => shareMapView());
 /* the location detail panel's own Share button (ui/render-map.js) can't call
    shareMapView() directly — features/map-url-sync.js is deliberately imported

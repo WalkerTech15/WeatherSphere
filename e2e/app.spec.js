@@ -972,7 +972,7 @@ test.describe("map visual polish", () => {
     await app.locator('.side-item[data-view="map"]').click();
     const buttons = app.locator(".map-layer");
     /* Satellite, Temperature, Rain, Wind, Pressure, Humidity, Air quality
-       (working) + Clouds (a disabled placeholder), Alerts and Lightning */
+       (working) + Clouds (disabled until its key is configured), Alerts and Lightning */
     await expect(buttons).toHaveCount(10);
 
     const icons = await buttons.evaluateAll((els) =>
@@ -2251,7 +2251,7 @@ test.describe("map layer switcher: mobile scrolling", () => {
     const overflowAmount = await firstRow.evaluate((el) => el.scrollWidth - el.clientWidth);
     expect(overflowAmount).toBeGreaterThan(0);
 
-    /* the last control in row 1 ("Clouds", disabled) is off-screen until
+    /* the last control in row 1 ("Clouds", disabled by default) is off-screen until
        scrolled to, but the row itself must still be able to reach it.
        Activating a weather overlay depends on live MapTiler weather tiles
        the e2e mocks don't provide, so reachability — not the resulting map
@@ -2365,7 +2365,9 @@ test.describe("map layer switcher: Pressure and the disabled placeholders", () =
     await expect(legend).toContainText("hPa");
   });
 
-  test("Clouds is disabled and inert", async ({ page }) => {
+  test("Clouds is disabled and inert while no OpenWeatherMap key is configured", async ({
+    page,
+  }) => {
     await openMap(page);
     const requests = [];
     page.on("request", (request) => requests.push(request.url()));
@@ -2383,13 +2385,14 @@ test.describe("map layer switcher: Pressure and the disabled placeholders", () =
     await expect(page.locator('.map-layer[data-map-layer="clouds"]')).not.toHaveClass(/is-active/);
     /* the still-disabled layer never requested weather tiles */
     expect(requests.some(isWeatherLayerRequest)).toBe(false);
+    expect(requests.some((url) => /api\/openweather-clouds\?z=/.test(url))).toBe(false);
   });
 
   test("the disabled layer stays disabled and labelled in French", async ({ page }) => {
     await openMap(page);
     const clouds = page.locator('.map-layer[data-map-layer="clouds"]');
     await expect(clouds).toContainText("Nuages");
-    await expect(clouds.locator(".map-layer-badge")).toContainText("Bientôt disponible");
+    await expect(clouds.locator(".map-layer-badge")).toContainText("Indisponible");
     await expect(clouds).toBeDisabled();
   });
 });

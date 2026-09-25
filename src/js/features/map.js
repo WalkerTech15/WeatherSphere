@@ -42,6 +42,7 @@ import { renderAirQualityUI, airQualityAnnouncement } from "../ui/render-map-air
 import { renderHumidityUI, humidityAnnouncement } from "../ui/render-map-humidity.js";
 import { renderAlertsUI, alertsAnnouncement } from "../ui/render-map-alerts.js";
 import { renderLightningUI, lightningAnnouncement } from "../ui/render-map-lightning.js";
+import { renderCloudsUI, cloudsAnnouncement } from "../ui/render-map-clouds.js";
 import { noticeHtml } from "../ui/notice.js";
 import { fetchAirQualityDetail } from "../weather/weather-provider.js";
 import { isWeatherError } from "../weather/weather-errors.js";
@@ -49,7 +50,16 @@ import { computeHumidityState } from "./humidity-state.js";
 import { computeAlertsState } from "./alerts-state.js";
 import { fetchOfficialAlerts } from "../services/alert-provider.js";
 import { fetchXweatherLightning } from "../services/xweather-lightning.js";
+import {
+  CLOUDS_ATTRIBUTION_URL,
+  CLOUDS_SOURCE_MAX_ZOOM,
+  CLOUDS_TILE_TIMEOUT_MS,
+  cloudsErrorKind,
+  cloudsTileTemplate,
+  fetchCloudsAvailable,
+} from "../services/openweather-clouds.js";
 import { isOffline } from "../services/offline.js";
+import { awaitMapReady } from "../core/map-ready.js";
 
 /* The SDK's stylesheet is imported HERE, inside the dynamic import, rather
    than statically at the top of this module. features/map.js is reachable
@@ -762,6 +772,16 @@ const lightningState = {
   errorKind: null,
 };
 
+/* The Clouds layer's own state. Unlike the point readings above it IS a map
+ * layer — raster tiles relayed by /api/openweather-clouds — but with no colour
+ * ramp and no forecast time, so it does not use the MapTiler weather-layer
+ * flow either. "ready" means the tiles arrived; a failed tile is never
+ * replaced by anything drawn locally. */
+const cloudsState = {
+  status: "idle" /* idle | loading | ready | error */,
+  errorKind: null /* "unavailable" | "rate_limited" | "timeout" | "offline" | "http" | "network" */,
+};
+
 /* Set by bindHumidity() the instant a new place is chosen, to the wx object
  * that was current just before that choice — i.e. the wrong one for the
  * place now in state.loc. features/location.js reassigns state.loc
@@ -816,6 +836,7 @@ function pointReadingAnnouncement() {
   if (overlay.type === "humidity") return humidityAnnouncement(humidityState);
   if (overlay.type === "alerts") return alertsAnnouncement(alertsState);
   if (overlay.type === "lightning") return lightningAnnouncement(lightningState);
+  if (overlay.type === "clouds") return cloudsAnnouncement(cloudsState);
   return "";
 }
 
@@ -832,6 +853,7 @@ function renderWeatherOverlay() {
   }
   if (overlay.type === "alerts") renderAlertsUI(alertsState);
   if (overlay.type === "lightning") renderLightningUI(lightningState);
+  if (overlay.type === "clouds") renderCloudsUI(cloudsState);
   announceLayerStatus(pointReadingAnnouncement());
 }
 
@@ -943,6 +965,12 @@ function resetOverlay(type) {
     lightningState.errorKind = null;
     clearLightningStrikes();
   }
+  /* leaving Clouds takes its tiles and its listeners with it */
+  if (type !== "clouds") {
+    cloudsState.status = "idle";
+    cloudsState.errorKind = null;
+    removeCloudsLayer();
+  }
 }
 
 /* Fold a weather-layers report into the overlay description. */
@@ -970,6 +998,7 @@ export async function setMapLayer(type, { offset = overlay.offset } = {}) {
   if (type === "humidity") return setHumidityLayer();
   if (type === "alerts") return setAlertsLayer();
   if (type === "lightning") return setLightningLayer();
+  if (type === "clouds") return setCloudsLayer();
   const requested = WEATHER_LAYER_IDS[type] ? type : "satellite";
   const requestId = ++layerRequestId;
   const isStale = () => requestId !== layerRequestId;
@@ -1356,6 +1385,161 @@ export function bindLightning() {
     announceLayerStatus(lightningAnnouncement(lightningState));
     loadLightningFor(loc, requestId, isStale, $('.map-layer[data-map-layer="lightning"]'));
   });
+}
+
+/* ── Clouds (OpenWeatherMap clouds_new raster tiles) ─────────────────────── */
+const CLOUDS_SOURCE = "openweather-clouds";
+const CLOUDS_LAYER = "openweather-clouds-tiles";
+/* The tile credit MapLibre's own attribution control prints. */
+const CLOUDS_MAP_ATTRIBUTION = `Weather data © <a href="${CLOUDS_ATTRIBUTION_URL}" target="_blank" rel="noopener noreferrer">OpenWeatherMap</a>`;
+
+let cloudsAvailable = false;
+let cloudsProbe = null;
+/* What is watching the live tile requests: the map, its two listeners and the
+   timeout. Null whenever the layer is not on the map. */
+let cloudsWatch = null;
+
+function stopCloudsWatch() {
+  if (!cloudsWatch) return;
+  const { map, onError, onData, timer } = cloudsWatch;
+  clearTimeout(timer);
+  try {
+    map.off("error", onError);
+    map.off("sourcedata", onData);
+  } catch {
+    /* map already removed */
+  }
+  cloudsWatch = null;
+}
+
+function removeCloudsLayer() {
+  stopCloudsWatch();
+  const map = MAPS.worldMap?.map;
+  if (!map) return;
+  try {
+    if (map.getLayer(CLOUDS_LAYER)) map.removeLayer(CLOUDS_LAYER);
+    if (map.getSource(CLOUDS_SOURCE)) map.removeSource(CLOUDS_SOURCE);
+  } catch {
+    /* style torn down or map removed */
+  }
+}
+
+/* One place that records the outcome and repaints. `dropLayer` is for the
+   outcomes where whatever tiles are on screen must not stay up under a message
+   saying the layer failed. */
+function settleClouds(status, errorKind = null, { dropLayer = false } = {}) {
+  if (overlay.type !== "clouds") return;
+  cloudsState.status = status;
+  cloudsState.errorKind = errorKind;
+  if (dropLayer) removeCloudsLayer();
+  else if (cloudsWatch) clearTimeout(cloudsWatch.timer);
+  setLayerButtonState("clouds");
+  renderWeatherOverlay();
+  emit("map:layer", getMapOverlayState());
+}
+
+/* Follows the tiles the map asks the proxy for. The first tile failure decides
+   the message, from the proxy's own status code; the layer counts as ready
+   when its source has loaded without one. */
+function watchCloudsTiles(map) {
+  const onError = (event) => {
+    if (event?.sourceId !== CLOUDS_SOURCE || cloudsState.status === "error") return;
+    const kind = cloudsErrorKind(event.error?.status);
+    /* a rejected or missing key, or a rate limit, will fail every tile alike */
+    settleClouds("error", kind, { dropLayer: kind === "unavailable" || kind === "rate_limited" });
+  };
+  const onData = (event) => {
+    if (event?.sourceId !== CLOUDS_SOURCE || !event.isSourceLoaded) return;
+    if (cloudsState.status === "loading") settleClouds("ready");
+  };
+  const timer = setTimeout(() => {
+    if (cloudsState.status === "loading") settleClouds("error", "timeout", { dropLayer: true });
+  }, CLOUDS_TILE_TIMEOUT_MS);
+  cloudsWatch = { map, onError, onData, timer };
+  map.on("error", onError);
+  map.on("sourcedata", onData);
+}
+
+function addCloudsLayer(inst) {
+  const map = inst.map;
+  map.addSource(CLOUDS_SOURCE, {
+    type: "raster",
+    tiles: [cloudsTileTemplate()],
+    tileSize: 256,
+    maxzoom: CLOUDS_SOURCE_MAX_ZOOM,
+    attribution: CLOUDS_MAP_ATTRIBUTION,
+  });
+  /* under the basemap's labels, like the MapTiler weather layers */
+  map.addLayer(
+    { id: CLOUDS_LAYER, type: "raster", source: CLOUDS_SOURCE, paint: { "raster-opacity": 0.75 } },
+    firstSymbolLayerId(map),
+  );
+  raiseSelectionArea(inst);
+}
+
+/* Whether the proxy holds a key, asked once. The Clouds button is only ever
+   enabled when it does; a static host, a missing route or a network failure
+   all read as "not available". */
+function probeClouds() {
+  cloudsProbe ??= fetchCloudsAvailable().then((available) => {
+    cloudsAvailable = available;
+    syncCloudsButton();
+    return available;
+  });
+  return cloudsProbe;
+}
+
+function syncCloudsButton() {
+  const button = $('.map-layer[data-map-layer="clouds"]');
+  if (!button) return;
+  const badge = button.querySelector(".map-layer-badge");
+  button.disabled = !cloudsAvailable;
+  button.classList.toggle("is-disabled", !cloudsAvailable);
+  if (cloudsAvailable) button.removeAttribute("aria-disabled");
+  else button.setAttribute("aria-disabled", "true");
+  if (badge) badge.hidden = cloudsAvailable;
+  button.dataset.i18nTip = cloudsAvailable ? "tipLayerClouds" : "tipLayerCloudsUnavailable";
+  button.dataset.tip = t(button.dataset.i18nTip);
+  /* the group's roving Tab stop: the checked layer only */
+  if (cloudsAvailable) button.tabIndex = button.getAttribute("aria-checked") === "true" ? 0 : -1;
+}
+
+async function setCloudsLayer() {
+  const requestId = ++layerRequestId;
+  const isStale = () => requestId !== layerRequestId;
+  const button = $('.map-layer[data-map-layer="clouds"]');
+  button?.classList.add("is-loading");
+  animator.detach({ silent: true });
+  resetOverlay("clouds");
+  removeCloudsLayer();
+  cloudsState.status = "loading";
+  cloudsState.errorKind = null;
+  renderWeatherOverlay();
+  const superseded = () => button?.classList.remove("is-loading");
+
+  await probeClouds();
+  if (isStale()) return superseded();
+  if (!cloudsAvailable) return settleClouds("error", "unavailable");
+  if (isOffline()) return settleClouds("error", "offline");
+  try {
+    await updateMap("worldMap");
+    const inst = MAPS.worldMap;
+    if (!inst) throw new Error("Map unavailable");
+    await awaitMapReady(inst.map);
+    if (isStale()) return superseded();
+    removeWeatherLayer(inst);
+    watchCloudsTiles(inst.map);
+    addCloudsLayer(inst);
+  } catch {
+    if (isStale()) return superseded();
+    stopCloudsWatch();
+    settleClouds("error", "network");
+  }
+}
+
+/* Called once at startup: settles whether the button can be offered. */
+export function bindClouds() {
+  probeClouds();
 }
 
 /* Cancels the previous alert request's actual network fetch the moment a

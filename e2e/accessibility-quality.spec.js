@@ -74,7 +74,7 @@ test.describe("map layers behave as one radio group", () => {
       timeout: 20000,
     });
 
-    /* wind → (Clouds is disabled) → pressure */
+    /* wind → (Clouds is disabled without a key) → pressure */
     await layer(page, "wind").focus();
     await page.keyboard.press("ArrowDown");
     await expect(layer(page, "pressure")).toBeFocused();

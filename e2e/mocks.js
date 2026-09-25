@@ -669,7 +669,7 @@ function weatherLatestPayload() {
 
 /* 1×1 opaque PNG — a real decodable image, so the layer's texture upload path
    runs rather than erroring. */
-const WEATHER_TILE_PNG = Buffer.from(
+export const WEATHER_TILE_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
   "base64",
 );
@@ -747,6 +747,7 @@ export async function installMocks(page, overrides = {}) {
     wikimediaProxy,
     placesProxy,
     mapillaryProxy,
+    cloudsProxy,
     reverseDelayMs,
     airQualityDetailStatus = 200,
     airQualityDetailBody,
@@ -924,6 +925,25 @@ export async function installMocks(page, overrides = {}) {
   await page.route("**/api/mapillary*", (route) => {
     if (typeof mapillaryProxy === "function") return mapillaryProxy(route);
     return route.fulfill(json({ images: [] }));
+  });
+
+  /* The OpenWeatherMap cloud-tile proxy — same-origin, and the function behind
+     it holds a real key. By default it answers "no key configured", so the
+     Clouds button stays disabled and the suite never depends on whether the
+     machine running it has OPENWEATHER_API_KEY. A test passes `cloudsProxy`
+     to answer the probe (?status=1) and the tiles itself. */
+  await page.route("**/api/openweather-clouds*", (route) => {
+    if (typeof cloudsProxy === "function") return cloudsProxy(route);
+    const probe = new URL(route.request().url()).searchParams.get("status");
+    return probe
+      ? route.fulfill(json({ available: false }))
+      : route.fulfill({ ...json({ error: "unavailable" }), status: 503 });
+  });
+
+  /* A direct browser call would publish the key. */
+  await page.route("**://tile.openweathermap.org/**", (route) => {
+    console.warn("[e2e] BLOCKED direct browser call to tile.openweathermap.org");
+    return route.abort();
   });
 
   /* The image bytes behind a Mapillary thumbnail URL. */

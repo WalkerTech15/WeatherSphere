@@ -1,7 +1,9 @@
 import { defineConfig, loadEnv } from "vite";
 import { lightningResponse } from "./api/xweather-lightning.js";
+import { cloudsResponse } from "./api/openweather-clouds.js";
 
 const XWEATHER_LIGHTNING_ENDPOINT = "/api/xweather-lightning";
+const OPENWEATHER_CLOUDS_ENDPOINT = "/api/openweather-clouds";
 
 /* Development stand-in for the production Pexels proxy.
  *
@@ -505,6 +507,43 @@ export function xweatherLightningDevProxy(clientId, clientSecret) {
   };
 }
 
+/* Development stand-in for the OpenWeatherMap cloud-tile proxy. Like the
+ * lightning one it calls the same cloudsResponse() that
+ * api/openweather-clouds.js serves on Vercel, so validation, error mapping and
+ * the response contract cannot drift apart.
+ *
+ * OPENWEATHER_API_KEY is unprefixed, so Vite never compiles it into the client
+ * bundle; it stays in this Node process.
+ */
+export function openWeatherCloudsDevProxy(apiKey) {
+  const handler = async (req, res, next) => {
+    const url = new URL(req.url, "http://localhost");
+    if (url.pathname !== OPENWEATHER_CLOUDS_ENDPOINT) return next();
+
+    if (req.method !== "GET") {
+      res.setHeader("Allow", "GET");
+      return sendJson(res, 405, { error: "method_not_allowed" });
+    }
+
+    const result = await cloudsResponse(Object.fromEntries(url.searchParams), { apiKey });
+    res.statusCode = result.status;
+    if (result.json) res.setHeader("Content-Type", "application/json; charset=utf-8");
+    for (const [name, value] of Object.entries(result.headers)) res.setHeader(name, value);
+    res.end(result.json ? JSON.stringify(result.body) : result.body);
+  };
+
+  return {
+    name: "weathersphere-openweather-clouds-dev-proxy",
+    apply: "serve",
+    configureServer(server) {
+      server.middlewares.use(handler);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(handler);
+    },
+  };
+}
+
 // The app has no client-side router (views are shown/hidden with JS, not
 // URLs), so a relative base lets the same build work unmodified whether it's
 // served from a domain root (current Hostinger deploy) or a GitHub Pages
@@ -520,6 +559,7 @@ export default defineConfig(({ mode }) => {
   const mapillaryToken = process.env.MAPILLARY_ACCESS_TOKEN ?? env.MAPILLARY_ACCESS_TOKEN ?? "";
   const xweatherId = process.env.XWEATHER_CLIENT_ID ?? env.XWEATHER_CLIENT_ID ?? "";
   const xweatherSecret = process.env.XWEATHER_CLIENT_SECRET ?? env.XWEATHER_CLIENT_SECRET ?? "";
+  const openWeatherKey = process.env.OPENWEATHER_API_KEY ?? env.OPENWEATHER_API_KEY ?? "";
 
   return {
     root: "src",
@@ -531,6 +571,7 @@ export default defineConfig(({ mode }) => {
       placesDevProxy(placesKey),
       mapillaryDevProxy(mapillaryToken),
       xweatherLightningDevProxy(xweatherId, xweatherSecret),
+      openWeatherCloudsDevProxy(openWeatherKey),
     ],
     build: {
       outDir: "../dist",

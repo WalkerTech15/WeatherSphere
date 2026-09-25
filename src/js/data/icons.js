@@ -149,7 +149,7 @@ export const MAP_LAYER_ICONS = {
   rain: METRIC_ICONS.rain,
   wind: METRIC_ICONS.wind,
   pressure: METRIC_ICONS.pressure,
-  /* clouds/air quality/alerts have no data source wired up yet (see
+  /* air quality/alerts glyphs — clouds is wired to its proxy; these two have none (see
      features/weather-layers.js) — these three glyphs exist only to label the
      disabled placeholder buttons, same stroke style as the rest. */
   clouds: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17.5a4.2 4.2 0 0 1 .6-8.36A5.3 5.3 0 0 1 18 10.8a3.9 3.9 0 0 1-1.3 6.7H7z"/></svg>`,

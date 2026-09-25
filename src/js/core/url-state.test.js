@@ -75,10 +75,10 @@ describe("parseAppUrl", () => {
     expect(parseAppUrl("#/map?layer=alerts").layer).toBe("alerts");
   });
 
-  it("rejects the disabled placeholder layers — they have no real data source", () => {
-    for (const layer of ["clouds"]) {
-      expect(parseAppUrl(`#/map?layer=${layer}`).layer).toBe("satellite");
-    }
+  it("accepts clouds, which has no forecast time, and still rejects unknown layers", () => {
+    expect(parseAppUrl("#/map?layer=clouds").layer).toBe("clouds");
+    expect(parseAppUrl("#/map?layer=clouds&t=3").offset).toBe(0);
+    expect(parseAppUrl("#/map?layer=sunshine").layer).toBe("satellite");
   });
 
   it("the point-reading layers have no forecast-time concept, so a t= under them is dropped", () => {
