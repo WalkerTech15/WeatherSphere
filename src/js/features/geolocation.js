@@ -20,6 +20,7 @@ import { selectLocation } from "./location.js";
 import { switchView } from "../ui/navigation.js";
 
 export let geoState = { status: "idle", loc: null, wx: null };
+let locateRequestId = 0;
 
 /* The "geo-me-<lat>,<lon>" id prefix is load-bearing in two places: favorites
    match by id alone (so a second fix must not overwrite the first), and
@@ -51,6 +52,12 @@ export async function applyGeoSuccess(lat, lon, info, opts = {}) {
 
 /* recenter=true (explicit tap): move the map to the fix. recenter=false
    (silent restore of a granted/cached fix on load): only fill the card + dot. */
+function positionOptions(precise) {
+  return precise
+    ? { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    : { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 };
+}
+
 export function locateMe(recenter = true) {
   if (geoState.status === "locating") return;
   if (!("geolocation" in navigator)) {
@@ -58,10 +65,16 @@ export function locateMe(recenter = true) {
     renderSidePos();
     return;
   }
+  const requestId = ++locateRequestId;
   geoState = { status: "locating", loc: null, wx: null };
   renderSidePos();
-  navigator.geolocation.getCurrentPosition(
-    async (pos) => {
+  const requestPosition = (precise) =>
+    new Promise((resolve, reject) =>
+      navigator.geolocation.getCurrentPosition(resolve, reject, positionOptions(precise)),
+    );
+
+  const finish = async (pos) => {
+      if (requestId !== locateRequestId) return;
       const { latitude: lat, longitude: lon, accuracy } = pos.coords;
       let info = {};
       try {
@@ -69,16 +82,25 @@ export function locateMe(recenter = true) {
       } catch {
         /* coords shown instead */
       }
-      applyGeoSuccess(lat, lon, info, { persist: true, acc: accuracy, recenter });
-    },
-    (err) => {
+      if (requestId === locateRequestId)
+        await applyGeoSuccess(lat, lon, info, { persist: true, acc: accuracy, recenter });
+    };
+
+  requestPosition(true)
+    .catch((err) => {
+      /* A precise GPS fix can fail indoors. Retry once with a cached/network
+         position, but never retry an explicit permission denial. */
+      if (err.code === 1) throw err;
+      return requestPosition(false);
+    })
+    .then(finish)
+    .catch((err) => {
+      if (requestId !== locateRequestId) return;
       /* 1 = denied, 2 = position unavailable, 3 = timeout */
       const status = err.code === 1 ? "denied" : err.code === 3 ? "timeout" : "unavailable";
       geoState = { status, loc: null, wx: null };
       renderSidePos();
-    },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
-  );
+    });
 }
 
 export async function initGeo() {
