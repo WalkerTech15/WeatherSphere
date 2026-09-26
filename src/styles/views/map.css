@@ -134,9 +134,9 @@ body[data-theme="dark"] .map-filters .chip.is-active {
   padding: var(--s-3);
   border-radius: var(--r-xl);
   /* where the map's control stack starts: clears the layer switcher's own
-     bottom edge (28px top inset + its rendered height, now two rows tall)
+     bottom edge (28px top inset + its 114px rendered height, two rows tall)
      with a small gap — see .maplibregl-ctrl-top-left/-right below */
-  --map-ctrl-top: 136px;
+  --map-ctrl-top: 146px;
   --map-ctrl-left: 12px;
 }
 .map-card:fullscreen {
@@ -667,7 +667,11 @@ body[data-theme="dark"] .maplibregl-ctrl button .maplibregl-ctrl-icon {
    the other row's layout. The base `max-width` below just keeps the pill
    off the card's own right edge; the ≥821px override further down is the
    one that matters in practice, since .map-weather-panel (below) floats a
-   350px card over the SAME top-right corner of the map at that width. */
+   350px card over the SAME top-right corner of the map at that width.
+   One container carries the only border; the buttons inside are borderless
+   fills, 8px apart in both directions. Its height is fixed by that geometry
+   (8 + 44 + 8 + 44 + 8, plus the 1px border) — --map-ctrl-top and the
+   expanded mode's --mx-pill-h are derived from it. */
 .map-layer-switcher {
   position: absolute;
   z-index: 4;
@@ -676,9 +680,9 @@ body[data-theme="dark"] .maplibregl-ctrl button .maplibregl-ctrl-icon {
   max-width: calc(100% - 56px);
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 5px;
-  border: 1px solid rgba(255, 255, 255, 0.72);
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--border);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
@@ -692,11 +696,17 @@ body[data-theme="dark"] .maplibregl-ctrl button .maplibregl-ctrl-icon {
   .map-layer-switcher {
     max-width: calc(100% - 56px - 350px - 16px);
   }
+  /* With the details panel closed ("Show details" instead), that corner is
+     free again, so the switcher may use the card's full width. */
+  .map-card:has(> .map-weather-panel[hidden]) .map-layer-switcher {
+    max-width: calc(100% - 56px);
+  }
 }
 .map-layer-row {
   position: relative;
   display: flex;
   align-items: center;
+  gap: 8px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -705,16 +715,21 @@ body[data-theme="dark"] .maplibregl-ctrl button .maplibregl-ctrl-icon {
 }
 .map-layer {
   display: inline-flex;
-  flex: 0 0 auto; /* never squeezed by the row's own scroll — see above */
+  /* Never squeezed by the row's own scroll (see above), but free to grow: the
+     shorter of the two rows stretches its buttons to the longer row's width,
+     so neither row ends in an empty strip. */
+  flex: 1 0 auto;
   align-items: center;
   justify-content: center;
   gap: 7px;
   min-height: 44px;
-  padding: 0 13px;
+  padding: 0 12px;
   border-radius: 10px;
+  background: rgba(15, 23, 42, 0.04);
   color: #53627a;
   font-size: 12.5px;
   font-weight: 700;
+  line-height: 1;
   white-space: nowrap;
   transition:
     color 0.18s,
@@ -723,7 +738,17 @@ body[data-theme="dark"] .maplibregl-ctrl button .maplibregl-ctrl-icon {
 }
 .map-layer:hover {
   color: #14213d;
-  background: #f1f5f9;
+  background: rgba(15, 23, 42, 0.08);
+}
+/* Each row scrolls, and a scroll container clips anything drawn outside it —
+   including the default ring 2px outside the button. The ring is drawn just
+   inside instead, and in white on the blue selected layer so it still shows. */
+.map-layer:focus-visible {
+  outline-offset: -2px;
+}
+.map-layer.is-active:focus-visible {
+  outline-color: #fff;
+  outline-offset: -4px;
 }
 .map-layer.is-active {
   color: #fff;
@@ -744,7 +769,7 @@ body[data-theme="dark"] .maplibregl-ctrl button .maplibregl-ctrl-icon {
 }
 .map-layer.is-disabled:hover {
   color: #a7b0c0;
-  background: none;
+  background: rgba(15, 23, 42, 0.04);
 }
 .map-layer-badge {
   padding: 2px 6px;
@@ -1985,22 +2010,28 @@ body[data-theme="dark"] .map-show-panel {
   color: var(--text);
 }
 body[data-theme="dark"] .map-layer {
+  background: rgba(148, 163, 184, 0.08);
   color: var(--text-2);
 }
 /* The rule above out-ranks `.map-layer.is-active { color: #fff }` (it adds an
    element), which left the selected layer's label grey on blue at 2.8:1 in
-   dark mode. White on --primary is 5.2:1 — the same as light mode. */
+   dark mode. White on --primary is 5.2:1 — the same as light mode. The same
+   goes for its fill, which would otherwise replace the blue. */
 body[data-theme="dark"] .map-layer.is-active {
+  background: var(--primary);
   color: #fff;
 }
 body[data-theme="dark"] .map-layer:hover {
   color: var(--text);
-  background: rgba(148, 163, 184, 0.12);
+  background: rgba(148, 163, 184, 0.16);
+}
+body[data-theme="dark"] .map-layer.is-active:hover {
+  background: var(--primary);
 }
 body[data-theme="dark"] .map-layer.is-disabled,
 body[data-theme="dark"] .map-layer.is-disabled:hover {
   color: var(--text-3);
-  background: none;
+  background: rgba(148, 163, 184, 0.04);
 }
 body[data-theme="dark"] .map-layer-badge {
   background: rgba(148, 163, 184, 0.16);
@@ -2027,6 +2058,11 @@ body[data-theme="dark"] .map-hour > span {
   .map-weather-panel {
     width: 318px;
     padding: 18px;
+  }
+  /* tighter horizontally only: the switcher's height (and so the control
+     stack's offset below it) stays the same at every width */
+  .map-layer-row {
+    gap: 6px;
   }
   .map-layer {
     padding-inline: 10px;
@@ -2070,12 +2106,6 @@ body[data-theme="dark"] .map-hour > span {
     right: 22px;
     left: 22px;
     max-width: none; /* the explicit right inset already bounds it */
-  }
-  .map-layer {
-    /* fills the now full-width row evenly, rather than the desktop pill's
-       compact, content-sized buttons (overflow-x/scrollbar-hiding for the
-       row itself is universal — see the base .map-layer-row rule above) */
-    flex: 1 0 auto;
   }
   /* ── Draggable bottom sheet ──────────────────────────────────────────────
      Anchored to the VIEWPORT (not .map-card), so it behaves like a native
@@ -2203,7 +2233,7 @@ body[data-theme="dark"] .map-hour > span {
   .map-card {
     padding: 8px;
     /* map controls: 18px top inset + the switcher's now two-row height */
-    --map-ctrl-top: 122px;
+    --map-ctrl-top: 132px;
     --map-ctrl-left: 6px;
   }
   .map-layer-switcher {
@@ -2282,10 +2312,10 @@ body.map-expanded {
   --mx-gap: 10px;
   /* compact header: 44px controls plus 4px of padding above and below */
   --mx-bar-h: 52px;
-  /* .map-layer-switcher's rendered height: 5px padding top and bottom
-     around its two 44px-tall rows, plus the 4px gap between them
-     (5 + 44 + 4 + 44 + 5) */
-  --mx-pill-h: 102px;
+  /* .map-layer-switcher's rendered height: 8px padding top and bottom
+     around its two 44px-tall rows, plus the 8px gap between them
+     (8 + 44 + 8 + 44 + 8) */
+  --mx-pill-h: 112px;
   /* each map control button, and the gap between control groups */
   --mx-ctrl: 44px;
   --mx-ctrl-gap: 8px;
