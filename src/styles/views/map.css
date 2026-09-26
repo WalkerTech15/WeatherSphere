@@ -56,38 +56,32 @@
 .chip.is-active:active {
   background: var(--primary-600);
 }
-/* One fixed icon box for every chip. The flag inside sizes by HEIGHT only
-   (width auto, object-fit: contain) — same model as .location-flag-wrap —
-   so it keeps its own natural ratio instead of being cropped to the box.
-   All local country flag assets share the same 4:3 ratio as this box, so in
-   practice FR/US/CA fill it edge-to-edge and read as one consistent size
-   next to the Monde globe; a differently-shaped flag would simply letterbox
-   inside the box rather than get cropped or stretched. */
+/* Keep flags at a consistent height while allowing each asset to retain its
+   natural aspect ratio. The width cap prevents an unusually wide flag from
+   pushing the country chip out of alignment without cropping the artwork. */
 .chip-icon {
   display: flex;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 22px;
+  width: auto;
+  min-width: 22px;
+  max-width: 34px;
   height: 16.5px;
-  overflow: hidden;
-  border-radius: 3px;
 }
 .chip-icon svg {
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 16.5px;
+  border-radius: 3px;
 }
 .chip-icon img,
 .chip-icon .flag {
   display: block;
-  /* Explicit px, not height: 100% — the flag <img> sits inside an
-     intervening <span data-flag> with no height of its own (main.js fills
-     it after the fact), so a percentage height has no definite containing
-     block to resolve against and collapses to 0. matches .chip-icon's own
-     height exactly. */
   height: 16.5px;
+  max-width: 34px;
   width: auto;
   object-fit: contain;
+  border-radius: 3px;
 }
 
 /* Country shortcuts use the compact rounded-rectangle treatment from the
