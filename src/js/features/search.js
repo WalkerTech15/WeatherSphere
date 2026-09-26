@@ -19,7 +19,12 @@ import { selectLocation } from "./location.js";
 import { geoState } from "./geolocation.js";
 import { recentToLocation } from "./recent-locations.js";
 import { buildSuggestions } from "./search-suggestions.js";
-import { rankSearchResults, rankingContext, mergeSearchResults } from "./search-ranking.js";
+import {
+  rankSearchResults,
+  rankingContext,
+  mergeSearchResults,
+  isSamePlace,
+} from "./search-ranking.js";
 import { switchView } from "../ui/navigation.js";
 
 let searchIndex = -1;
@@ -285,8 +290,12 @@ function pickSearchResult(i) {
     showAllResults();
     return;
   }
-  const loc = searchResults[i];
-  if (!loc) return;
+  const result = searchResults[i];
+  if (!result) return;
+  /* MapTiler can return its own copy of a curated city when the query includes
+     a region or country. Keep the reviewed location record so its verified
+     landmark image and metadata survive selection. */
+  const loc = LOCATIONS.find((curated) => isSamePlace(curated, result)) || result;
   /* full place name in the input so the chosen result is unambiguous */
   $("#searchInput").value =
     loc.fullName || [locName(loc), locRegion(loc), locCountry(loc)].filter(Boolean).join(", ");

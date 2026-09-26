@@ -14,7 +14,7 @@
  * rule, it is never hidden. Names are lower-case and accent-free (the form
  * normalize() in data/locations.js produces), comma-separated, with the
  * common French exonyms beside the English names. */
-const MAJOR_CITIES = {
+export const MAJOR_CITIES = {
   FR: "paris,marseille,lyon,toulouse,nice,nantes,strasbourg,bordeaux,lille,montpellier",
   GB: "london,londres,manchester,birmingham,edinburgh,edimbourg,glasgow,liverpool,cardiff,belfast",
   IE: "dublin",

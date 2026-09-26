@@ -19,6 +19,8 @@ import {
   rankPexelsCandidates,
   rankWikimediaCandidates,
   resolveLocationImage,
+  locVisual,
+  locPhotoHtml,
   fetchBestPhoto,
   areaFallbackTargets,
   bumpPhotoToken,
@@ -671,6 +673,73 @@ describe("resolveLocationImage — ocean/sea fallback glyph", () => {
 
   it("still shows the generic city glyph for an ordinary unknown place", () => {
     expect(resolveLocationImage({ kind: "city", name: { en: "Somewhere" } })).toBe("🏙️");
+  });
+});
+
+/* One picture, one owner. The compact visual that fills the City badge, a
+ * search row and a card's emoji layer is a glyph (an emoji or a flag); a real
+ * photo is rendered only by hydrateLocPhoto(), into a `.loc-photo` container.
+ * Lourdes has the one curated photograph (loc.landmark.img), which used to be
+ * rendered again by every slot that asked for the location's visual. */
+describe("location visuals never render a picture", () => {
+  const lourdes = LOCATIONS.find((loc) => loc.id === "lourdes");
+  const withPhoto = LOCATIONS.filter((loc) => loc.landmark?.img || loc.img);
+
+  beforeEach(() => {
+    state.lang = "en";
+  });
+
+  it("finds Lourdes' curated photograph in the dataset, as metadata", () => {
+    expect(lourdes.landmark.img).toContain("photo-1641070496002-8077aefba51c");
+    expect(lourdes.landmark.photo).toMatchObject({
+      source: "unsplash",
+      photographer: "Nick Castelli",
+    });
+    expect(withPhoto.length).toBeGreaterThan(0);
+  });
+
+  it("gives Lourdes its emoji, not its photograph", () => {
+    expect(locVisual(lourdes)).toBe("⛪");
+    expect(locVisual(lourdes)).not.toContain("<img");
+    expect(locVisual(lourdes)).not.toContain(lourdes.landmark.img);
+  });
+
+  it("returns no <img> for any curated location that has a local image", () => {
+    for (const loc of withPhoto) {
+      expect(locVisual(loc), loc.id).not.toMatch(/<img(?![^>]*class="flag)/);
+      expect(locVisual(loc), loc.id).not.toContain("loc-img");
+    }
+  });
+
+  it("returns an emoji or a flag for every curated location, never a picture of the place", () => {
+    for (const loc of LOCATIONS) {
+      const visual = locVisual(loc);
+      expect(visual, loc.id).toBeTruthy();
+      if (visual.includes("<")) {
+        expect(loc.kind, loc.id).toBe("country");
+        expect(visual, loc.id).toMatch(/class="flag[ "]/);
+      }
+    }
+  });
+
+  it("keeps a country on its flag and open water on a wave", () => {
+    const japan = LOCATIONS.find((loc) => loc.id === "japan");
+    expect(locVisual(japan)).toMatch(/class="flag[ "]/);
+    expect(locVisual({ kind: "sea", name: { en: "Adriatic" } })).toBe("🌊");
+  });
+
+  it("is what the photo container shows underneath the photo, not a second image", () => {
+    const html = locPhotoHtml(lourdes, "hero-photo");
+    expect(html).toContain('class="loc-photo loading hero-photo"');
+    expect(html).toContain(">⛪</span>");
+    expect(html).not.toContain("<img");
+    expect(html.match(/loc-photo-fallback/g)).toHaveLength(1);
+  });
+
+  it("does not depend on the language", () => {
+    state.lang = "fr";
+    expect(locVisual(lourdes)).toBe("⛪");
+    expect(locPhotoHtml(lourdes)).not.toContain("<img");
   });
 });
 

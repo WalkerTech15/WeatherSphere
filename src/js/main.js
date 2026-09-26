@@ -8,6 +8,7 @@ import { injectIconDefs, weatherIcon, MAP_LAYER_ICONS } from "./data/icons.js";
 import { flagHtml } from "./data/flags.js";
 import { LOCATIONS, DEFAULT_LOCATION_ID } from "./data/locations.js";
 import { bindSearchEvents, closeMobileSearch, focusSearch } from "./features/search.js";
+import { isSamePlace } from "./features/search-ranking.js";
 import {
   setMode,
   setUnitTemp,
@@ -382,7 +383,8 @@ renderExplore();
 renderFavorites();
 
 /* Re-resolve stored locations against the current dataset (old saves may lack new fields) */
-const freshen = (loc) => loc && (LOCATIONS.find((l) => l.id === loc.id) || loc);
+const freshen = (loc) =>
+  loc && (LOCATIONS.find((l) => l.id === loc.id || isSamePlace(l, loc)) || loc);
 state.favorites = state.favorites.map(freshen);
 /* re-sanitized on read, so an older or hand-edited store can never
    reintroduce a shape the current privacy rules would refuse to write */

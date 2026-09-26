@@ -1,6 +1,8 @@
-/* Location visuals: curated landmark image → country flag → emoji fallback,
-   with an optional real photo layered on top once it loads (never blocking
-   the initial render, never causing layout shift).
+/* Location visuals: a compact glyph (country flag or emoji — locVisual) that
+   is the only thing rendered up front, with the real photo layered on top by
+   hydrateLocPhoto once it loads (never blocking the initial render, never
+   causing layout shift). A photo has exactly one owner: hydrateLocPhoto fills
+   a `.loc-photo` container, and no other slot ever renders an <img> of it.
 
    The real photo comes from a chain of sources ordered by how well each can
    PROVE the picture shows this place, not by how attractive it is — see
@@ -82,40 +84,30 @@ export function gradBg(loc) {
   return `background:linear-gradient(145deg, ${loc.grad[0]}, ${loc.grad[1]})`;
 }
 
-/* Ordered providers; the first that returns HTML wins. This keeps the visual
-   decoupled from callers so a real image API (e.g. Unsplash) can slot in as a
-   new provider WITHOUT touching any component. Providers must key off stable
-   identity (loc.id / curated landmark / country code) — never the raw query —
-   so a duplicate city name (Paris TX) can never borrow Paris FR's image. */
-const IMAGE_PROVIDERS = [
-  /* 1. curated local landmark image (opt-in: loc.landmark.img is a URL/dataURI) */
-  (loc) =>
-    loc.landmark && loc.landmark.img
-      ? `<img class="loc-img" src="${loc.landmark.img}" alt="" loading="lazy">`
-      : null,
-  /* 2. existing local regional image (opt-in: loc.img on a curated entry) */
-  (loc) => (loc.img ? `<img class="loc-img" src="${loc.img}" alt="" loading="lazy">` : null),
-  /* 3. country flag for countries */
-  (loc) => (loc.kind === "country" ? flagHtml(loc.cc, "", state.lang) : null),
-  /* 4. a wave glyph for an ocean/sea (core/coord-location.js, core/marine-
-     regions.js) — never the generic cityscape emoji below, which would
-     misrepresent open water as a place with streets and buildings */
-  (loc) => (isMarineKind(loc.kind) ? "🌊" : null),
-  /* 5. curated landmark emoji, else a generic location glyph (safe fallback) */
-  (loc) => (loc.landmark ? loc.landmark.emoji : "🏙️"),
-  /* NOTE: to add Unsplash later, insert a provider ABOVE this line that returns
-     an <img> for loc.id/landmark and null on miss — nothing else changes. */
-];
+/* The compact visual of a place: a flag, a wave, or its emoji — a GLYPH, never
+   an <img>. It fills every small slot (the City badge, a search row, a card's
+   emoji layer, the photo container's own fallback) and is the "skeleton" the
+   real photo fades in over.
+
+   A picture is rendered by exactly one owner: hydrateLocPhoto(), into a
+   `.loc-photo` container. A curated landmark image (loc.landmark.img) is
+   metadata that hydrateLocPhoto reads; it is never also rendered here, or the
+   same photograph would appear once per slot — which is how Lourdes ended up
+   in its badge, its container and its background at once.
+
+   Keys off stable identity (kind / country code / curated landmark), never the
+   raw query, so a duplicate city name (Paris TX) can never borrow Paris FR's
+   glyph. */
 export function resolveLocationImage(loc) {
-  for (const provider of IMAGE_PROVIDERS) {
-    const out = provider(loc);
-    if (out) return out;
-  }
-  return "🏙️";
+  if (loc.kind === "country") return flagHtml(loc.cc, "", state.lang);
+  /* a wave for an ocean/sea (core/coord-location.js, core/marine-regions.js) —
+     never the cityscape emoji below, which would misrepresent open water as a
+     place with streets and buildings */
+  if (isMarineKind(loc.kind)) return "🌊";
+  return (loc.landmark && loc.landmark.emoji) || "🏙️";
 }
-export function locVisual(loc) {
-  return resolveLocationImage(loc);
-}
+
+export const locVisual = resolveLocationImage;
 
 /* For the selected location's hero + info-card visual. Priority:
    1) curated local image  2) Pexels (query built from full geocoding metadata,
@@ -1071,6 +1063,7 @@ function renderPhotoCredit(host, photo, extraClass = "") {
 /* One entry per provider whose terms demand specific wording. Pexels is
    absent on purpose — it is the default. */
 const ATTRIBUTION = {
+  unsplash: (p) => `Photo by ${p.photographer} on Unsplash`,
   google: (p) => t("photoCreditGoogle").replace("{photographer}", p.photographer),
   wikimedia: (p) =>
     t("photoCreditWikimedia")
@@ -1086,6 +1079,7 @@ function fallbackAttribution(photo) {
 }
 
 const SOURCE_LABEL = {
+  unsplash: (p) => `${p.photographer} · Unsplash ↗`,
   google: (p) => `${p.photographer} · Google ↗`,
   wikimedia: () => "Wikimedia Commons ↗",
   mapillary: (p) => `${p.photographer} · Mapillary ↗`,
@@ -1230,7 +1224,7 @@ export async function hydrateLocPhoto(el, loc, opts = {}) {
     pre.onerror = done;
     pre.src = src;
   };
-  if (loc.landmark && loc.landmark.img) return swap(loc.landmark.img, null);
+  if (loc.landmark && loc.landmark.img) return swap(loc.landmark.img, loc.landmark.photo || null);
   if (loc.img) return swap(loc.img, null);
   /* A curated landmark with no manually reviewed photo (see locations.js —
      a landmark NAME alone is never treated as a guarantee) stays on the
