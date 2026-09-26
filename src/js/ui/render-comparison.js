@@ -20,6 +20,9 @@ import {
   comparableLocations,
   comparisonLocations,
   comparisonWx,
+  comparisonStatus,
+  comparisonAqiFailed,
+  comparisonMatches,
   isCompared,
   toggleComparison,
   removeFromComparison,
@@ -28,8 +31,12 @@ import {
   loadComparisonWeather,
 } from "../features/comparison.js";
 import { showToast } from "./notifications.js";
+import { providerById } from "../data/attributions.js";
 
 const DASH = "—";
+/* A column whose weather is on its way. A dash says "this place has no value";
+   this says "not yet". */
+const LOADING = "…";
 
 /* One metric of one place, already formatted for display in the visitor's
    chosen units. Returns the em dash for anything missing, so a partial
@@ -74,15 +81,91 @@ export function formatComparisonCell(metric, entry) {
   }
 }
 
+const hasValue = (entry) =>
+  ["temp", "feelsLike", "humidity", "wind", "precipitation", "uv", "aqi"].some(
+    (key) => typeof entry?.[key] === "number" && Number.isFinite(entry[key]),
+  );
+
+/**
+ * Where the table stands, and each column with it — so a dash is only ever
+ * printed for a place that has no value, never for weather still loading or a
+ * request that failed.
+ *
+ * Column: "ready" (it has values), "loading" (its weather is on its way) or
+ * "unavailable" (the request failed, or the provider had nothing for it).
+ * State: "loading" while any column waits; "error" when no column has values;
+ * "partial" when some do not; otherwise "ready".
+ *
+ * `current` says whether the weather held is of exactly these places, so a
+ * column added a moment ago reads as loading even before its request starts.
+ */
+export function comparisonView(locs, wx = {}, options = {}) {
+  const { status = "ready", current = true, aqiFailed = false } = options;
+  const waiting = status === "loading" || status === "idle" || (status === "ready" && !current);
+  const columns = {};
+  for (const loc of locs) {
+    const entry = wx[loc.id];
+    if (status === "error") columns[loc.id] = "unavailable";
+    else if (entry) columns[loc.id] = hasValue(entry) ? "ready" : "unavailable";
+    else columns[loc.id] = waiting ? "loading" : "unavailable";
+  }
+  const kinds = Object.values(columns);
+  let state = "ready";
+  if (kinds.includes("loading")) state = "loading";
+  else if (kinds.every((kind) => kind === "unavailable")) state = "error";
+  else if (kinds.includes("unavailable")) state = "partial";
+  return {
+    state,
+    columns,
+    unavailable: locs.filter((loc) => columns[loc.id] === "unavailable"),
+    aqiFailed: Boolean(aqiFailed) && (state === "ready" || state === "partial"),
+  };
+}
+
 /* The whole table as data: one row per metric, one cell per selected place.
    `wx` is passed in rather than read from the module so tests can supply a
-   fixture. */
-export function buildComparisonRows(locs, wx = {}) {
+   fixture. `columns` (from comparisonView) marks the places still loading. */
+export function buildComparisonRows(locs, wx = {}, columns = {}) {
   return COMPARISON_METRICS.map((metric) => ({
     metric,
     label: t(metric === "uv" ? "uvIndex" : metric),
-    cells: locs.map((loc) => formatComparisonCell(metric, wx[loc.id])),
+    cells: locs.map((loc) =>
+      columns[loc.id] === "loading" ? LOADING : formatComparisonCell(metric, wx[loc.id]),
+    ),
   }));
+}
+
+/* Where the numbers in the table come from, right under them. Open-Meteo
+   supplies both the weather and the air quality (see features/comparison.js). */
+function sourceNoteHtml() {
+  const provider = providerById("open-meteo");
+  const link = `<a href="${esc(provider.url)}" target="_blank" rel="noopener">${esc(provider.name)}</a>`;
+  return `<p class="compare-source">${t("compareSource").replace("{provider}", link)}</p>`;
+}
+
+function retryHtml() {
+  return `<button type="button" class="compare-clear compare-retry" data-compare-retry>${esc(t("compareRetry"))}</button>`;
+}
+
+/* One sentence saying what the dashes and ellipses in the table mean, when
+   they mean anything. */
+function statusHtml(view) {
+  let text = "";
+  let retry = false;
+  if (view.state === "loading") text = t("compareLoading");
+  else if (view.state === "error") {
+    text = t("compareUnavailable");
+    retry = true;
+  } else if (view.state === "partial") {
+    const names = view.unavailable.map((loc) => locName(loc)).join(", ");
+    text = t("comparePlaceUnavailable").replace("{names}", names);
+    retry = true;
+  } else if (view.aqiFailed) {
+    text = t("compareAqiUnavailable");
+    retry = true;
+  }
+  if (!text) return "";
+  return `<p class="compare-empty compare-status" role="status" data-state="${view.state}">${esc(text)} ${retry ? retryHtml() : ""}</p>`;
 }
 
 function pickerHtml() {
@@ -111,10 +194,10 @@ function pickerHtml() {
     </div>`;
 }
 
-function tableHtml(locs) {
-  const rows = buildComparisonRows(locs, comparisonWx);
-  return `<div class="table-scroll">
-      <table class="compare-table">
+function tableHtml(locs, view) {
+  const rows = buildComparisonRows(locs, comparisonWx, view.columns);
+  return `${statusHtml(view)}<div class="table-scroll">
+      <table class="compare-table" aria-busy="${view.state === "loading"}">
         <caption class="sr-only">${esc(t("compareTitle"))}</caption>
         <thead>
           <tr>
@@ -145,7 +228,7 @@ function tableHtml(locs) {
             .join("")}
         </tbody>
       </table>
-    </div>`;
+    </div>${sourceNoteHtml()}`;
 }
 
 /* Which control inside the block currently has focus, as a selector that
@@ -165,6 +248,7 @@ function focusedControlSelector(host) {
     return `[data-compare-remove="${CSS.escape(active.dataset.compareRemove)}"]`;
   }
   if (active.id === "compareClearBtn") return "#compareClearBtn";
+  if ("compareRetry" in active.dataset) return "[data-compare-retry]";
   return "";
 }
 
@@ -178,10 +262,20 @@ function restoreFocus(host, selector) {
   target?.focus();
 }
 
+/* Set when the visitor presses "Try again": the button is gone while the table
+   loads, so focus is handed back to it if the failure stands — otherwise a
+   keyboard user would be dropped on the first chip. */
+let retryHadFocus = false;
+
 export function renderComparison() {
   const host = $("#compareBlock");
   if (!host) return;
   const locs = comparisonLocations();
+  const view = comparisonView(locs, comparisonWx, {
+    status: comparisonStatus,
+    current: comparisonMatches(locs),
+    aqiFailed: comparisonAqiFailed,
+  });
   const previouslyFocused = focusedControlSelector(host);
 
   host.innerHTML = `
@@ -200,7 +294,7 @@ export function renderComparison() {
       ${pickerHtml()}
       ${
         locs.length >= 2
-          ? tableHtml(locs)
+          ? tableHtml(locs, view)
           : comparableLocations().length
             ? `<p class="compare-empty">${esc(t("compareEmpty"))}</p>`
             : ""
@@ -223,28 +317,39 @@ export function renderComparison() {
       refreshComparison();
     }),
   );
+  $("[data-compare-retry]", host)?.addEventListener("click", () => {
+    retryHadFocus = true;
+    refreshComparison();
+  });
   $("#compareClearBtn")?.addEventListener("click", () => {
     clearComparison();
     refreshComparison();
   });
 
   restoreFocus(host, previouslyFocused);
+  if (retryHadFocus) {
+    const retry = $("[data-compare-retry]", host);
+    if (retry) retry.focus();
+    if (retry || view.state !== "loading") retryHadFocus = false;
+  }
 }
 
-/* Repaint, then fetch, then repaint again — so a click feels immediate
-   (the column appears at once, showing dashes) and fills in when the
-   batched request lands. loadComparisonWeather is latest-only, so a rapid
+/* Start the fetch, paint, then paint again when it lands — so a click feels
+   immediate (the column appears at once, marked as loading) and fills in when
+   the batched request arrives. The fetch starts FIRST so the first paint
+   already knows it is loading (a retry would otherwise repaint the old
+   failure for a moment). loadComparisonWeather is latest-only, so a rapid
    sequence of picks can only ever paint the last one. */
 export function refreshComparison() {
+  const pending = comparisonLocations().length >= 2 ? loadComparisonWeather(true) : null;
   renderComparison();
-  if (comparisonLocations().length < 2) return;
-  loadComparisonWeather(true).then(() => renderComparison());
+  pending?.then(() => renderComparison());
 }
 
 /* Called when the view opens: same flow, but honouring the freshness
    window rather than forcing a refetch. */
 export function loadComparison() {
+  const pending = comparisonLocations().length >= 2 ? loadComparisonWeather() : null;
   renderComparison();
-  if (comparisonLocations().length < 2) return;
-  loadComparisonWeather().then(() => renderComparison());
+  pending?.then(() => renderComparison());
 }

@@ -19,6 +19,9 @@ import {
   pruneComparison,
   loadComparisonWeather,
   comparisonWx,
+  comparisonStatus,
+  comparisonAqiFailed,
+  comparisonMatches,
   __resetComparisonForTests,
 } from "./comparison.js";
 
@@ -268,14 +271,60 @@ describe("loadComparisonWeather", () => {
     expect(wx.paris.timezone).toBe("Europe/Paris");
   });
 
-  it("keeps the columns with blank values when the whole batch fails", async () => {
+  it("reports a failure, holding no numbers, when the whole batch fails", async () => {
     stubFetch(() => {
       throw new Error("offline");
     });
     const wx = await loadComparisonWeather(true);
-    expect(Object.keys(wx).sort()).toEqual(["paris", "tokyo"]);
-    expect(wx.paris.temp).toBeNull();
-    expect(wx.paris.aqi).toBeNull();
+    expect(wx).toEqual({});
+    expect(comparisonStatus).toBe("error");
+    expect(comparisonAqiFailed).toBe(false);
+    expect(comparisonMatches(comparisonLocations())).toBe(false);
+  });
+
+  it("reports a failure on an HTTP error too", async () => {
+    stubFetch(() => ({ ok: false, status: 429, json: async () => ({}) }));
+    await loadComparisonWeather(true);
+    expect(comparisonStatus).toBe("error");
+  });
+
+  it("does not cache a failure as fresh: the next open asks again", async () => {
+    stubFetch(() => {
+      throw new Error("offline");
+    });
+    await loadComparisonWeather(true);
+    const calls = stubFetch((url) =>
+      url.includes("air-quality") ? ok([]) : ok([weatherPayload(20), weatherPayload(30)]),
+    );
+    await loadComparisonWeather(false); /* not forced */
+    expect(calls.length).toBeGreaterThan(0);
+    expect(comparisonStatus).toBe("ready");
+    expect(comparisonWx.paris.temp).toBe(20);
+  });
+
+  it("is loading while the request is in flight, ready once it lands", async () => {
+    let answerWeather;
+    globalThis.fetch = vi.fn((url) =>
+      String(url).includes("air-quality")
+        ? Promise.resolve(ok([]))
+        : new Promise((resolve) => (answerWeather = resolve)),
+    );
+    const pending = loadComparisonWeather(true);
+    expect(comparisonStatus).toBe("loading");
+    answerWeather(ok([weatherPayload(20), weatherPayload(30)]));
+    await pending;
+    expect(comparisonStatus).toBe("ready");
+    expect(comparisonMatches(comparisonLocations())).toBe(true);
+  });
+
+  it("holds an entry with no values for a place the provider had nothing for", async () => {
+    stubFetch((url) =>
+      url.includes("air-quality") ? ok([]) : ok([weatherPayload(20), { timezone: "Asia/Tokyo" }]),
+    );
+    const wx = await loadComparisonWeather(true);
+    expect(wx.paris.temp).toBe(20);
+    expect(wx.tokyo.temp).toBeNull(); /* not invented, not estimated */
+    expect(comparisonStatus).toBe("ready");
   });
 
   it("keeps the weather when only air quality fails — it is a separate service", async () => {
@@ -286,6 +335,18 @@ describe("loadComparisonWeather", () => {
     const wx = await loadComparisonWeather(true);
     expect(wx.paris.temp).toBe(20);
     expect(wx.paris.aqi).toBeNull();
+    expect(comparisonStatus).toBe("ready");
+    expect(comparisonAqiFailed).toBe(true); /* so the table can say why the row is empty */
+  });
+
+  it("does not call air quality 'failed' when it answered with no value for a place", async () => {
+    stubFetch((url) =>
+      url.includes("air-quality")
+        ? ok([{ current: {} }, { current: {} }])
+        : ok([weatherPayload(20), weatherPayload(30)]),
+    );
+    await loadComparisonWeather(true);
+    expect(comparisonAqiFailed).toBe(false);
   });
 
   it("does nothing and clears when no place is selected", async () => {

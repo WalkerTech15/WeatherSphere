@@ -69,6 +69,7 @@ import {
   clearOfflineCaches,
 } from "./services/offline.js";
 import { renderFavorites } from "./ui/render-favorites.js";
+import { renderDataSources } from "./ui/render-sources.js";
 import { bindWeatherNotice } from "./ui/render-weather-notice.js";
 import { bindAmbient } from "./ui/render-ambient.js";
 import { renderForecastPage } from "./ui/render-forecast.js";
@@ -365,6 +366,9 @@ $$("[data-layer-icon]").forEach((el) => {
 });
 applyTheme();
 syncThemeNav();
+/* the About page's provider list is drawn from data/attributions.js; its blurbs
+   are translated by the call just below */
+renderDataSources();
 applyStaticI18n();
 syncSegToggle($("#modeToggle"), "mode", state.mode);
 syncSegToggle($("#modeToggleSide"), "mode", state.mode);

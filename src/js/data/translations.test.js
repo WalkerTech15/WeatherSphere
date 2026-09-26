@@ -70,8 +70,8 @@ describe("translation dictionary", () => {
   });
 
   it("uses French spacing before a colon", () => {
-    expect(I18N.en.footerData).toBe("Data: Open-Meteo · OpenStreetMap");
-    expect(I18N.fr.footerData).toBe("Données : Open-Meteo · OpenStreetMap");
+    expect(I18N.en.footerData).toBe("Data: Open-Meteo · OpenStreetMap · MapTiler");
+    expect(I18N.fr.footerData).toBe("Données : Open-Meteo · OpenStreetMap · MapTiler");
   });
 
   it("does not describe Pexels photos as rights-free", () => {

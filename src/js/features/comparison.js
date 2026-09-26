@@ -12,8 +12,11 @@
  *
  * Weather comes from ONE batched Open-Meteo call plus ONE batched
  * air-quality call, mirroring how features/favorites.js already fetches its
- * grid — so adding a column costs no extra round trip. Failure degrades the
- * way the rest of the app does: the row shows "—" rather than an error. */
+ * grid — so adding a column costs no extra round trip.
+ *
+ * A dash in the table must always mean "this place has no value", never "not
+ * loaded yet" or "the request failed": comparisonStatus says which of those
+ * the table is in, and ui/render-comparison.js shows it in words. */
 import { state } from "../core/state.js";
 import { getJSON, setJSON, KEYS } from "../core/storage.js";
 import { FETCH_TIMEOUT_MS } from "../core/config.js";
@@ -127,11 +130,24 @@ export function pruneComparison() {
 export let comparisonWx = {};
 let comparisonKey = "";
 let comparisonAt = 0;
+/* idle | loading | ready | error — where the last request for the selected
+   places stands. A failure is never cached as fresh, so reopening the view
+   (or the retry button) asks again. */
+export let comparisonStatus = "idle";
+/* The air-quality service is separate, and may fail on its own. */
+export let comparisonAqiFailed = false;
+
+/* Whether the weather held is the weather of exactly these places. */
+export function comparisonMatches(locs) {
+  return comparisonKey === batchKey(locs);
+}
 
 export function __resetComparisonForTests() {
   comparisonWx = {};
   comparisonKey = "";
   comparisonAt = 0;
+  comparisonStatus = "idle";
+  comparisonAqiFailed = false;
 }
 
 /* One loader, so a rapid sequence of selections can only ever paint the
@@ -141,11 +157,12 @@ const loadLatest = createBatchLoader();
 
 async function loadAirQuality(locs, signal) {
   try {
-    return await fetchAirQuality(locs, { signal });
+    return { values: await fetchAirQuality(locs, { signal }), failed: false };
   } catch {
-    /* Air quality is the one column allowed to be missing on its own — it
-       is a separate service, and losing it must not blank the comparison. */
-    return [];
+    /* Air quality is the one row allowed to be missing on its own — it is a
+       separate service, and losing it must not blank the comparison. The
+       table says so, rather than leaving a row of unexplained dashes. */
+    return { values: [], failed: true };
   }
 }
 
@@ -160,11 +177,13 @@ export function loadComparisonWeather(force = false) {
     if (!locs.length) {
       comparisonWx = {};
       comparisonKey = "";
+      comparisonStatus = "idle";
       return {};
     }
     if (!force && isBatchFresh({ key: comparisonKey, at: comparisonAt }, key)) {
       return comparisonWx;
     }
+    comparisonStatus = "loading";
 
     /* one timeout shared by both requests, plus cancellation by a newer load */
     const signal = anySignal([cancelSignal, AbortSignal.timeout(FETCH_TIMEOUT_MS)]);
@@ -175,23 +194,30 @@ export function loadComparisonWeather(force = false) {
         next[loc.id] = toComparisonWeather(snapshots[i]);
       });
     } catch {
-      /* Whole-batch failure: keep the columns, blank the numbers. The
-         renderer prints "—" per cell, which is honest and keeps the layout
-         (and the remove buttons) usable. */
-      next = {};
-      for (const loc of locs) next[loc.id] = toComparisonWeather(null);
+      if (isStale()) return comparisonWx; /* a newer selection owns the state */
+      /* Whole-batch failure: the columns and their remove buttons stay, the
+         table says the weather could not be loaded, and nothing is cached as
+         fresh — so the next attempt is a real one. */
+      comparisonWx = {};
+      comparisonKey = "";
+      comparisonAt = 0;
+      comparisonAqiFailed = false;
+      comparisonStatus = "error";
+      return comparisonWx;
     }
     if (isStale()) return comparisonWx;
 
     const aqi = await loadAirQuality(locs, signal);
     if (isStale()) return comparisonWx;
     locs.forEach((loc, i) => {
-      if (next[loc.id]) next[loc.id].aqi = aqi[i] ?? null;
+      if (next[loc.id]) next[loc.id].aqi = aqi.values[i] ?? null;
     });
 
     comparisonWx = next;
     comparisonKey = key;
     comparisonAt = Date.now();
+    comparisonAqiFailed = aqi.failed;
+    comparisonStatus = "ready";
     return comparisonWx;
   });
 }

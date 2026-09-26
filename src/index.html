@@ -1389,117 +1389,7 @@
             <div class="card info-card">
               <h2 class="info-title lg" data-i18n="srcTitle">Data sources</h2>
               <p class="src-sub" data-i18n="srcSub"></p>
-              <div class="src-list">
-                <div class="src-row">
-                  <span class="src-logo tone-primary">OM</span>
-                  <span class="src-body"><b>Open-Meteo</b><span data-i18n="srcOm"></span></span>
-                  <a class="link-chip" href="https://open-meteo.com" target="_blank" rel="noopener"
-                    >open-meteo.com
-                    <svg
-                      viewBox="0 0 24 24"
-                      width="12"
-                      height="12"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M7 17 17 7M9 7h8v8" /></svg
-                  ></a>
-                </div>
-                <div class="src-row">
-                  <span class="src-logo tone-emerald">OSM</span>
-                  <span class="src-body"><b>OpenStreetMap</b><span data-i18n="srcOsm"></span></span>
-                  <a
-                    class="link-chip"
-                    href="https://www.openstreetmap.org"
-                    target="_blank"
-                    rel="noopener"
-                    >openstreetmap.org
-                    <svg
-                      viewBox="0 0 24 24"
-                      width="12"
-                      height="12"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M7 17 17 7M9 7h8v8" /></svg
-                  ></a>
-                </div>
-                <div class="src-row">
-                  <span class="src-logo tone-sky">MT</span>
-                  <span class="src-body"><b>MapTiler</b><span data-i18n="srcMaptiler"></span></span>
-                  <a
-                    class="link-chip"
-                    href="https://www.maptiler.com"
-                    target="_blank"
-                    rel="noopener"
-                    >maptiler.com
-                    <svg
-                      viewBox="0 0 24 24"
-                      width="12"
-                      height="12"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M7 17 17 7M9 7h8v8" /></svg
-                  ></a>
-                </div>
-                <div class="src-row">
-                  <span class="src-logo tone-emerald">Px</span>
-                  <span class="src-body"><b>Pexels</b><span data-i18n="srcPexels"></span></span>
-                  <a class="link-chip" href="https://www.pexels.com" target="_blank" rel="noopener"
-                    >pexels.com
-                    <svg
-                      viewBox="0 0 24 24"
-                      width="12"
-                      height="12"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M7 17 17 7M9 7h8v8" /></svg
-                  ></a>
-                </div>
-                <div class="src-row">
-                  <span class="src-logo tone-amber">BDC</span>
-                  <span class="src-body"
-                    ><b>BigDataCloud</b><span data-i18n="srcBigdatacloud"></span
-                  ></span>
-                  <a
-                    class="link-chip"
-                    href="https://www.bigdatacloud.com"
-                    target="_blank"
-                    rel="noopener"
-                    >bigdatacloud.com
-                    <svg
-                      viewBox="0 0 24 24"
-                      width="12"
-                      height="12"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M7 17 17 7M9 7h8v8" /></svg
-                  ></a>
-                </div>
-              </div>
+              <div class="src-list" id="srcList"></div>
               <p class="src-note" data-i18n="srcNote"></p>
             </div>
           </div>
@@ -2218,7 +2108,7 @@
             © 2026 WeatherSphere. <span data-i18n="footRights">All rights reserved.</span>
           </p>
           <p class="footer-note">
-            <span data-i18n="footerData">Data: Open-Meteo · OpenStreetMap</span>
+            <span data-i18n="footerData">Data: Open-Meteo · OpenStreetMap · MapTiler</span>
           </p>
         </div>
       </div>

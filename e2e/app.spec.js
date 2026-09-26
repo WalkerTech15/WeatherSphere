@@ -380,7 +380,7 @@ test.describe("bilingual accessible names", () => {
     await expect(insights).toHaveAttribute("aria-label", "Analyses météo et carte");
     expect(await footerNavs()).toEqual(["Produit", "À propos", "Ressources"]);
     await expect(app.locator('[data-i18n="footerData"]')).toHaveText(
-      "Données : Open-Meteo · OpenStreetMap",
+      "Données : Open-Meteo · OpenStreetMap · MapTiler",
     );
 
     await setLang(app, "en");
@@ -388,7 +388,7 @@ test.describe("bilingual accessible names", () => {
     await expect(insights).toHaveAttribute("aria-label", "Insights and map");
     expect(await footerNavs()).toEqual(["Product", "About", "Resources"]);
     await expect(app.locator('[data-i18n="footerData"]')).toHaveText(
-      "Data: Open-Meteo · OpenStreetMap",
+      "Data: Open-Meteo · OpenStreetMap · MapTiler",
     );
   });
 
@@ -1210,7 +1210,7 @@ test.describe("about page", () => {
   }) => {
     await goToAbout(app);
     const rows = app.locator(".src-row");
-    await expect(rows).toHaveCount(5);
+    await expect(rows).toHaveCount(11);
     const bdc = rows.filter({ hasText: "BigDataCloud" });
     await expect(bdc).toHaveCount(1);
     await expect(bdc).toContainText("Géocodage inverse de secours");
@@ -1227,7 +1227,7 @@ test.describe("about page", () => {
   }) => {
     await goToAbout(app);
     const links = app.locator(".src-list .link-chip");
-    await expect(links).toHaveCount(5);
+    await expect(links).toHaveCount(11);
     const info = await links.evaluateAll((els) =>
       els.map((el) => ({
         href: el.getAttribute("href"),
@@ -1244,7 +1244,7 @@ test.describe("about page", () => {
     }
     /* the decorative "external link" arrow never speaks for itself */
     const arrowCount = await app.locator(".src-list .link-chip svg[aria-hidden='true']").count();
-    expect(arrowCount).toBe(5);
+    expect(arrowCount).toBe(11);
   });
 
   test("57. the heading hierarchy and provider/technology cards survive the changes", async ({
@@ -1311,11 +1311,24 @@ test.describe("about page", () => {
     expect(techNames.some((n) => n.includes("MapTiler SDK"))).toBe(true);
     expect(techNames.some((n) => n.includes("MapTiler Weather"))).toBe(true);
 
-    /* the data-source card still lists all five real providers */
+    /* the data-source card lists every provider the app really uses
+       (data/attributions.js) */
     const srcNames = await app
       .locator(".src-row b")
       .evaluateAll((els) => els.map((el) => el.textContent.trim()));
-    expect(srcNames).toEqual(["Open-Meteo", "OpenStreetMap", "MapTiler", "Pexels", "BigDataCloud"]);
+    expect(srcNames).toEqual([
+      "Open-Meteo",
+      "OpenStreetMap",
+      "MapTiler",
+      "Pexels",
+      "BigDataCloud",
+      "Wikimedia Commons",
+      "OpenWeatherMap",
+      "Xweather",
+      "National Weather Service",
+      "Google Places",
+      "Mapillary",
+    ]);
   });
 
   test("61. every technology badge is the same size and hidden from assistive tech", async ({

@@ -1,4 +1,5 @@
 /* i18n dictionary — English / Français. */
+import { footerProviderNames } from "./attributions.js";
 
 export const I18N = {
   en: {
@@ -432,6 +433,11 @@ export const I18N = {
     compareRemove: "Remove {name} from the comparison",
     compareFull: "You can compare up to five places at a time.",
     compareClear: "Clear comparison",
+    compareLoading: "Loading the weather for the selected places…",
+    compareUnavailable: "The weather for these places could not be loaded.",
+    comparePlaceUnavailable: "No weather is available for {names}.",
+    compareAqiUnavailable: "Air quality could not be loaded.",
+    compareRetry: "Try again",
     localTime: "Local time",
     colPlace: "Place",
     colConditions: "Conditions",
@@ -440,6 +446,13 @@ export const I18N = {
     viewGrid: "Grid view",
     viewList: "List view",
     agoMin: "{m} min ago",
+    agoHour: "{h} h ago",
+    agoDay: "{d} d ago",
+    notUpdated: "Not updated",
+    favLoading: "Loading weather…",
+    favUnavailable: "Weather unavailable",
+    favRetry: "Try again",
+    favRetryFor: "Try loading the weather again",
 
     aboutText1:
       "WeatherSphere is a premium weather experience — live conditions, rich forecasts and beautiful charts for any place on Earth.",
@@ -490,6 +503,13 @@ export const I18N = {
     srcMaptiler: "Vector map tiles & geocoding (satellite hybrid style).",
     srcPexels: "Free location & landmark photography.",
     srcBigdatacloud: "Fallback reverse geocoding used to identify a location.",
+    srcWikimedia: "Freely licensed place photos, credited on each image.",
+    srcOpenWeather: "Cloud cover for the map's Clouds layer.",
+    srcXweather: "Recent lightning observations for the Lightning layer.",
+    srcNws: "Official U.S. weather alerts for the Alerts layer.",
+    srcGoogle: "Place photos, with the contributor credited on each image.",
+    srcMapillary: "Street-level photos of small places (CC BY-SA), credited on each image.",
+    compareSource: "Weather and air quality: {provider}.",
     srcNote: "Data may be subject to slight variations.",
     contactNote: "WeatherSphere is a student project built for school. It has no support address.",
     helpTitle: "Help centre",
@@ -588,7 +608,7 @@ export const I18N = {
     dataExported: "Your data has been downloaded.",
 
     footerTag: "Real-time weather, everywhere in the world.",
-    footerData: "Data: Open-Meteo · OpenStreetMap",
+    footerData: `Data: ${footerProviderNames()}`,
     myPosition: "My location",
     geoUse: "Use my current location",
     geoLocating: "Locating…",
@@ -1051,6 +1071,11 @@ export const I18N = {
     compareRemove: "Retirer {name} de la comparaison",
     compareFull: "Vous pouvez comparer jusqu’à cinq lieux à la fois.",
     compareClear: "Effacer la comparaison",
+    compareLoading: "Chargement de la météo des lieux sélectionnés…",
+    compareUnavailable: "La météo de ces lieux n’a pas pu être chargée.",
+    comparePlaceUnavailable: "Aucune météo n’est disponible pour {names}.",
+    compareAqiUnavailable: "La qualité de l’air n’a pas pu être chargée.",
+    compareRetry: "Réessayer",
     localTime: "Heure locale",
     colPlace: "Lieu",
     colConditions: "Conditions",
@@ -1059,6 +1084,13 @@ export const I18N = {
     viewGrid: "Vue grille",
     viewList: "Vue liste",
     agoMin: "il y a {m} min",
+    agoHour: "il y a {h} h",
+    agoDay: "il y a {d} j",
+    notUpdated: "Données non actualisées",
+    favLoading: "Chargement de la météo…",
+    favUnavailable: "Météo indisponible",
+    favRetry: "Réessayer",
+    favRetryFor: "Réessayer de charger la météo",
 
     aboutText1:
       "WeatherSphere est une expérience météo haut de gamme — conditions en direct, prévisions riches et graphiques élégants pour n'importe quel endroit sur Terre.",
@@ -1112,6 +1144,14 @@ export const I18N = {
     srcMaptiler: "Tuiles vectorielles et géocodage (style satellite hybride).",
     srcPexels: "Photos gratuites de lieux et monuments.",
     srcBigdatacloud: "Géocodage inverse de secours pour identifier une position.",
+    srcWikimedia: "Photos de lieux sous licence libre, créditées sur chaque image.",
+    srcOpenWeather: "Couverture nuageuse de la couche Nuages de la carte.",
+    srcXweather: "Observations récentes de foudre pour la couche Foudre.",
+    srcNws: "Alertes météo officielles des États-Unis pour la couche Alertes.",
+    srcGoogle: "Photos de lieux, avec le contributeur crédité sur chaque image.",
+    srcMapillary:
+      "Photos au niveau de la rue pour les petits lieux (CC BY-SA), créditées sur chaque image.",
+    compareSource: "Météo et qualité de l’air : {provider}.",
     srcNote: "Les données peuvent être sujettes à de légers écarts.",
     contactNote:
       "WeatherSphere est un projet scolaire réalisé par un élève. Il n'a pas d'adresse de contact.",
@@ -1216,7 +1256,7 @@ export const I18N = {
 
     footerTag: "La météo en temps réel, partout dans le monde.",
     /* French typography puts a space before a colon */
-    footerData: "Données : Open-Meteo · OpenStreetMap",
+    footerData: `Données : ${footerProviderNames()}`,
     myPosition: "Ma position",
     geoUse: "Utiliser ma position actuelle",
     geoLocating: "Localisation…",

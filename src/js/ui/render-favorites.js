@@ -9,7 +9,8 @@ import { fmtTemp, tempUnit, fmtWind, windUnit } from "../core/units.js";
 import { locName, locCountry, kindLabel, flagsHtml } from "../core/location.js";
 import { flagHtml } from "../data/flags.js";
 import { gradBg, locVisual, hydrateLocPhoto } from "../services/photo-api.js";
-import { favWx, favWxAt, persistFavs } from "../features/favorites.js";
+import { favWx, favWxAt, favStatus, loadFavWeather, persistFavs } from "../features/favorites.js";
+import { agoOrNotUpdated, updatedPhrase } from "../core/time-ago.js";
 import { showToast } from "./notifications.js";
 import { confirmAction } from "./confirm-dialog.js";
 import { selectLocation } from "../features/location.js";
@@ -23,9 +24,32 @@ function favSubtitle(loc) {
   return loc.kind === "country" ? kindLabel(loc.kind) : esc(locCountry(loc));
 }
 
-function favAgoText() {
-  const mins = Math.max(0, Math.round((Date.now() - favWxAt) / 60000));
-  return mins < 1 ? t("justNow") : t("agoMin").replace("{m}", mins);
+/* What a favorite without weather is doing: still on its way, or not coming.
+   (A favorite WITH weather shows it, however the last refresh went.) */
+function missingWeatherState() {
+  return favStatus === "ready" || favStatus === "error" ? "unavailable" : "loading";
+}
+
+function retryButton(className) {
+  return `<button type="button" class="${className}" data-fav-retry aria-label="${esc(t("favRetryFor"))}">${esc(t("favRetry"))}</button>`;
+}
+
+/* The temperature slot of a card that has no weather. The ellipsis / dash is
+   decoration; the line under it says which of the two it is. */
+function cardMissingHtml() {
+  if (missingWeatherState() === "loading") {
+    return `<span class="favx-temp" aria-hidden="true">…</span>
+          <span class="favx-desc">${esc(t("favLoading"))}</span>`;
+  }
+  return `<span class="favx-temp" aria-hidden="true">—</span>
+          <span class="favx-desc">${esc(t("favUnavailable"))}</span>
+          ${retryButton("favx-retry")}`;
+}
+
+/* Timestamp text in a card's footer: only ever for weather that exists. */
+function cardFootText(hasWeather) {
+  if (hasWeather) return updatedPhrase(favWxAt);
+  return missingWeatherState() === "unavailable" ? t("notUpdated") : "";
 }
 
 let favPhotoObserver;
@@ -77,7 +101,7 @@ function favCardHtml(loc, i) {
      previous role="button" wrapper nested the remove control inside another
      control, which is invalid and made the card unusable with a screen reader. */
   return `
-    <article class="favx-card" data-fav-id="${esc(loc.id)}" style="animation-delay:${i * 60}ms">
+    <article class="favx-card" data-fav-id="${esc(loc.id)}" style="animation-delay:${i * 60}ms"${w ? "" : ' aria-busy="' + (missingWeatherState() === "loading") + '"'}>
       <span class="favx-bg loc-photo loading" style="${gradBg(loc)}" aria-hidden="true">
         <span class="loc-photo-fallback favx-emoji">${locVisual(loc)}</span>
       </span>
@@ -98,15 +122,26 @@ function favCardHtml(loc, i) {
             <span>↑ ${fmtTemp(w.hi)}°</span><span>↓ ${fmtTemp(w.lo)}°</span>
             <span>💧 ${Math.round(w.humidity)}%</span><span>🍃 ${fmtWind(w.wind)} ${windUnit()}</span>
           </span>`
-            : `<span class="favx-temp">…</span>`
+            : cardMissingHtml()
         }
       </span>
       <span class="favx-foot">
         <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-        ${t("updated")} ${favAgoText()}
+        ${esc(cardFootText(Boolean(w)))}
       </span>
       <button class="favx-open" data-loc="${esc(loc.id)}" aria-label="${openLabel}"></button>
     </article>`;
+}
+
+/* The condition cell of a row that has no weather; its other cells stay "—". */
+function rowMissingHtml() {
+  if (missingWeatherState() === "loading") return esc(t("favLoading"));
+  return `${esc(t("favUnavailable"))} ${retryButton("compare-clear ft-retry")}`;
+}
+
+function rowAgoText(hasWeather) {
+  if (hasWeather) return agoOrNotUpdated(favWxAt);
+  return missingWeatherState() === "unavailable" ? t("notUpdated") : "—";
 }
 
 function favRowHtml(loc) {
@@ -121,12 +156,12 @@ function favRowHtml(loc) {
           <span class="ft-names">${flagHtml(loc.cc, "", state.lang)} <b>${esc(locName(loc))}</b><span>${favSubtitle(loc)}</span></span>
         </button>
       </td>
-      <td><span class="ft-cond">${w ? `<span class="ft-wicon">${weatherIcon(wmo(w.code).icon, w.isDay)}</span> ${wxDesc(w.code, state.lang)}` : "…"}</span></td>
+      <td><span class="ft-cond">${w ? `<span class="ft-wicon">${weatherIcon(wmo(w.code).icon, w.isDay)}</span> ${wxDesc(w.code, state.lang)}` : rowMissingHtml()}</span></td>
       <td><b>${w ? fmtTemp(w.temp) + tempUnit() : "—"}</b></td>
       <td>${w ? `<span class="ft-hi">${fmtTemp(w.hi)}°</span> / <span class="ft-lo">${fmtTemp(w.lo)}°</span>` : "—"}</td>
       <td>💧 ${w ? Math.round(w.humidity) + "%" : "—"}</td>
       <td>🍃 ${w ? fmtWind(w.wind) + " " + windUnit() : "—"}</td>
-      <td class="ft-ago">${favAgoText()}</td>
+      <td class="ft-ago">${esc(rowAgoText(Boolean(w)))}</td>
       <td>
         <button class="fav-remove-s" data-remove="${esc(loc.id)}" aria-label="${t("removeFavorite")}">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
@@ -139,6 +174,12 @@ async function favClickHandler(e) {
   /* Attribution links are independent controls; following one must not also
      select the table row's location. */
   if (e.target.closest(".loc-credit")) return;
+  /* Trying again is its own control: it must not also open the place */
+  if (e.target.closest("[data-fav-retry]")) {
+    e.stopPropagation();
+    loadFavWeather(true);
+    return;
+  }
   const rm = e.target.closest("[data-remove]");
   if (rm) {
     e.stopPropagation();

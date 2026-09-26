@@ -1,5 +1,6 @@
-/* Favorites' batched weather: live values, demo fallback on any failure, and
- * the freshness rule that avoids refetching the same list. */
+/* Favorites' batched weather: live values, an honest failure state (never
+ * invented numbers), and the freshness rule that avoids refetching the same
+ * list. */
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from "vitest";
 
 vi.mock("../ui/notifications.js", () => ({ showToast: vi.fn() }));
@@ -9,7 +10,6 @@ vi.mock("../ui/render-comparison.js", () => ({ refreshComparison: vi.fn() }));
 
 import { state } from "../core/state.js";
 import { FAVORITES_WEATHER_TTL_MS } from "../core/config.js";
-import { demoWeather } from "../weather/weather-demo.js";
 import { batchEntry } from "../weather/open-meteo.fixtures.js";
 import { renderFavorites } from "../ui/render-favorites.js";
 import * as favorites from "./favorites.js";
@@ -37,17 +37,15 @@ afterEach(() => {
   globalThis.fetch = originalFetch;
 });
 
-function expectedDemo(loc) {
-  const w = demoWeather(loc);
-  return {
-    temp: w.current.temp,
-    code: w.current.code,
-    isDay: w.current.isDay,
-    humidity: w.current.humidity,
-    wind: w.current.windSpeed,
-    hi: w.daily[0].hi,
-    lo: w.daily[0].lo,
-  };
+/* The module keeps its last weather between calls, so the tests about a
+   first load or a failure need a module of their own. */
+async function fresh() {
+  vi.resetModules();
+  const { state: freshState } = await import("../core/state.js");
+  freshState.favorites = [PARIS, TOKYO];
+  const fav = await import("./favorites.js");
+  const { renderFavorites: render } = await import("../ui/render-favorites.js");
+  return { fav, render, state: freshState };
 }
 
 describe("loadFavWeather", () => {
@@ -65,25 +63,101 @@ describe("loadFavWeather", () => {
     expect(renderFavorites).toHaveBeenCalledTimes(1);
   });
 
-  it("falls back to demo data for every favorite when the request throws", async () => {
+  it("reports a failure — no numbers — when the request throws", async () => {
+    const { fav, render } = await fresh();
     globalThis.fetch = vi.fn(async () => {
       throw new TypeError("Failed to fetch");
     });
-    await favorites.loadFavWeather(true);
-    expect(favorites.favWx).toEqual({ paris: expectedDemo(PARIS), tokyo: expectedDemo(TOKYO) });
-    expect(renderFavorites).toHaveBeenCalledTimes(1);
+    await fav.loadFavWeather(true);
+    expect(fav.favStatus).toBe("error");
+    expect(fav.favWx).toEqual({});
+    expect(render).toHaveBeenCalledTimes(1);
   });
 
-  it("falls back on an HTTP error", async () => {
+  it("reports a failure on an HTTP error", async () => {
+    const { fav } = await fresh();
     globalThis.fetch = vi.fn(async () => ({ ok: false, status: 500, json: async () => ({}) }));
-    await favorites.loadFavWeather(true);
-    expect(favorites.favWx).toEqual({ paris: expectedDemo(PARIS), tokyo: expectedDemo(TOKYO) });
+    await fav.loadFavWeather(true);
+    expect(fav.favStatus).toBe("error");
+    expect(fav.favWx).toEqual({});
   });
 
-  it("falls back for the whole list when a favorite has no entry in the response", async () => {
+  it("keeps the favorites that have weather when one has none — no fake values for it", async () => {
+    const { fav } = await fresh();
     globalThis.fetch = vi.fn(async () => ok([batchEntry(20)]));
-    await favorites.loadFavWeather(true);
-    expect(favorites.favWx).toEqual({ paris: expectedDemo(PARIS), tokyo: expectedDemo(TOKYO) });
+    await fav.loadFavWeather(true);
+    expect(fav.favStatus).toBe("ready");
+    expect(fav.favWx.paris.temp).toBe(20);
+    expect(fav.favWx.tokyo).toBeUndefined();
+  });
+
+  it("reports a failure when none of the favorites has weather", async () => {
+    const { fav } = await fresh();
+    globalThis.fetch = vi.fn(async () => ok([null, null]));
+    await fav.loadFavWeather(true);
+    expect(fav.favStatus).toBe("error");
+  });
+
+  it("marks the state loading while a request is in flight, ready once it lands", async () => {
+    const { fav } = await fresh();
+    let answer;
+    globalThis.fetch = vi.fn(() => new Promise((resolve) => (answer = resolve)));
+    const pending = fav.loadFavWeather(true);
+    expect(fav.favStatus).toBe("loading");
+    answer(ok([batchEntry(20), batchEntry(30)]));
+    await pending;
+    expect(fav.favStatus).toBe("ready");
+  });
+
+  it("stamps the weather with the time it arrived", async () => {
+    const { fav } = await fresh();
+    globalThis.fetch = vi.fn(async () => ok([batchEntry(20), batchEntry(30)]));
+    await fav.loadFavWeather(true);
+    expect(fav.favWxAt).toBe(Date.now());
+  });
+
+  it("a failure is not cached as fresh: the next visit tries again", async () => {
+    const { fav } = await fresh();
+    globalThis.fetch = vi.fn(async () => {
+      throw new TypeError("offline");
+    });
+    await fav.loadFavWeather(true);
+    globalThis.fetch = vi.fn(async () => ok([batchEntry(20), batchEntry(30)]));
+    await fav.loadFavWeather(); /* not forced */
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    expect(fav.favStatus).toBe("ready");
+  });
+
+  it("a retry after a failure shows the loading state again at once", async () => {
+    const { fav, render } = await fresh();
+    globalThis.fetch = vi.fn(async () => {
+      throw new TypeError("offline");
+    });
+    await fav.loadFavWeather(true);
+    render.mockClear();
+    let answer;
+    globalThis.fetch = vi.fn(() => new Promise((resolve) => (answer = resolve)));
+    const retry = fav.loadFavWeather(true);
+    expect(fav.favStatus).toBe("loading");
+    expect(render).toHaveBeenCalledTimes(1);
+    answer(ok([batchEntry(20), batchEntry(30)]));
+    await retry;
+    expect(fav.favStatus).toBe("ready");
+  });
+
+  it("a failed refresh keeps the last real weather, and its real (old) timestamp", async () => {
+    const { fav } = await fresh();
+    globalThis.fetch = vi.fn(async () => ok([batchEntry(20), batchEntry(30)]));
+    await fav.loadFavWeather(true);
+    const at = fav.favWxAt;
+    vi.setSystemTime(Date.now() + 10 * 60000);
+    globalThis.fetch = vi.fn(async () => {
+      throw new TypeError("offline");
+    });
+    await fav.loadFavWeather(true);
+    expect(fav.favStatus).toBe("error");
+    expect(fav.favWx.paris.temp).toBe(20);
+    expect(fav.favWxAt).toBe(at);
   });
 
   it("accepts the single-object response used for one favorite", async () => {
@@ -163,7 +237,7 @@ describe("loadFavWeather — overlapping loads", () => {
       paris: { temp: 21, code: 61, isDay: 1, humidity: 55, wind: 12, hi: 25, lo: 15 },
       tokyo: { temp: 31, code: 61, isDay: 1, humidity: 55, wind: 12, hi: 35, lo: 25 },
     });
-    /* the cancelled load neither rendered nor fell back to demo data */
+    /* the cancelled load neither rendered nor reported a failure */
     expect(renderFavorites).toHaveBeenCalledTimes(1);
   });
 

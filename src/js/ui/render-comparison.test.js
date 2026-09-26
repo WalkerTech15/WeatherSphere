@@ -3,7 +3,7 @@
  * covered by e2e/comparison.spec.js. */
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { state } from "../core/state.js";
-import { formatComparisonCell, buildComparisonRows } from "./render-comparison.js";
+import { formatComparisonCell, buildComparisonRows, comparisonView } from "./render-comparison.js";
 import { COMPARISON_METRICS } from "../features/comparison.js";
 
 const DASH = "—";
@@ -150,5 +150,112 @@ describe("buildComparisonRows", () => {
     const rows = buildComparisonRows([], {});
     expect(rows).toHaveLength(COMPARISON_METRICS.length);
     for (const row of rows) expect(row.cells).toEqual([]);
+  });
+});
+
+describe("comparisonView — what a dash may mean", () => {
+  const paris = { id: "paris", name: { en: "Paris", fr: "Paris" } };
+  const tokyo = { id: "tokyo", name: { en: "Tokyo", fr: "Tokyo" } };
+  const locs = [paris, tokyo];
+
+  it("is ready when every place has values", () => {
+    const view = comparisonView(locs, { paris: FULL, tokyo: FULL }, { status: "ready" });
+    expect(view.state).toBe("ready");
+    expect(view.columns).toEqual({ paris: "ready", tokyo: "ready" });
+    expect(view.unavailable).toEqual([]);
+  });
+
+  it("is loading while the request is in flight, for every place without an entry", () => {
+    const view = comparisonView(locs, {}, { status: "loading" });
+    expect(view.state).toBe("loading");
+    expect(view.columns).toEqual({ paris: "loading", tokyo: "loading" });
+  });
+
+  it("is loading before the first request has even started (idle)", () => {
+    expect(comparisonView(locs, {}, { status: "idle" }).state).toBe("loading");
+  });
+
+  it("marks only the new column as loading when a place is added to weather already held", () => {
+    const view = comparisonView(locs, { paris: FULL }, { status: "loading" });
+    expect(view.columns).toEqual({ paris: "ready", tokyo: "loading" });
+    expect(view.state).toBe("loading");
+  });
+
+  it("treats weather held for a different selection as still to come", () => {
+    const view = comparisonView(locs, { paris: FULL }, { status: "ready", current: false });
+    expect(view.columns.tokyo).toBe("loading");
+  });
+
+  it("is an error, with every column unavailable, when the request failed", () => {
+    const view = comparisonView(locs, {}, { status: "error" });
+    expect(view.state).toBe("error");
+    expect(view.columns).toEqual({ paris: "unavailable", tokyo: "unavailable" });
+    expect(view.unavailable).toEqual(locs);
+  });
+
+  it("does not show old numbers as if they were current after a failure", () => {
+    const view = comparisonView(locs, { paris: FULL, tokyo: FULL }, { status: "error" });
+    expect(view.state).toBe("error");
+  });
+
+  it("is partial when the provider had values for one place and nothing for another", () => {
+    const view = comparisonView(locs, { paris: FULL, tokyo: EMPTY }, { status: "ready" });
+    expect(view.state).toBe("partial");
+    expect(view.columns).toEqual({ paris: "ready", tokyo: "unavailable" });
+    expect(view.unavailable).toEqual([tokyo]);
+  });
+
+  it("is an error when the provider had nothing for any place", () => {
+    const view = comparisonView(locs, { paris: EMPTY, tokyo: EMPTY }, { status: "ready" });
+    expect(view.state).toBe("error");
+  });
+
+  it("does not count a time zone alone as weather", () => {
+    const zoneOnly = { ...EMPTY, timezone: "Europe/Paris" };
+    expect(comparisonView([paris], { paris: zoneOnly }, { status: "ready" }).state).toBe("error");
+  });
+
+  it("does not invent a value: a place ready on one metric only is still ready", () => {
+    const onlyTemp = { ...EMPTY, temp: 12 };
+    expect(comparisonView([paris], { paris: onlyTemp }, { status: "ready" }).state).toBe("ready");
+  });
+
+  it("flags a failed air-quality service only when the weather itself is fine", () => {
+    const wx = { paris: FULL, tokyo: FULL };
+    expect(comparisonView(locs, wx, { status: "ready", aqiFailed: true }).aqiFailed).toBe(true);
+    expect(comparisonView(locs, wx, { status: "ready", aqiFailed: false }).aqiFailed).toBe(false);
+    expect(comparisonView(locs, {}, { status: "error", aqiFailed: true }).aqiFailed).toBe(false);
+  });
+
+  it("ignores NaN and non-numbers as values", () => {
+    const junk = { ...EMPTY, temp: NaN, humidity: "55", wind: undefined };
+    expect(comparisonView([paris], { paris: junk }, { status: "ready" }).state).toBe("error");
+  });
+});
+
+describe("buildComparisonRows — loading cells", () => {
+  const paris = { id: "paris", name: { en: "Paris", fr: "Paris" } };
+  const tokyo = { id: "tokyo", name: { en: "Tokyo", fr: "Tokyo" } };
+
+  it("prints an ellipsis, not a dash, for a column still loading", () => {
+    const rows = buildComparisonRows(
+      [paris, tokyo],
+      { paris: FULL },
+      { paris: "ready", tokyo: "loading" },
+    );
+    for (const row of rows) {
+      expect(row.cells[1]).toBe("…");
+      expect(row.cells[0]).not.toBe("…");
+    }
+  });
+
+  it("still prints a dash for a value a place genuinely lacks", () => {
+    const rows = buildComparisonRows([paris], { paris: { ...FULL, uv: null } }, { paris: "ready" });
+    expect(rows.find((row) => row.metric === "uv").cells[0]).toBe(DASH);
+  });
+
+  it("behaves exactly as before when no columns are given", () => {
+    const rows = buildComparisonRows([paris], { paris: FULL });
+    expect(rows.find((row) => row.metric === "temperature").cells[0]).toBe("21°C");
   });
 });
