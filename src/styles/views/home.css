@@ -1054,6 +1054,13 @@ body[data-mode="simple"] .home-duo {
   max-width: calc(100% - 10px);
   border-radius: 0 var(--r-md) 0 8px;
 }
+
+/* Explore cards stay visually clean. Pexels does not require an on-image
+   credit badge; required Wikimedia, Google, and Mapillary attribution remains
+   visible because those providers require contributor/source credit. */
+.explore-credit[data-provider="pexels"] {
+  display: none;
+}
 .explore-txt {
   position: absolute;
   left: 18px;
