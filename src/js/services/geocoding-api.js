@@ -18,27 +18,41 @@ import {
 } from "../core/config.js";
 import { createBoundedCache, createAsyncCache } from "./cache.js";
 
+/* GeoNames codes for a country or territory (Open-Meteo's `feature_code`):
+   PCLI independent state, PCLD dependent, PCLF freely associated, PCLS semi-
+   independent, PCLIX section of an independent state, PCL other. Without this
+   every fallback result was a "city", so Japan the country could not be told
+   from Japan, Missouri. */
+const COUNTRY_FEATURE_CODE = /^PCL/;
+
 /* Geocoding fallback for places outside the curated set */
 export async function geocode(query) {
   const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=${state.lang}&format=json`;
   const res = await fetch(url, { signal: AbortSignal.timeout(GEOCODE_FALLBACK_TIMEOUT_MS) });
   if (!res.ok) return [];
   const d = await res.json();
-  return (d.results || []).map((r) => ({
-    id: "geo-" + r.id,
-    kind: "city",
-    flag: "📍",
-    cc: (r.country_code || "").toUpperCase(),
-    lat: r.latitude,
-    lon: r.longitude,
-    name: { en: r.name, fr: r.name },
-    region: { en: r.admin1 || "", fr: r.admin1 || "" },
-    country: { en: r.country || "", fr: r.country || "" },
-    landmark: null,
-    aliases: [],
-    grad: ["#3B82F6", "#1E40AF"],
-    dynamic: true,
-  }));
+  return (d.results || []).map((r) => {
+    const isCountry = COUNTRY_FEATURE_CODE.test(r.feature_code || "");
+    return {
+      id: "geo-" + r.id,
+      kind: isCountry ? "country" : "city",
+      flag: "📍",
+      cc: (r.country_code || "").toUpperCase(),
+      lat: r.latitude,
+      lon: r.longitude,
+      name: { en: r.name, fr: r.name },
+      /* a country has no region above it, exactly as the curated ones */
+      region: isCountry ? { en: "", fr: "" } : { en: r.admin1 || "", fr: r.admin1 || "" },
+      country: {
+        en: r.country || (isCountry ? r.name : ""),
+        fr: r.country || (isCountry ? r.name : ""),
+      },
+      landmark: null,
+      aliases: [],
+      grad: ["#3B82F6", "#1E40AF"],
+      dynamic: true,
+    };
+  });
 }
 
 /* MapTiler place_type → our kind + fallback zoom (used only when no bbox). */
@@ -258,14 +272,20 @@ function tokenMatches(queryToken, candidateToken) {
   return editDistance(queryToken, candidateToken) <= tolerance;
 }
 
+/* A place's name in BOTH interface languages: "Mexique" must find Mexico
+   whichever language the visitor is reading, exactly as "Mexico" does. */
+function bothLanguages(field) {
+  return field ? [field.en, field.fr] : [];
+}
+
 export function isRelevantGeocodeResult(query, loc) {
   const queryTokens = searchTokens(query).filter((token) => !GENERIC_SEARCH_WORDS.has(token));
   if (!queryTokens.length || !loc) return false;
   const candidateTokens = searchTokens(
     [
-      loc.name && (loc.name.en || loc.name.fr),
-      loc.region && (loc.region.en || loc.region.fr),
-      loc.country && (loc.country.en || loc.country.fr),
+      ...bothLanguages(loc.name),
+      ...bothLanguages(loc.region),
+      ...bothLanguages(loc.country),
       loc.fullName,
       loc.cc,
       loc.regionCode,

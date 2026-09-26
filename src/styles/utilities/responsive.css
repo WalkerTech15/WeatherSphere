@@ -119,6 +119,15 @@
   }
 }
 
+/* The keyboard hint has no room between the search field and the display
+   toggle on compact desktop/tablet widths. Keep the search field intact and
+   hide only the decorative hint before it collides visually with the toggle. */
+@media (min-width: 901px) and (max-width: 1200px) {
+  .search-kbd {
+    display: none;
+  }
+}
+
 @media (max-width: 640px) {
   .logo-text {
     display: none;

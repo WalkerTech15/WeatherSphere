@@ -6,12 +6,19 @@
  * when something in the ranking actually separates it from the runner-up.
  *
  * Priority, strongest first:
+ *   0. a country whose own name was typed exactly, in either language —
+ *      "Japan" is Japan, never Japan, Missouri
  *   1. an exact city-name match with a known country
  *   2. a capital or major city (data/major-cities.js)
  *   3. an exact match near the visitor's current location
  *   4. a popular or recently selected place (curated, favourite, recent)
  *   5. every other valid match — a municipality in its own right before a
  *      hamlet of the same name, then in the provider's own order
+ *
+ * The country rule outranks the rest because the name is the whole query: a
+ * visitor who types a country's name and nothing else means the country. The
+ * places that merely share the name (Cañada in Spain, Mexico in the
+ * Philippines) stay in the list, right below it.
  *
  * How closely the NAME matches the query outranks all of these: "Paris Texas"
  * (the name plus a region that is really there) beats a bare "Paris", which
@@ -27,6 +34,8 @@ import { distanceKm } from "../services/photo-relevance.js";
 export const MATCH = Object.freeze({ OTHER: 1, PREFIX: 2, EXACT: 3, QUALIFIED: 4 });
 
 const CITY_KINDS = new Set(["city", "town", "village"]);
+/* Where priority()'s tuple keeps "a capital or major city". */
+const MAJOR_CITY_RANK = 2;
 /* MapTiler's own word for "a municipality in its own right" — as against a
    `place`, which is also a hamlet or neighbourhood inside another
    municipality. Both arrive as kind "city", so this is what still tells the
@@ -91,6 +100,10 @@ export function isCityKind(loc) {
   return CITY_KINDS.has(loc?.kind);
 }
 
+export function isCountryKind(loc) {
+  return loc?.kind === "country";
+}
+
 /** A capital or major city — by name and country, so a namesake elsewhere does not count. */
 export function isMajorCity(loc) {
   if (!loc || !loc.cc || !isCityKind(loc)) return false;
@@ -114,6 +127,9 @@ function kindClass(loc) {
    provider has no region for at all. */
 export function isSamePlace(a, b) {
   if (a.cc !== b.cc || kindClass(a) !== kindClass(b)) return false;
+  /* A country is one place per ISO code, however far apart the two providers
+     put its point (Canada's capital and its centroid are ~1,900 km apart). */
+  if (isCountryKind(a) && isCountryKind(b) && a.cc) return true;
   const known = new Set(nameWords(a));
   if (!nameWords(b).some((name) => known.has(name))) return false;
   const km = distanceKm(a.lat, a.lon, b.lat, b.lon);
@@ -150,6 +166,7 @@ function priority(loc, strength, context) {
       ? distanceKm(loc.lat, loc.lon, context.userPoint.lat, context.userPoint.lon)
       : null;
   return [
+    exact && isCountryKind(loc) ? 1 : 0, //         0. the country itself, named exactly
     exact && isCityKind(loc) && loc.cc ? 1 : 0, // 1. exact city with a known country
     isMajorCity(loc) ? 1 : 0, //                   2. capital or major city
     near !== null && near <= NEAR_USER_KM ? 1 : 0, // 3. exact match near the visitor
@@ -211,6 +228,6 @@ export function rankSearchResults(query, results, context = rankingContext()) {
      which of several places somebody was still typing. */
   const separated = exact
     ? compareTuples(top.tuple, rivals[0].tuple) !== 0
-    : top.tuple[1] > rivals[0].tuple[1];
+    : top.tuple[MAJOR_CITY_RANK] > rivals[0].tuple[MAJOR_CITY_RANK];
   return { results: ordered, best: separated, ambiguous: !separated && exact };
 }

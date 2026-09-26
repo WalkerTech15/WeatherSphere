@@ -556,14 +556,326 @@ describe("a country, a state, a major city and the sea", () => {
     expect(r.best).toBe(true);
   });
 
-  it("a state shared with a country ('Georgia') is ambiguous: nothing separates them", () => {
+  it("a state shared with a country ('Georgia'): the country is the answer, the state stays listed", () => {
     const list = remote([
-      feature("Georgia", "country", [], [43.5, 42.0], "ge"),
       feature("Georgia", "region", ["country:United States"], [-83.5, 32.7], "us"),
+      feature("Georgia", "country", [], [43.5, 42.0], "ge"),
     ]);
     const r = rank("Georgia", [], list, ctx());
-    expect(r.best).toBe(false);
-    expect(r.ambiguous).toBe(true);
+    expect(r.results.map((l) => `${l.kind}:${l.cc}`)).toEqual(["country:GE", "region:US"]);
+    expect(r.best).toBe(true);
+    expect(r.ambiguous).toBe(false);
+  });
+});
+
+/* ── An exact country name is the country ─────────────────────────────────
+   Each pair is the country and a place elsewhere that shares its name (accents
+   aside), as MapTiler answers: the namesake is listed FIRST here on purpose,
+   which is the worst case for the ranking. */
+const COUNTRY_CASES = [
+  {
+    query: "Canada",
+    fr: "Canada",
+    country: () => feature("Canada", "country", [], [-98.3, 61.4], "ca"),
+    namesake: () =>
+      feature(
+        "Cañada",
+        "place",
+        ["county:Alicante", "region:Valencian Community", "country:Spain"],
+        [-0.72, 38.63],
+        "es",
+      ),
+    namesakeIn: "ES",
+  },
+  {
+    query: "Japan",
+    fr: "Japon",
+    country: () =>
+      feature("Japan", "country", [], [138.25, 36.2], "jp", { text_en: "Japan", text_fr: "Japon" }),
+    namesake: () =>
+      feature(
+        "Japan",
+        "place",
+        ["county:Wright", "region:Missouri|US-MO", "country:United States"],
+        [-92.5, 37.2],
+        "us",
+      ),
+    namesakeIn: "US",
+  },
+  {
+    query: "Brazil",
+    fr: "Brésil",
+    country: () =>
+      feature("Brazil", "country", [], [-53.1, -10.8], "br", {
+        text_en: "Brazil",
+        text_fr: "Brésil",
+      }),
+    namesake: () =>
+      feature(
+        "Brazil",
+        "municipality",
+        ["county:Clay", "region:Indiana|US-IN", "country:United States"],
+        [-87.12, 39.52],
+        "us",
+      ),
+    namesakeIn: "US",
+  },
+  {
+    query: "Germany",
+    fr: "Allemagne",
+    country: () =>
+      feature("Germany", "country", [], [10.4, 51.1], "de", {
+        text_en: "Germany",
+        text_fr: "Allemagne",
+      }),
+    namesake: () =>
+      feature(
+        "Germany",
+        "place",
+        ["county:Adams", "region:Pennsylvania|US-PA", "country:United States"],
+        [-77.05, 39.75],
+        "us",
+      ),
+    namesakeIn: "US",
+  },
+  {
+    query: "Mexico",
+    fr: "Mexique",
+    country: () =>
+      feature("Mexico", "country", [], [-102.5, 23.6], "mx", {
+        text_en: "Mexico",
+        text_fr: "Mexique",
+      }),
+    namesake: () =>
+      feature(
+        "Mexico",
+        "municipality",
+        ["county:Pampanga", "region:Central Luzon", "country:Philippines"],
+        [120.72, 15.07],
+        "ph",
+      ),
+    namesakeIn: "PH",
+  },
+  {
+    query: "Vietnam",
+    fr: "Viêt Nam",
+    country: () =>
+      feature("Vietnam", "country", [], [106.3, 16.6], "vn", {
+        text_en: "Vietnam",
+        text_fr: "Viêt Nam",
+      }),
+    namesake: () =>
+      feature(
+        "Vietnam",
+        "locality",
+        ["county:Wakiso", "region:Central Region", "country:Uganda"],
+        [32.55, 0.36],
+        "ug",
+      ),
+    namesakeIn: "UG",
+  },
+  {
+    query: "United Kingdom",
+    fr: "Royaume-Uni",
+    country: () =>
+      feature("United Kingdom", "country", [], [-2.2, 54.6], "gb", {
+        text_en: "United Kingdom",
+        text_fr: "Royaume-Uni",
+      }),
+    namesake: () =>
+      feature(
+        "United Kingdom",
+        "locality",
+        ["region:Dubai", "country:United Arab Emirates"],
+        [55.31, 25.07],
+        "ae",
+      ),
+    namesakeIn: "AE",
+  },
+  {
+    query: "South Africa",
+    fr: "Afrique du Sud",
+    country: () =>
+      feature("South Africa", "country", [], [25.1, -28.9], "za", {
+        text_en: "South Africa",
+        text_fr: "Afrique du Sud",
+      }),
+    namesake: () =>
+      feature(
+        "South Africa",
+        "place",
+        ["county:Hardin", "region:Kentucky|US-KY", "country:United States"],
+        [-86.0, 37.7],
+        "us",
+      ),
+    namesakeIn: "US",
+  },
+];
+
+describe("an exact country name is the country, never a namesake elsewhere", () => {
+  describe.each(COUNTRY_CASES)("$query", ({ query, fr, country, namesake, namesakeIn }) => {
+    /* provider order puts the namesake first — the worst case */
+    const list = () => remote([namesake(), country()]);
+
+    it("ranks the country first, and Enter may take it", () => {
+      const r = rank(query, [], list(), ctx());
+      expect(r.results[0].kind).toBe("country");
+      expect(r.results[0].name.en).toBe(query);
+      expect(r.best).toBe(true);
+      expect(r.ambiguous).toBe(false);
+    });
+
+    it("keeps the namesake visible, right below the country", () => {
+      const r = rank(query, [], list(), ctx());
+      expect(r.results).toHaveLength(2);
+      expect(r.results[1].cc).toBe(namesakeIn);
+      expect(r.results[1].kind).not.toBe("country");
+    });
+
+    it("ranks the same with the country listed first, and in any order", () => {
+      const a = rank(query, [], remote([country(), namesake()]), ctx());
+      const b = rank(query, [], remote([namesake(), country()]), ctx());
+      expect(a.results.map((l) => l.id)).toHaveLength(2);
+      expect(a.results[0].kind).toBe("country");
+      expect(b.results[0].kind).toBe("country");
+    });
+
+    it(`answers to its French name too (${fr})`, () => {
+      const r = rank(fr, [], list(), ctx());
+      expect(r.results[0].kind).toBe("country");
+      expect(r.best).toBe(true);
+    });
+
+    it("beats a same-named city even one the visitor has favourited or is standing in", () => {
+      const places = list();
+      const near = places.find((l) => l.kind !== "country");
+      const r = rank(
+        query,
+        [],
+        places,
+        ctx({
+          userPoint: { lat: near.lat, lon: near.lon },
+          favorites: [near],
+          recents: [near],
+        }),
+      );
+      expect(r.results[0].kind).toBe("country");
+      expect(r.best).toBe(true);
+    });
+
+    it("is unaffected by upper case, accents and stray punctuation in what was typed", () => {
+      const r = rank(`  ${query.toUpperCase()}, `, [], list(), ctx());
+      expect(r.results[0].kind).toBe("country");
+    });
+  });
+
+  it("Canada: Cañada, Spain matches the name once accents are ignored — and still loses", () => {
+    const [canada, canada2] = remote([
+      feature("Cañada", "place", ["region:Valencia", "country:Spain"], [-0.7, 38.6], "es"),
+      feature("Canada", "country", [], [-98.3, 61.4], "ca"),
+    ]);
+    expect(matchStrength("Canada", canada)).toBe(MATCH.EXACT);
+    expect(matchStrength("Canada", canada2)).toBe(MATCH.EXACT);
+    const r = rank("Canada", [], [canada, canada2], ctx());
+    expect(r.results.map((l) => l.cc)).toEqual(["CA", "ES"]);
+  });
+
+  it("a curated country and the provider's copy are one result, even when their points are far apart", () => {
+    const curated = findLocations("Canada", "en");
+    const provider = remote([feature("Canada", "country", [], [-98.3, 61.4], "ca")]);
+    /* Ottawa and Canada's centroid are ~1,900 km apart */
+    expect(isSamePlace(curated[0], provider[0])).toBe(true);
+    const r = rank("Canada", curated, provider, ctx());
+    expect(r.results.filter((l) => l.kind === "country")).toHaveLength(1);
+    expect(r.results[0].id).toBe("canada");
+  });
+
+  it("with a curated country, Japan comes first from the built-in list alone (before any lookup)", () => {
+    const r = rank("Japan", findLocations("Japan", "en"), [], ctx());
+    expect(r.results[0].id).toBe("japan");
+    expect(r.best).toBe(true);
+  });
+
+  it("does not merge two different countries, nor a country with a place of the same name", () => {
+    const [mexico, mexicoCity] = remote([
+      feature("Mexico", "country", [], [-102.5, 23.6], "mx"),
+      feature("Mexico", "municipality", ["country:Philippines"], [120.72, 15.07], "ph"),
+    ]);
+    expect(isSamePlace(mexico, mexicoCity)).toBe(false);
+  });
+
+  it("the country rule needs the WHOLE name: a prefix is not the country", () => {
+    const list = remote([
+      feature("Japan", "country", [], [138.25, 36.2], "jp"),
+      feature("Japan", "place", ["region:Missouri", "country:United States"], [-92.5, 37.2], "us"),
+      feature("Japanese Tea Garden", "poi", ["country:United States"], [-122.4, 37.8], "us"),
+    ]);
+    const exact = rank("Japan", [], list, ctx());
+    expect(exact.results[0].kind).toBe("country");
+    const partial = rank("Japa", [], list, ctx());
+    /* a partial name never decides for the visitor */
+    expect(partial.best).toBe(false);
+  });
+
+  it("a city that is also a country name stays a city when the country is not among the results", () => {
+    const [japanMissouri] = remote([
+      feature("Japan", "place", ["region:Missouri", "country:United States"], [-92.5, 37.2], "us"),
+    ]);
+    const r = rank("Japan", [], [japanMissouri], ctx());
+    expect(r.results[0].kind).toBe("city");
+  });
+});
+
+describe("ordinary city search is untouched by the country rule", () => {
+  it("Paris still lists Paris, France first, then Texas and Ontario", () => {
+    const r = rank("Paris", findLocations("Paris", "en"), PARIS(), ctx());
+    expect(r.results[0].cc).toBe("FR");
+    expect(r.best).toBe(true);
+    const countries = r.results.map((l) => `${l.region.en || l.country.en}`);
+    expect(countries.indexOf("Texas")).toBeLessThan(countries.indexOf("Ontario"));
+  });
+
+  it("Paris Texas puts Texas first", () => {
+    const r = rank("Paris Texas", [], PARIS(), ctx());
+    expect(r.results[0].region.en).toBe("Texas");
+    expect(r.best).toBe(true);
+  });
+
+  it("Dallas: the city stays the answer, with no country in the way", () => {
+    const list = remote([
+      feature(
+        "Dallas",
+        "municipality",
+        ["county:Dallas", "region:Texas|US-TX", "country:United States"],
+        [-96.8, 32.78],
+        "us",
+      ),
+      feature("Dallas", "place", ["region:Oregon", "country:United States"], [-123.3, 44.9], "us"),
+      feature("Dallas", "place", ["region:Georgia", "country:United States"], [-84.8, 33.9], "us"),
+    ]);
+    const r = rank("Dallas", [], list, ctx());
+    expect(r.results.every((l) => l.kind === "city")).toBe(true);
+    expect(r.results[0].region.en).toBe("Texas");
+  });
+
+  it("Tokyo: the curated city beats the prefecture, and Japan is not dragged in", () => {
+    const list = remote([
+      feature("Tokyo", "region", ["country:Japan"], [139.4, 35.6], "jp"),
+      feature("Japan", "country", [], [138.25, 36.2], "jp"),
+    ]);
+    const r = rank("Tokyo", findLocations("Tokyo", "en"), list, ctx());
+    expect(r.results[0].id).toBe("tokyo");
+  });
+
+  it("a query that is a city AND part of a country's name stays a city", () => {
+    const list = remote([
+      feature("Guinea", "country", [], [-10.9, 10.4], "gn"),
+      feature("Guinea-Bissau", "country", [], [-15.2, 12.0], "gw"),
+      feature("New Guinea", "place", ["region:Papua", "country:Indonesia"], [138, -4], "id"),
+    ]);
+    const r = rank("Guinea", [], list, ctx());
+    expect(r.results[0].name.en).toBe("Guinea");
+    expect(r.results[0].kind).toBe("country");
   });
 });
 
