@@ -8,6 +8,8 @@ import {
   parseLatLon,
   sameAppUrl,
   DEFAULT_URL_STATE,
+  URL_TIME_OFFSETS,
+  layerHasForecastTime,
 } from "./url-state.js";
 
 describe("parseLatLon", () => {
@@ -81,10 +83,20 @@ describe("parseAppUrl", () => {
     expect(parseAppUrl("#/map?layer=sunshine").layer).toBe("satellite");
   });
 
-  it("the point-reading layers have no forecast-time concept, so a t= under them is dropped", () => {
+  it("the layers with no forecast-time concept drop a t= under them", () => {
     expect(parseAppUrl("#/map?layer=airQuality&t=3").offset).toBe(0);
-    expect(parseAppUrl("#/map?layer=humidity&t=3").offset).toBe(0);
     expect(parseAppUrl("#/map?layer=alerts&t=3").offset).toBe(0);
+    expect(parseAppUrl("#/map?layer=lightning&t=3").offset).toBe(0);
+  });
+
+  it.each([3, 6, 12, 24])("keeps t=%i under a layer that has a forecast time", (hours) => {
+    expect(parseAppUrl(`#/map?layer=temperature&t=${hours}`).offset).toBe(hours);
+    expect(parseAppUrl(`#/map?layer=humidity&t=${hours}`).offset).toBe(hours);
+  });
+
+  it("offers the same hours as the timeline itself", async () => {
+    const { TIME_OFFSETS } = await import("../features/map-timeline.js");
+    expect(URL_TIME_OFFSETS).toEqual(TIME_OFFSETS);
   });
 
   it.each(["t=99", "t=-3", "t=1.5", "t=abc"])(
@@ -147,9 +159,15 @@ describe("buildAppUrl", () => {
     expect(parseAppUrl("#/map?layer=airQuality").layer).toBe("airQuality");
   });
 
-  it("round-trips the humidity layer, with no t= param (it has no forecast time)", () => {
-    expect(buildAppUrl({ view: "map", layer: "humidity", offset: 6 })).toBe("#/map?layer=humidity");
-    expect(parseAppUrl("#/map?layer=humidity").layer).toBe("humidity");
+  it("round-trips the humidity layer with its forecast hour", () => {
+    expect(buildAppUrl({ view: "map", layer: "humidity", offset: 0 })).toBe("#/map?layer=humidity");
+    expect(buildAppUrl({ view: "map", layer: "humidity", offset: 12 })).toBe(
+      "#/map?layer=humidity&t=12",
+    );
+    expect(parseAppUrl("#/map?layer=humidity&t=12")).toMatchObject({
+      layer: "humidity",
+      offset: 12,
+    });
   });
 
   it("round-trips the alerts layer, with no t= param (it has no forecast time)", () => {
@@ -169,4 +187,17 @@ describe("buildAppUrl", () => {
     expect(sameAppUrl({ view: "map", zoom: 9.5001 }, { view: "map", zoom: 9.5 })).toBe(true);
     expect(sameAppUrl({ view: "map" }, { view: "home" })).toBe(false);
   });
+});
+
+describe("layerHasForecastTime", () => {
+  it.each(["temperature", "rain", "wind", "pressure", "humidity"])("%s has an hour", (layer) => {
+    expect(layerHasForecastTime(layer)).toBe(true);
+  });
+
+  it.each(["satellite", "airQuality", "alerts", "lightning", "clouds", "sunshine", undefined])(
+    "%s has none",
+    (layer) => {
+      expect(layerHasForecastTime(layer)).toBe(false);
+    },
+  );
 });

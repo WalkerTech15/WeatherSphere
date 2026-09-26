@@ -2453,7 +2453,7 @@ test.describe("map layer switcher: Air Quality", () => {
     await expect(aqi.locator(".map-aqi-meta")).toContainText("Open-Meteo");
   });
 
-  test("never renders a colour-ramp legend or a forecast-time row — it isn't a map layer", async ({
+  test("never renders a colour-ramp legend — it isn't a ramp map layer — but does offer its forecast hours", async ({
     page,
   }) => {
     await openMap(page);
@@ -2607,7 +2607,9 @@ test.describe("map layer switcher: Humidity", () => {
     await humidityBtn(page).click();
     await expect(panel(page).locator(".map-humidity")).toBeVisible({ timeout: 20000 });
     await expect(panel(page).locator(".map-legend")).toHaveCount(0);
-    await expect(panel(page).locator(".map-time-row")).toHaveCount(0);
+    /* the reading is the place's own hourly forecast, so the hours are offered */
+    await expect(panel(page).locator(".map-time-row")).toHaveCount(1);
+    await expect(panel(page).locator(".map-time:not(.map-anim)")).toHaveCount(5);
   });
 
   test("a failed forecast shows an honest error state, never the fabricated demo number", async ({
@@ -2665,7 +2667,8 @@ test.describe("map layer switcher: Humidity", () => {
        itself is legitimately hidden now — toHaveText, unlike toBeVisible,
        does not require that, matching the Air Quality test above */
     await expect(panel(page).locator('[data-loading="1"]')).toHaveCount(1);
-    await expect(panel(page)).not.toContainText("12");
+    /* "12%": the old reading ("+12 h" in the timeline row is a different 12) */
+    await expect(panel(page)).not.toContainText("12%");
     await page.locator('.side-item[data-view="map"]').click();
     await expect(panel(page).locator(".map-aqi-value")).toContainText("92", { timeout: 20000 });
   });

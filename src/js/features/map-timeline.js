@@ -21,10 +21,18 @@
  * Pure logic with an injected `layer` and `now` — unit-testable against a
  * plain fake object. */
 
-/* The three offsets the UI always offers, in hours. */
-export const TIME_OFFSETS = [0, 3, 6];
+/* The offsets the UI always offers, in hours: now, +3 h, +6 h, +12 h, +24 h.
+   core/url-state.js keeps its own copy of this list (core must not import from
+   features); map-timeline.test.js fails if the two ever drift apart. */
+export const TIME_OFFSETS = [0, 3, 6, 12, 24];
 
 const HOUR_SECONDS = 3600;
+const HOUR_MS = HOUR_SECONDS * 1000;
+
+/* The one place an offset becomes a moment in time. */
+export function offsetTargetMs(offsetHours, nowMs = Date.now()) {
+  return nowMs + normalizeOffset(offsetHours) * HOUR_MS;
+}
 
 export function isSupportedOffset(hours) {
   return TIME_OFFSETS.includes(hours);
@@ -57,7 +65,7 @@ export function layerTimeRange(layer) {
  */
 export function applyLayerTime(layer, offsetHours, nowMs = Date.now()) {
   const offset = normalizeOffset(offsetHours);
-  const requestedMs = nowMs + offset * HOUR_SECONDS * 1000;
+  const requestedMs = offsetTargetMs(offset, nowMs);
   const range = layerTimeRange(layer);
   if (!range || typeof layer.setAnimationTime !== "function") {
     return { available: false, offset, timeMs: null, requestedMs, clamped: false };
@@ -80,7 +88,36 @@ export function availableOffsets(layer, nowMs = Date.now()) {
   const range = layerTimeRange(layer);
   if (!range) return [];
   return TIME_OFFSETS.filter((offset) => {
-    const target = nowMs + offset * HOUR_SECONDS * 1000;
+    const target = offsetTargetMs(offset, nowMs);
     return target >= range.startMs - 1000 && target <= range.endMs + 1000;
+  });
+}
+
+/* ── Layers read from the place's own hourly forecast ─────────────────────
+   Humidity has no map tiles: it is read from the normalized `wx.hourly` the
+   app already fetched (weather/providers/open-meteo.js), which starts at the
+   CURRENT hour and steps one hour at a time — so an offset of N hours is
+   simply entry N, with no second request and no interpolation. */
+
+/* The `wx.hourly` index for an offset, or null when the forecast does not
+   reach that far (a short or missing hourly array). */
+export function hourlyIndexForOffset(offsetHours, hourlyLength) {
+  const index = normalizeOffset(offsetHours);
+  return Number.isInteger(hourlyLength) && index < hourlyLength ? index : null;
+}
+
+/* The hourly entry for an offset, or null — never a neighbouring hour. */
+export function hourlyEntryAtOffset(hourly, offsetHours) {
+  if (!Array.isArray(hourly)) return null;
+  const index = hourlyIndexForOffset(offsetHours, hourly.length);
+  return index === null ? null : (hourly[index] ?? null);
+}
+
+/* Which offsets an hourly forecast can satisfy for one field (e.g.
+   "humidity"), so the buttons past its end are disabled, not faked. */
+export function availableHourlyOffsets(hourly, field) {
+  return TIME_OFFSETS.filter((offset) => {
+    const entry = hourlyEntryAtOffset(hourly, offset);
+    return Number.isFinite(entry?.[field]);
   });
 }

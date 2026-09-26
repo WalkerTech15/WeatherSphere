@@ -9,6 +9,10 @@ import {
   layerTimeRange,
   applyLayerTime,
   availableOffsets,
+  offsetTargetMs,
+  hourlyIndexForOffset,
+  hourlyEntryAtOffset,
+  availableHourlyOffsets,
 } from "./map-timeline.js";
 
 const HOUR = 3600 * 1000;
@@ -26,8 +30,17 @@ function fakeLayer({ startMs = NOW - 3 * HOUR, endMs = NOW + 9 * HOUR, frames = 
 }
 
 describe("offsets", () => {
-  it("offers exactly now, +3 h and +6 h", () => {
-    expect(TIME_OFFSETS).toEqual([0, 3, 6]);
+  it("offers exactly now, +3 h, +6 h, +12 h and +24 h", () => {
+    expect(TIME_OFFSETS).toEqual([0, 3, 6, 12, 24]);
+  });
+
+  it.each([12, 24])("accepts +%i h", (hours) => {
+    expect(isSupportedOffset(hours)).toBe(true);
+    expect(normalizeOffset(hours)).toBe(hours);
+  });
+
+  it.each([1, 9, 18, 48])("does not offer %i h", (hours) => {
+    expect(isSupportedOffset(hours)).toBe(false);
   });
 
   it.each([99, -3, 1.5, "abc", null, undefined])("resolves the unsupported %o to now", (value) => {
@@ -37,6 +50,17 @@ describe("offsets", () => {
 
   it("accepts a numeric string, as a URL parameter would supply", () => {
     expect(normalizeOffset("3")).toBe(3);
+  });
+});
+
+describe("offsetTargetMs", () => {
+  it.each(TIME_OFFSETS)("is now + %i h", (hours) => {
+    expect(offsetTargetMs(hours, NOW)).toBe(NOW + hours * HOUR);
+  });
+
+  it("resolves an unsupported offset to now, like every other consumer", () => {
+    expect(offsetTargetMs(5, NOW)).toBe(NOW);
+    expect(offsetTargetMs(undefined, NOW)).toBe(NOW);
   });
 });
 
@@ -111,5 +135,87 @@ describe("availableOffsets", () => {
 
   it("is empty with no frames", () => {
     expect(availableOffsets(fakeLayer({ frames: false }), NOW)).toEqual([]);
+  });
+
+  it("offers +12 h and +24 h only when the frames reach them", () => {
+    expect(availableOffsets(fakeLayer({ endMs: NOW + 12 * HOUR }), NOW)).toEqual([0, 3, 6, 12]);
+    expect(availableOffsets(fakeLayer({ endMs: NOW + 30 * HOUR }), NOW)).toEqual(TIME_OFFSETS);
+  });
+
+  it("points the layer at +24 h in seconds, and clamps a shorter forecast", () => {
+    const long = fakeLayer({ endMs: NOW + 48 * HOUR });
+    applyLayerTime(long, 24, NOW);
+    expect(long.setAnimationTime).toHaveBeenCalledWith((NOW + 24 * HOUR) / 1000);
+
+    const short = fakeLayer({ endMs: NOW + 9 * HOUR });
+    const result = applyLayerTime(short, 24, NOW);
+    expect(short.setAnimationTime).toHaveBeenCalledWith((NOW + 9 * HOUR) / 1000);
+    expect(result).toMatchObject({ offset: 24, clamped: true });
+  });
+});
+
+/* wx.hourly starts at the CURRENT hour, one entry per hour. */
+const hourly = (count, field = "humidity") =>
+  Array.from({ length: count }, (_, hour) => ({ time: `h${hour}`, [field]: 40 + hour }));
+
+describe("hourlyIndexForOffset", () => {
+  it.each([
+    [0, 25, 0],
+    [3, 25, 3],
+    [12, 25, 12],
+    [24, 25, 24],
+  ])("offset %i in %i entries is entry %i", (offset, length, index) => {
+    expect(hourlyIndexForOffset(offset, length)).toBe(index);
+  });
+
+  it("is null when the forecast stops short of the hour", () => {
+    expect(hourlyIndexForOffset(24, 24)).toBeNull();
+    expect(hourlyIndexForOffset(12, 12)).toBeNull();
+    expect(hourlyIndexForOffset(0, 0)).toBeNull();
+  });
+
+  it("is null for a missing length", () => {
+    expect(hourlyIndexForOffset(3, undefined)).toBeNull();
+    expect(hourlyIndexForOffset(3, "25")).toBeNull();
+  });
+
+  it("resolves an unsupported offset to now", () => {
+    expect(hourlyIndexForOffset(5, 25)).toBe(0);
+  });
+});
+
+describe("hourlyEntryAtOffset", () => {
+  it("returns the entry for the hour, never a neighbour", () => {
+    expect(hourlyEntryAtOffset(hourly(25), 6)).toEqual({ time: "h6", humidity: 46 });
+    expect(hourlyEntryAtOffset(hourly(25), 24)).toEqual({ time: "h24", humidity: 64 });
+  });
+
+  it("is null past the end, and for anything that is not an array", () => {
+    expect(hourlyEntryAtOffset(hourly(12), 12)).toBeNull();
+    expect(hourlyEntryAtOffset(undefined, 3)).toBeNull();
+    expect(hourlyEntryAtOffset({ length: 25 }, 3)).toBeNull();
+  });
+});
+
+describe("availableHourlyOffsets", () => {
+  it("lists every offset when the hourly data reaches +24 h", () => {
+    expect(availableHourlyOffsets(hourly(25), "humidity")).toEqual(TIME_OFFSETS);
+  });
+
+  it("drops the hours a short forecast does not reach", () => {
+    expect(availableHourlyOffsets(hourly(13), "humidity")).toEqual([0, 3, 6, 12]);
+    expect(availableHourlyOffsets(hourly(4), "humidity")).toEqual([0, 3]);
+  });
+
+  it("drops an hour whose own value is missing or not a number", () => {
+    const data = hourly(25);
+    data[6].humidity = null;
+    data[12].humidity = NaN;
+    expect(availableHourlyOffsets(data, "humidity")).toEqual([0, 3, 24]);
+  });
+
+  it("is empty when the field is absent everywhere, or there is no data", () => {
+    expect(availableHourlyOffsets(hourly(25, "temp"), "humidity")).toEqual([]);
+    expect(availableHourlyOffsets(null, "humidity")).toEqual([]);
   });
 });

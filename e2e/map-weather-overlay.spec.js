@@ -203,14 +203,14 @@ test.describe("tablet layout", () => {
 });
 
 test.describe("forecast timeline", () => {
-  test("offers Now, +3 h and +6 h as an accessible radio group", async ({ page }) => {
+  test("offers Now, +3 h, +6 h, +12 h and +24 h as an accessible radio group", async ({ page }) => {
     await openMap(page);
     await chooseLayer(page, "temperature");
 
     const row = page.locator(".map-time-row");
     await expect(row).toHaveAttribute("role", "radiogroup");
     await expect(row).toHaveAttribute("aria-label", /.+/);
-    await expect(page.locator(".map-time")).toHaveCount(3);
+    await expect(page.locator(".map-time")).toHaveCount(5);
     await expect(page.locator('.map-time[data-map-time="0"]')).toHaveAttribute(
       "aria-checked",
       "true",

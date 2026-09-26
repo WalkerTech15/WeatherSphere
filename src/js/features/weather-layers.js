@@ -155,7 +155,10 @@ export async function applyWeatherLayer(
   /* the identity check catches a newer request that already swapped the layer
      out while this one was waiting on its source */
   if (isStale() || inst.weatherLayer !== layer) return null;
-  const time = applyLayerTime(layer, offsetHours, now);
+  /* a function is read now, after the wait, so it can name an hour chosen
+     while the source was still loading */
+  const hours = typeof offsetHours === "function" ? offsetHours() : offsetHours;
+  const time = applyLayerTime(layer, hours, now);
   const report = describe(layer, requested, sourceReady, time);
   onSourceReady?.(report);
   return report;

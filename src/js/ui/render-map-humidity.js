@@ -11,11 +11,21 @@
  * time, driven by the overlay's own type. Deliberately reuses the Air
  * Quality panel's `.map-aqi-*` classes (see styles/views/map.css) — the
  * same "status line / value + badge / meta line" shape applies here too, so
- * a second point-reading panel needed no new CSS. */
+ * a second point-reading panel needed no new CSS.
+ *
+ * The forecast-time row above the reading is the ramp layers' own (see
+ * ui/render-map-weather.js): the reading is the place's hourly humidity at
+ * the chosen hour, from the forecast already fetched. */
 import { $, esc } from "../core/dom.js";
 import { t } from "../core/i18n.js";
 import { fmtDateTime } from "../core/datetime.js";
 import { classifyHumidity } from "../data/humidity.js";
+import {
+  timelineHtml,
+  bindTimeline,
+  focusedTimelineOffset,
+  restoreTimelineFocus,
+} from "./render-map-weather.js";
 
 const ERROR_MESSAGE_KEYS = {
   offline: "mapHumidityOffline",
@@ -53,17 +63,36 @@ export function humidityAnnouncement(humidityState) {
   if (humidityState.status === "loading") return t("mapHumidityLoading");
   if (humidityState.status === "ready") {
     const cat = classifyHumidity(humidityState.data.humidity);
-    return `${t("humidity")}, ${Math.round(humidityState.data.humidity)}%, ${cat.label}`;
+    const reading = `${t("humidity")}, ${Math.round(humidityState.data.humidity)}%, ${cat.label}`;
+    /* "now" needs no date; a later hour says which moment it is for */
+    if (!humidityState.data.offset) return reading;
+    return `${reading}. ${t("mapTimeShowing").replace("{time}", fmtDateTime(humidityState.data.timeMs))}`;
   }
   return t(ERROR_MESSAGE_KEYS[humidityState.errorKind] || "mapHumidityError");
+}
+
+/* What the shared timeline needs from a humidity state. While ready it names
+   the moment shown; while loading or on an error it draws no status line of
+   its own, because the reading's own message below already says which. */
+function timelineView(humidityState, offset) {
+  const { status, data, offsets } = humidityState;
+  return {
+    offset,
+    status: status === "ready" ? "ready" : "none",
+    offsets: status === "loading" ? null : offsets,
+    timeMs: data?.timeMs ?? null,
+    clamped: false,
+  };
 }
 
 /**
  * Repaint the Humidity panel.
  * @param {{status: "idle"|"loading"|"ready"|"error", data: object|null,
- *   errorKind: string|null}} humidityState
+ *   errorKind: string|null, offsets: number[]}} humidityState
+ * @param {number} offset  the chosen forecast hour
+ * @param {(offset: number) => void} [onSelectTime]
  */
-export function renderHumidityUI(humidityState) {
+export function renderHumidityUI(humidityState, offset = 0, onSelectTime) {
   const host = $("#mapWeatherControls");
   if (!host) return;
 
@@ -73,9 +102,13 @@ export function renderHumidityUI(humidityState) {
     return;
   }
 
+  const focusedOffset = focusedTimelineOffset();
   host.hidden = false;
   host.innerHTML =
-    humidityState.status === "ready"
+    timelineHtml(timelineView(humidityState, offset)) +
+    (humidityState.status === "ready"
       ? readyHtml(humidityState.data)
-      : statusHtml(humidityState.status, humidityState.errorKind);
+      : statusHtml(humidityState.status, humidityState.errorKind));
+  if (onSelectTime) bindTimeline(host, onSelectTime);
+  restoreTimelineFocus(host, focusedOffset);
 }

@@ -15,7 +15,9 @@ import {
   resetOverlay,
   startLayerRequest,
   registerOverlayLayer,
+  setMapTime,
 } from "./map-overlay.js";
+import { normalizeOffset } from "./map-timeline.js";
 import { isOffline } from "../services/offline.js";
 import { computeHumidityState } from "./humidity-state.js";
 import { renderHumidityUI, humidityAnnouncement } from "../ui/render-map-humidity.js";
@@ -30,6 +32,7 @@ const humidityState = {
   status: "idle" /* idle | loading | ready | error */,
   data: null,
   errorKind: null /* "offline" | "unavailable" | "error", set only when status is "error" */,
+  offsets: [] /* the forecast hours this place's hourly data can answer */,
 };
 
 /* Set by bindHumidity() the instant a new place is chosen, to the wx object
@@ -64,6 +67,7 @@ function refreshHumidityState() {
       wx: state.wx,
       isDemo: state.isDemo,
       offline: isOffline(),
+      offset: overlay.offset,
     }),
   );
 }
@@ -75,13 +79,16 @@ function refreshHumidityState() {
  * of its own to await here — the reading comes straight from state.wx,
  * already fetched by ordinary location selection — so this is
  * synchronous once the (possibly still-loading) basemap settles. */
-export async function setHumidityLayer() {
+export async function setHumidityLayer({ offset } = {}) {
   const isStale = startLayerRequest();
   const button = $('.map-layer[data-map-layer="humidity"]');
   button?.classList.add("is-loading");
   detachOverlayAnimation();
 
   resetOverlay("humidity");
+  /* the hour comes from a shared link, or carries over from the layer the
+     user just left (resetOverlay keeps it, exactly as for a ramp layer) */
+  if (offset !== undefined) overlay.offset = normalizeOffset(offset);
   renderWeatherOverlay();
 
   try {
@@ -120,20 +127,23 @@ export function bindHumidity() {
     humidityState.status = "loading";
     humidityState.data = null;
     humidityState.errorKind = null;
-    renderHumidityUI(humidityState);
+    humidityState.offsets = [];
+    renderHumidityUI(humidityState, overlay.offset, setMapTime);
     announceLayerStatus(humidityAnnouncement(humidityState));
   });
 }
 
 registerOverlayLayer("humidity", {
+  timed: true,
   render() {
     refreshHumidityState();
-    renderHumidityUI(humidityState);
+    renderHumidityUI(humidityState, overlay.offset, setMapTime);
   },
   announcement: () => humidityAnnouncement(humidityState),
   reset() {
     humidityState.status = "idle";
     humidityState.data = null;
     humidityState.errorKind = null;
+    humidityState.offsets = [];
   },
 });

@@ -10,7 +10,9 @@ vi.mock("./map-overlay.js", () => ({
 vi.mock("./map-layer-air-quality.js", () => ({
   setAirQualityLayer: () => calls.push(["airQuality"]),
 }));
-vi.mock("./map-layer-humidity.js", () => ({ setHumidityLayer: () => calls.push(["humidity"]) }));
+vi.mock("./map-layer-humidity.js", () => ({
+  setHumidityLayer: (...args) => calls.push(["humidity", ...args]),
+}));
 vi.mock("./map-layer-alerts.js", () => ({ setAlertsLayer: () => calls.push(["alerts"]) }));
 vi.mock("./map-layer-lightning.js", () => ({
   setLightningLayer: () => calls.push(["lightning"]),
@@ -28,9 +30,14 @@ describe("setMapLayer", () => {
     "sends %s to its own flow, and never to the ramp",
     async (type) => {
       await setMapLayer(type);
-      expect(calls).toEqual([[type]]);
+      expect(calls.map(([name]) => name)).toEqual([type]);
     },
   );
+
+  it("hands a shared link's forecast hour to Humidity, the own-flow layer that reads one", async () => {
+    await setMapLayer("humidity", { offset: 12 });
+    expect(calls).toEqual([["humidity", { offset: 12 }]]);
+  });
 
   it.each(["temperature", "rain", "wind", "pressure", "satellite"])(
     "sends %s to the ramp flow, with its options",

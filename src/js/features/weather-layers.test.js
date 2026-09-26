@@ -259,6 +259,31 @@ describe("forecast time", () => {
     expect(inst.weatherLayer.animationTime).toBe((NOW + 3 * HOUR) / 1000);
   });
 
+  it.each([12, 24])("opens on +%i h when asked", async (hours) => {
+    const inst = fakeMapInstance();
+    await applyWeatherLayer(inst, "wind", {
+      loadWeather: async () => fakeWeatherModule(),
+      offsetHours: hours,
+      now: NOW,
+    });
+    /* the fake forecast ends at +9 h, so the layer shows its last frame */
+    expect(inst.weatherLayer.animationTime).toBe((NOW + 9 * HOUR) / 1000);
+  });
+
+  it("reads the hour AFTER the wait when given a function, so an hour chosen meanwhile wins", async () => {
+    const inst = fakeMapInstance();
+    let chosen = 0;
+    const pending = applyWeatherLayer(inst, "temperature", {
+      loadWeather: async () => fakeWeatherModule({ sourceReady: 20 }),
+      offsetHours: () => chosen,
+      now: NOW,
+    });
+    chosen = 6; /* clicked while the source was still loading */
+    const report = await pending;
+    expect(report.time.offset).toBe(6);
+    expect(inst.weatherLayer.animationTime).toBe((NOW + 6 * HOUR) / 1000);
+  });
+
   it("hands the caller the layer's own colour ramp for the legend", async () => {
     const ramp = [{ value: 0, color: [1, 2, 3, 255] }];
     const inst = fakeMapInstance();

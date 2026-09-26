@@ -67,11 +67,13 @@ export function getMapOverlayState() {
 
 /* The layers that are not a ramp: each registers its panel painter, the
    sentence a screen reader hears for it, and how to drop everything it holds
-   when another layer is chosen. */
+   when another layer is chosen. `timed: true` marks a layer that reads a
+   forecast hour of its own (Humidity): its render() reads `overlay.offset`,
+   so choosing a time only has to repaint it. */
 const overlayLayers = new Map();
 
-export function registerOverlayLayer(type, { render, announcement, reset }) {
-  overlayLayers.set(type, { render, announcement, reset });
+export function registerOverlayLayer(type, { render, announcement, reset, timed = false }) {
+  overlayLayers.set(type, { render, announcement, reset, timed });
 }
 
 /* The point-reading layers' results reach screen readers through the polite
@@ -207,16 +209,24 @@ function absorbReport(report) {
    re-apply itself to a layer the user has already switched away from. */
 let layerRequestId = 0;
 
-/* Starts a layer or time request and makes every earlier one stale. Returns
-   the check that request must make after each await. */
+/* True from the moment a ramp layer is asked for until it has landed (or
+   failed). An hour chosen in that window belongs to the layer on its way in,
+   so it is remembered rather than allowed to cancel that layer. */
+let layerLoading = false;
+
+/* Starts a layer or time request and makes every earlier one stale — including
+   any layer still loading, which a newer request has replaced. Returns the
+   check that request must make after each await. */
 export function startLayerRequest() {
   const requestId = ++layerRequestId;
+  layerLoading = false;
   return () => requestId !== layerRequestId;
 }
 
 export async function setRampLayer(type, { offset = overlay.offset } = {}) {
   const requested = WEATHER_LAYER_IDS[type] ? type : "satellite";
   const isStale = startLayerRequest();
+  layerLoading = requested !== "satellite";
   const button = $(`.map-layer[data-map-layer="${requested}"]`);
   button?.classList.add("is-loading");
   /* whatever was animating belongs to the layer about to be replaced */
@@ -237,10 +247,13 @@ export async function setRampLayer(type, { offset = overlay.offset } = {}) {
         raiseSelectionArea(added);
         freezeWindIfNotAllowed(added);
       },
-      offsetHours: overlay.offset,
+      /* read when the source is ready, so an hour chosen while the layer was
+         loading is the one it opens on */
+      offsetHours: () => overlay.offset,
       windOptions: windLayerOptions({ constrained: isConstrainedDevice() }),
     });
     if (isStale()) return;
+    layerLoading = false;
     absorbReport(report);
     if (overlay.status === "ready") attachAnimation(inst);
     setLayerButtonState(requested);
@@ -248,6 +261,7 @@ export async function setRampLayer(type, { offset = overlay.offset } = {}) {
     emit("map:layer", getMapOverlayState());
   } catch {
     if (isStale()) return;
+    layerLoading = false;
     animator.detach({ silent: true });
     removeWeatherLayer(MAPS.worldMap);
     resetOverlay("satellite");
@@ -264,11 +278,34 @@ export async function setRampLayer(type, { offset = overlay.offset } = {}) {
   }
 }
 
-/* Move the active overlay to now / +3 h / +6 h. No layer is recreated: this
-   is a setAnimationTime() call on the layer already on the map. */
+/* A layer that reads a forecast hour of its own has no map layer to re-time:
+   remember the hour and repaint. Bumping the request counter still retires
+   any ramp request left in flight from a layer the user has just left. */
+function setOwnLayerTime(offset) {
+  startLayerRequest();
+  overlay.offset = offset;
+  renderWeatherOverlay();
+  emit("map:layer", getMapOverlayState());
+}
+
+/* Move the active overlay to now / +3 h / +6 h / +12 h / +24 h. For a ramp
+   layer no layer is recreated: this is a setAnimationTime() call on the layer
+   already on the map. Layers with no forecast time (Air Quality, Alerts,
+   Lightning, Clouds) ignore it — they show no timeline to choose from. */
 export async function setMapTime(offsetHours) {
   const offset = normalizeOffset(offsetHours);
   if (overlay.type === "satellite") return; /* nothing to re-time */
+  const own = overlayLayers.get(overlay.type);
+  if (own) {
+    if (own.timed) setOwnLayerTime(offset);
+    return;
+  }
+  if (layerLoading) {
+    /* the layer is still on its way in: it will open on this hour */
+    overlay.offset = offset;
+    renderWeatherOverlay();
+    return;
+  }
   const isStale = startLayerRequest();
 
   overlay.offset = offset;

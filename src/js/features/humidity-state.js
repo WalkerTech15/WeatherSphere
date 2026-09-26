@@ -11,14 +11,33 @@
  * this is a point reading for the selected place, not a map-wide colour
  * layer.
  *
+ * The forecast time (now / +3 h / +6 h / +12 h / +24 h) reads the SAME
+ * `wx.hourly` array — see features/map-timeline.js's hourlyEntryAtOffset —
+ * so choosing a later hour costs no request. An hour the forecast does not
+ * reach is reported as unavailable (and its button disabled), never replaced
+ * by a neighbouring hour or an invented value.
+ *
  * Kept here as a pure function of explicit arguments — rather than reading
  * core/state.js or services/offline.js directly — so the whole state
  * machine is unit-testable with plain objects, no module mocking, the same
  * way map-legend.js's buildLegend() is. features/map.js supplies the real
  * arguments and owns the render/DOM side. */
-export function computeHumidityState({ loc, wx, isDemo, offline }) {
-  if (!loc) return { status: "error", data: null, errorKind: "unavailable" };
-  if (!wx) return { status: "loading", data: null, errorKind: null };
+import { availableHourlyOffsets, hourlyEntryAtOffset, offsetTargetMs } from "./map-timeline.js";
+
+/* The offsets this place's forecast can answer: "now" comes from the current
+   reading, every later one from an hourly entry that really has a humidity. */
+function humidityOffsets(wx) {
+  const later = availableHourlyOffsets(wx.hourly, "humidity").filter((offset) => offset > 0);
+  return Number.isFinite(wx.current?.humidity) ? [0, ...later] : later;
+}
+
+function humidityAt(wx, offset) {
+  return offset === 0 ? wx.current?.humidity : hourlyEntryAtOffset(wx.hourly, offset)?.humidity;
+}
+
+export function computeHumidityState({ loc, wx, isDemo, offline, offset = 0, nowMs }) {
+  if (!loc) return { status: "error", data: null, errorKind: "unavailable", offsets: [] };
+  if (!wx) return { status: "loading", data: null, errorKind: null, offsets: [] };
   /* The app's shared forecast pipeline already falls back to deterministic
      demo data on any fetch failure (features/location.js) so the rest of
      the page always has SOMETHING to show. This panel is an honest point
@@ -27,12 +46,23 @@ export function computeHumidityState({ loc, wx, isDemo, offline }) {
      browser itself is offline, `error` for any other cause (timeout, HTTP
      error, malformed response — the shared pipeline does not preserve
      which). */
-  if (isDemo) return { status: "error", data: null, errorKind: offline ? "offline" : "error" };
-  const value = wx.current?.humidity;
-  if (!Number.isFinite(value)) return { status: "error", data: null, errorKind: "unavailable" };
+  if (isDemo) {
+    return { status: "error", data: null, errorKind: offline ? "offline" : "error", offsets: [] };
+  }
+  const offsets = humidityOffsets(wx);
+  const value = humidityAt(wx, offset);
+  if (!Number.isFinite(value)) {
+    return { status: "error", data: null, errorKind: "unavailable", offsets };
+  }
   return {
     status: "ready",
-    data: { humidity: value, updatedAt: wx.updatedAt },
+    data: {
+      humidity: value,
+      updatedAt: wx.updatedAt,
+      offset,
+      timeMs: offsetTargetMs(offset, nowMs),
+    },
     errorKind: null,
+    offsets,
   };
 }

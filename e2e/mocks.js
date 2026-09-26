@@ -53,6 +53,17 @@ const WEATHER_KINDS = {
      so they just reuse `calm`'s. */
   humid: { code: 1, feels: 20.1, gust: 24, visibility: 20000, humidity: 92 },
   dryAir: { code: 1, feels: 20.1, gust: 24, visibility: 20000, humidity: 12 },
+  /* Humidity that CHANGES hour by hour (30 % now, +1 point per hour), so the
+     forecast-time control can be checked against a different real value at
+     each hour instead of one flat number. */
+  humidityRamp: {
+    code: 1,
+    feels: 20.1,
+    gust: 24,
+    visibility: 20000,
+    humidity: 30,
+    humidityPerHour: 1,
+  },
 };
 
 /* `place` distinguishes one entry of a BATCHED (comma-joined coordinates)
@@ -85,7 +96,9 @@ function weatherPayload(kind = "calm", place = 0, timezone = "Europe/Paris") {
       time: HOURS.map(hourIso),
       temperature_2m: HOURS.map((i) => (w.temp ?? 18) + (w.temp === undefined ? i % 8 : 0) + dTemp),
       apparent_temperature: HOURS.map(() => w.feels + dTemp),
-      relative_humidity_2m: HOURS.map(() => 55),
+      relative_humidity_2m: HOURS.map((i) =>
+        w.humidityPerHour ? (w.humidity ?? 55) + i * w.humidityPerHour : 55,
+      ),
       wind_speed_10m: HOURS.map((i) => 10 + (i % 5) + place),
       wind_gusts_10m: HOURS.map(() => w.gust),
       surface_pressure: HOURS.map(() => 1014),
@@ -633,10 +646,12 @@ function mapStylePayload() {
 
    Keyframes are generated relative to the moment of the request, on the hour,
    spanning -3 h … +9 h. That is what makes "Now", "+3 h" and "+6 h" all
-   genuinely reachable whenever the suite runs. */
+   genuinely reachable whenever the suite runs — and leaves "+12 h" and
+   "+24 h" out of reach, as a provider with a short forecast would. A test of
+   the longer hours passes `weatherKeyframeHours` to reach them. */
 export const WEATHER_KEYFRAME_HOURS = [-3, 0, 3, 6, 9];
 
-function weatherVariable(variableId, channels) {
+function weatherVariable(variableId, channels, hours = WEATHER_KEYFRAME_HOURS) {
   const onTheHour = Math.floor(Date.now() / 3600000) * 3600000;
   return {
     tile_format: "png",
@@ -648,21 +663,21 @@ function weatherVariable(variableId, channels) {
         decoding: { channels, min: -100, max: 100 },
       },
     },
-    keyframes: WEATHER_KEYFRAME_HOURS.map((hours) => ({
-      id: `${variableId}-${hours}`,
-      timestamp: new Date(onTheHour + hours * 3600000).toISOString(),
+    keyframes: hours.map((hour) => ({
+      id: `${variableId}-${hour}`,
+      timestamp: new Date(onTheHour + hour * 3600000).toISOString(),
     })),
   };
 }
 
-function weatherLatestPayload() {
+function weatherLatestPayload(hours) {
   return {
     variables: [
-      weatherVariable("temperature-2m:gfs", "R"),
-      weatherVariable("precipitation-1h:gfs", "R"),
+      weatherVariable("temperature-2m:gfs", "R", hours),
+      weatherVariable("precipitation-1h:gfs", "R", hours),
       /* wind is a two-channel (u/v) variable */
-      weatherVariable("wind-10m:gfs", "RG"),
-      weatherVariable("pressure-msl:gfs", "R"),
+      weatherVariable("wind-10m:gfs", "RG", hours),
+      weatherVariable("pressure-msl:gfs", "R", hours),
     ],
   };
 }
@@ -755,6 +770,9 @@ export async function installMocks(page, overrides = {}) {
     nwsStatus = 200,
     nwsBody,
     nwsDelayMs,
+    weatherKeyframeHours = WEATHER_KEYFRAME_HOURS,
+    weatherManifestStatus = 200,
+    weatherManifestDelayMs = 0,
   } = overrides;
   /* "calm" by default. Pass a function to vary the weather per request — the
      URL carries the coordinates, which is how a test gives two cities two
@@ -861,9 +879,14 @@ export async function installMocks(page, overrides = {}) {
     return route.fulfill(json(reverseGeocodePayloadFor(...coords)));
   });
   /* weather manifest + raster tiles for the real @maptiler/weather layers */
-  await page.route("**://api.maptiler.com/weather/latest.json*", (route) =>
-    route.fulfill(json(weatherLatestPayload())),
-  );
+  await page.route("**://api.maptiler.com/weather/latest.json*", async (route) => {
+    if (weatherManifestDelayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, weatherManifestDelayMs));
+    }
+    return weatherManifestStatus === 200
+      ? route.fulfill(json(weatherLatestPayload(weatherKeyframeHours)))
+      : route.fulfill({ status: weatherManifestStatus, body: "unavailable" });
+  });
   await page.route("**://api.maptiler.com/tiles/**", (route) =>
     route.fulfill({ status: 200, contentType: "image/png", body: WEATHER_TILE_PNG }),
   );

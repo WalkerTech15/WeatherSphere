@@ -61,10 +61,10 @@ test.describe("map overlay controls on a phone", () => {
     await chooseLayer(page, "wind");
 
     const buttons = page.locator(".map-time:not(.map-anim)");
-    await expect(buttons).toHaveCount(3);
+    await expect(buttons).toHaveCount(5);
     const boxes = await buttons.evaluateAll((els) => els.map((el) => el.getBoundingClientRect()));
     boxes.forEach((box) => expect(box.height).toBeGreaterThanOrEqual(40));
-    /* all three on the same row */
+    /* all five on the same row (which scrolls sideways if it must) */
     expect(new Set(boxes.map((box) => Math.round(box.y))).size).toBe(1);
     expect(await docOverflow(page)).toBeLessThanOrEqual(0);
   });

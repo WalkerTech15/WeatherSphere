@@ -1,7 +1,9 @@
 /* Switching the map's layer. Air Quality, Humidity, Alerts, Lightning and
    Clouds have no MapTiler weather layer (WEATHER_LAYER_IDS deliberately
    excludes them — see weather-layers.js) and each follows its own flow; every
-   other choice is a ramp layer, or Satellite, handled by map-overlay.js. */
+   other choice is a ramp layer, or Satellite, handled by map-overlay.js. The
+   options ({ offset }, from a shared link) go to every own flow; only Humidity,
+   which reads a forecast hour, uses them. */
 import { setRampLayer } from "./map-overlay.js";
 import { setAirQualityLayer } from "./map-layer-air-quality.js";
 import { setHumidityLayer } from "./map-layer-humidity.js";
@@ -19,5 +21,5 @@ export const OWN_FLOW_LAYERS = {
 
 export async function setMapLayer(type, options) {
   const setOwnLayer = Object.hasOwn(OWN_FLOW_LAYERS, type) ? OWN_FLOW_LAYERS[type] : null;
-  return setOwnLayer ? setOwnLayer() : setRampLayer(type, options);
+  return setOwnLayer ? setOwnLayer(options) : setRampLayer(type, options);
 }

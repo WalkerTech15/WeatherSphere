@@ -34,6 +34,7 @@ import { isMapPanelOpen, showMapPanel, hideMapPanel } from "../ui/render-map.js"
 import { getMapCamera, getMapOverlayState, setMapLayer, jumpTo } from "./map.js";
 import { selectCoordinate } from "./map-click.js";
 import { isDeviceLocation } from "./recent-locations.js";
+import { layerHasForecastTime } from "../core/url-state.js";
 import {
   readUrlState,
   writeUrlState,
@@ -145,6 +146,16 @@ async function applyUrlState(url, { initial = false } = {}) {
        manage to apply — never a blank screen */
   } finally {
     applying = false;
+  }
+
+  /* An hour clicked while this restore was still loading its layer was held
+     back by `applying` (writes are suppressed during a restore, so the app
+     never overwrites the link it is opening) and would otherwise leave the
+     address bar on the old hour. The layer is the one the link asked for, so
+     only the hour can differ: write it now, in place. */
+  const after = getMapOverlayState();
+  if (after.type === url.layer && layerHasForecastTime(after.type) && after.offset !== url.offset) {
+    writeUrlState(snapshot(), { replace: true });
   }
 
   if (queuedUrl) {

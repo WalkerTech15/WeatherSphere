@@ -239,8 +239,10 @@ describe("setRampLayer", () => {
     expect(mocks.applyWeatherLayer).toHaveBeenCalledWith(
       MAPS.worldMap,
       "rain",
-      expect.objectContaining({ offsetHours: 3 }),
+      expect.objectContaining({ offsetHours: expect.any(Function) }),
     );
+    /* the hour is read when the source is ready, and it is the one asked for */
+    expect(mocks.applyWeatherLayer.mock.calls[0][2].offsetHours()).toBe(3);
     expect(getMapOverlayState()).toEqual({ type: "rain", offset: 3, status: "ready" });
     expect(buttons[2].attrs["aria-checked"]).toBe("true");
   });
@@ -319,6 +321,187 @@ describe("setMapTime", () => {
     mocks.setWeatherLayerTime.mockRejectedValueOnce(new Error("boom"));
     await setMapTime(3);
     expect(getMapOverlayState().status).toBe("error");
+  });
+
+  it.each([12, 24])("hands +%i h to the layer's own clock", async (hours) => {
+    const { MAPS, overlay, setMapTime, getMapOverlayState } = await load();
+    MAPS.worldMap = { map: {} };
+    overlay.type = "temperature";
+    mocks.setWeatherLayerTime.mockResolvedValue(report());
+    await setMapTime(hours);
+    expect(mocks.setWeatherLayerTime).toHaveBeenCalledWith(
+      MAPS.worldMap,
+      hours,
+      expect.any(Object),
+    );
+    expect(getMapOverlayState().offset).toBe(hours);
+  });
+
+  it("resolves an hour the timeline does not offer to now", async () => {
+    const { MAPS, overlay, setMapTime, getMapOverlayState } = await load();
+    MAPS.worldMap = { map: {} };
+    overlay.type = "rain";
+    mocks.setWeatherLayerTime.mockResolvedValue(report());
+    await setMapTime(9);
+    expect(getMapOverlayState().offset).toBe(0);
+  });
+
+  it("lets only the hour asked for last finish, however the answers arrive", async () => {
+    const { MAPS, overlay, setMapTime } = await load();
+    MAPS.worldMap = { map: {} };
+    overlay.type = "rain";
+    const releases = [];
+    mocks.setWeatherLayerTime.mockImplementation(
+      () => new Promise((resolve) => releases.push(resolve)),
+    );
+    const early = setMapTime(3);
+    const late = setMapTime(24);
+    await vi.waitFor(() => expect(releases).toHaveLength(2));
+    /* the newer answer lands first, then the older one straggles in */
+    releases[1](report({ time: { timeMs: 24, available: true, clamped: false } }));
+    releases[0](report({ time: { timeMs: 3, available: true, clamped: false } }));
+    await Promise.all([early, late]);
+    expect(overlay.offset).toBe(24);
+    expect(overlay.timeMs).toBe(24);
+    expect(overlay.status).toBe("ready");
+  });
+
+  describe("on a layer that reads a forecast hour of its own (Humidity)", () => {
+    const registerHumidity = (registerOverlayLayer, log = []) =>
+      registerOverlayLayer("humidity", {
+        timed: true,
+        render: () => log.push("render"),
+        announcement: () => "",
+        reset: () => {},
+      });
+
+    it("only remembers the hour and repaints: no map layer is re-timed", async () => {
+      const { registerOverlayLayer, resetOverlay, setMapTime, overlay, getMapOverlayState } =
+        await load();
+      const log = [];
+      registerHumidity(registerOverlayLayer, log);
+      resetOverlay("humidity");
+      log.length = 0;
+      await setMapTime(12);
+      expect(mocks.setWeatherLayerTime).not.toHaveBeenCalled();
+      expect(overlay.offset).toBe(12);
+      expect(log).toEqual(["render"]);
+      expect(getMapOverlayState()).toMatchObject({ type: "humidity", offset: 12 });
+    });
+
+    it("keeps its hour when the user moves to another layer and back", async () => {
+      const { registerOverlayLayer, resetOverlay, setMapTime, overlay } = await load();
+      registerHumidity(registerOverlayLayer);
+      resetOverlay("humidity");
+      await setMapTime(6);
+      resetOverlay("temperature");
+      expect(overlay.offset).toBe(6);
+    });
+
+    it("retires a ramp request still in flight from the layer just left", async () => {
+      const { MAPS, registerOverlayLayer, resetOverlay, setMapTime, overlay } = await load();
+      MAPS.worldMap = { map: {} };
+      registerHumidity(registerOverlayLayer);
+      overlay.type = "rain";
+      let release;
+      mocks.setWeatherLayerTime.mockImplementationOnce(
+        () => new Promise((resolve) => (release = resolve)),
+      );
+      const straggler = setMapTime(3);
+      await vi.waitFor(() => expect(mocks.setWeatherLayerTime).toHaveBeenCalled());
+      resetOverlay("humidity");
+      await setMapTime(24);
+      release(report({ time: { timeMs: 3, available: true, clamped: false } }));
+      await straggler;
+      expect(overlay).toMatchObject({ type: "humidity", offset: 24, timeMs: null });
+    });
+  });
+
+  it.each(["airQuality", "alerts", "lightning", "clouds"])(
+    "leaves %s alone: it has no forecast time to choose",
+    async (type) => {
+      const { registerOverlayLayer, resetOverlay, setMapTime, overlay } = await load();
+      const log = [];
+      registerOverlayLayer(type, {
+        render: () => log.push("render"),
+        announcement: () => "",
+        reset: () => {},
+      });
+      resetOverlay(type);
+      overlay.status = "ready";
+      log.length = 0;
+      await setMapTime(6);
+      expect(mocks.setWeatherLayerTime).not.toHaveBeenCalled();
+      expect(overlay).toMatchObject({ type, offset: 0, status: "ready" });
+      expect(log).toEqual([]);
+    },
+  );
+
+  describe("an hour chosen while a layer is still loading", () => {
+    it("belongs to that layer: it opens on the hour and is not cancelled", async () => {
+      const { MAPS, overlay, setMapTime, setRampLayer, getMapOverlayState } = await load();
+      MAPS.worldMap = { map: {} };
+      let release;
+      let hourWhenReady;
+      mocks.applyWeatherLayer.mockImplementationOnce(
+        (_inst, _type, options) =>
+          new Promise((resolve) => {
+            release = () => {
+              hourWhenReady = options.offsetHours();
+              resolve(report());
+            };
+          }),
+      );
+      const loading = setRampLayer("wind");
+      await vi.waitFor(() => expect(mocks.applyWeatherLayer).toHaveBeenCalled());
+
+      await setMapTime(12); /* clicked while wind is on its way in */
+      await setMapTime(24);
+      expect(mocks.setWeatherLayerTime).not.toHaveBeenCalled();
+      expect(overlay.offset).toBe(24);
+      expect(overlay.status).toBe("loading");
+
+      release();
+      await loading;
+      expect(hourWhenReady).toBe(24);
+      expect(getMapOverlayState()).toEqual({ type: "wind", offset: 24, status: "ready" });
+      expect(buttons[3].classes.has("is-active")).toBe(true);
+    });
+
+    it("goes back to re-timing the layer once it has landed", async () => {
+      const { MAPS, setMapTime, setRampLayer, getMapOverlayState } = await load();
+      MAPS.worldMap = { map: {} };
+      mocks.applyWeatherLayer.mockResolvedValue(report());
+      mocks.setWeatherLayerTime.mockResolvedValue(report());
+      await setRampLayer("wind");
+      await setMapTime(12);
+      expect(mocks.setWeatherLayerTime).toHaveBeenCalledWith(MAPS.worldMap, 12, expect.any(Object));
+      expect(getMapOverlayState().offset).toBe(12);
+    });
+
+    it("is dropped when another layer replaces the loading one", async () => {
+      const { MAPS, overlay, setMapTime, setRampLayer } = await load();
+      MAPS.worldMap = { map: {} };
+      mocks.applyWeatherLayer.mockImplementationOnce(() => new Promise(() => {}));
+      setRampLayer("wind");
+      await vi.waitFor(() => expect(mocks.applyWeatherLayer).toHaveBeenCalledTimes(1));
+      mocks.applyWeatherLayer.mockResolvedValueOnce(report());
+      await setRampLayer("rain"); /* replaces wind */
+      mocks.setWeatherLayerTime.mockResolvedValue(report());
+      await setMapTime(6);
+      expect(mocks.setWeatherLayerTime).toHaveBeenCalled();
+      expect(overlay.type).toBe("rain");
+    });
+
+    it("is dropped when the load fails, so the next hour is not swallowed", async () => {
+      const { MAPS, setMapTime, setRampLayer, getMapOverlayState } = await load();
+      MAPS.worldMap = { map: {} };
+      mocks.applyWeatherLayer.mockRejectedValueOnce(new Error("boom"));
+      await setRampLayer("wind");
+      expect(getMapOverlayState().type).toBe("satellite");
+      await setMapTime(6); /* nothing to re-time on the basemap, and no stuck flag */
+      expect(mocks.setWeatherLayerTime).not.toHaveBeenCalled();
+    });
   });
 
   it("does not re-apply itself to a layer chosen after it", async () => {

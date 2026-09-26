@@ -48,15 +48,15 @@ export const URL_LAYERS = [
 ];
 /* Layers with no forecast-time concept — a shared/bookmarked link never
    carries a meaningless `t=` for them. */
-const URL_LAYERS_WITHOUT_TIME = [
-  "satellite",
-  "humidity",
-  "airQuality",
-  "alerts",
-  "lightning",
-  "clouds",
-];
-export const URL_TIME_OFFSETS = [0, 3, 6];
+const URL_LAYERS_WITHOUT_TIME = ["satellite", "airQuality", "alerts", "lightning", "clouds"];
+export const URL_TIME_OFFSETS = [0, 3, 6, 12, 24];
+
+/* Whether a layer has a forecast hour to remember (the ramp layers and
+   Humidity), as opposed to Air Quality, Alerts, Lightning, Clouds and
+   Satellite, which never write a `t=`. */
+export function layerHasForecastTime(layer) {
+  return URL_LAYERS.includes(layer) && !URL_LAYERS_WITHOUT_TIME.includes(layer);
+}
 
 export const DEFAULT_URL_STATE = {
   view: "home",
