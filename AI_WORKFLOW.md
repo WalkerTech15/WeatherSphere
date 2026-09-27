@@ -40,6 +40,64 @@ This document defines how Claude Code and Codex collaborate on WeatherSphere.
 - Use the least expensive model and reasoning level that can complete the task
   safely without reducing verification quality.
 
+## Codex efficiency and model routing
+
+- These rules apply to every current and future Codex model, including GPT-5.6
+  Luna, GPT-5.6 Terra, GPT-5.6 Sol, GPT-6 Luna, GPT-6 Sol, GPT-6 Astra, and
+  future models.
+- Use the lowest reasoning level that can safely complete the task:
+  - Simple status, git, or documentation checks: low or minimal.
+  - Focused bug fixes and normal QA: medium.
+  - Complex debugging, architecture, security, or flaky tests: high.
+- Use fast models for narrow checks and larger models only for difficult
+  reasoning. Do not use maximum reasoning by default.
+- Before inspecting the repository, read `AI_REPORT.md` if it exists. Use it as
+  a starting point, then verify important claims directly.
+- Do not repeat tests that already have a recent, matching, successful result
+  unless source files, dependencies, runtime state, or configuration changed.
+- Prefer focused tests before full suites. Run the full suite only when the
+  focused checks pass or when regression risk requires it.
+- Group independent read-only checks in parallel when safe, such as git status,
+  diff checks, test discovery, and file inspection.
+- Do not run duplicate builds, duplicate scans, or repeated browser checks
+  without new evidence or a changed state.
+- Keep tool output concise. Capture failures, summaries, counts, and relevant
+  file paths instead of dumping complete logs.
+- Stop immediately when the requested acceptance criteria are verified.
+- If a long-running command is still progressing, report its current status
+  and do not start a duplicate command.
+- If a check is unnecessary for the requested scope, mark it as not run and
+  explain why in one short sentence.
+- Never reduce verification quality only to save tokens. Security, relevant
+  tests, accessibility checks, and commit-scope checks remain required.
+- Always distinguish: Verified, Not run, In progress, Failed, Pre-existing,
+  and Blocked.
+- Give the user a direct Yes or No commit verdict before the explanation.
+
+## Reasoning-level guidance
+
+Reasoning levels may appear in different languages or UI labels:
+
+- Minimal = minimal
+- Moyen = low
+- Élevé = medium
+- Très élevé = high
+- Maximum = xhigh or maximum
+- Ultra = the highest available reasoning level
+
+Use the lowest level that safely completes the task:
+
+- Minimal: status checks, simple file reads, git checks, and short explanations.
+- Low: focused searches, small documentation edits, and simple test runs.
+- Medium: normal bug fixes, UI QA, translation work, and responsive checks.
+- High: complex debugging, architecture, security audits, and flaky tests.
+- Maximum/Ultra: difficult repository-wide reasoning or serious unresolved
+  failures only. Never use them by default.
+
+The exact names and available levels may differ between models. Detect the
+available options and choose the closest supported level. Never claim to use a
+level that the current model or tool does not provide.
+
 ## Shared rules
 
 - Inspect the existing architecture before editing.
@@ -98,6 +156,11 @@ This document defines how Claude Code and Codex collaborate on WeatherSphere.
   abstractions, and dependencies that make the website heavier.
 - When the user says “check it” or asks to inspect VS Code, inspect the real
   worktree, git status, running website, and rendered UI before giving a verdict.
+- Treat shorthand requests such as “go to VS Code and check” as the same full
+  inspection request. Check the real worktree, current commit and staged state,
+  uncommitted files, `AI_REPORT.md` when present, relevant tests, and the
+  running website or rendered UI when the task affects it. Give a direct Yes or
+  No verdict for commit readiness and explain any exact blocker.
 - Never report “ready to commit” without relevant tests and a rendered UI check
   when the change affects the interface.
 - Preserve existing user changes and do not delete files merely because they
@@ -232,6 +295,24 @@ automatically unless the user explicitly asks for the commit.
 For production work, also report the verified production URL, deployment
 status, relevant logs, and whether environment variables were present without
 revealing their values.
+
+## Agent handoff reports
+
+- Claude Code must save every completed task report in the repository at
+  `AI_REPORT.md` so Codex can inspect it directly.
+- Codex must inspect `AI_REPORT.md` instead of asking the user to copy and paste
+  another agent's report.
+- Keep `AI_REPORT.md` short and replace the previous report when starting a new
+  verification phase.
+- The report must include the objective, scope, files changed, checklist
+  status, exact commands and results, browser and responsive verification,
+  known failures, security or performance findings, a direct commit verdict,
+  a suggested commit message, and confirmation of commit, push, and deployment
+  status.
+- Never include API keys, tokens, passwords, `.env` values, or sensitive logs.
+- Never claim a test passed unless the command actually completed successfully.
+- If the report conflicts with repository or runtime evidence, report the
+  conflict and trust the verifiable evidence.
 
 ## Communication rules
 
