@@ -380,7 +380,9 @@ export function flagImgTag(src, alt, cls = "") {
    "Drapeau : FR"). Takes `lang` explicitly so this data module stays free
    of a dependency on core/state.js. */
 export function flagAlt(name, lang) {
-  return lang === "fr" ? `Drapeau : ${name}` : `${name} flag`;
+  if (lang === "fr") return `Drapeau : ${name}`;
+  if (lang === "es") return `Bandera: ${name}`;
+  return `${name} flag`;
 }
 
 /* Real Wikimedia asset first — keeps the class="flag" sizing contract (all

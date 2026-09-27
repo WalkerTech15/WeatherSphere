@@ -2,10 +2,12 @@
    home view and the forecast view so there is exactly one implementation. */
 import { state } from "./state.js";
 import { t } from "./i18n.js";
+import { intlLocale } from "./location.js";
 
 export function fmtHour(iso) {
   const h = parseInt(iso.slice(11, 13), 10);
   if (state.lang === "fr") return `${h} h`;
+  if (state.lang === "es") return `${h}:00`;
   const ampm = h >= 12 ? "PM" : "AM";
   return `${h % 12 === 0 ? 12 : h % 12} ${ampm}`;
 }
@@ -14,6 +16,7 @@ export function fmtClock(iso) {
   const h = iso.slice(11, 13),
     m = iso.slice(14, 16);
   if (state.lang === "fr") return `${parseInt(h, 10)} h ${m}`;
+  if (state.lang === "es") return `${parseInt(h, 10)}:${m}`;
   const hh = parseInt(h, 10);
   return `${hh % 12 === 0 ? 12 : hh % 12}:${m} ${hh >= 12 ? "PM" : "AM"}`;
 }
@@ -26,9 +29,10 @@ export function fmtDay(dateStr, short = true) {
 
 export function fmtDate(dateStr) {
   const d = new Date(dateStr + "T12:00:00");
-  return state.lang === "fr"
-    ? `${d.getDate()} ${t("months")[d.getMonth()].toLowerCase()}`
-    : `${t("months")[d.getMonth()]} ${d.getDate()}`;
+  /* French and Spanish put the day first, with a lower-case month */
+  return state.lang === "en"
+    ? `${t("months")[d.getMonth()]} ${d.getDate()}`
+    : `${d.getDate()} ${t("months")[d.getMonth()].toLowerCase()}`;
 }
 
 /* Absolute instant (day + clock) in the visitor's own zone, used by the map
@@ -38,9 +42,8 @@ export function fmtDate(dateStr) {
 export function fmtDateTime(value) {
   const d = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(d.getTime())) return "";
-  const locale = state.lang === "fr" ? "fr-FR" : "en-US";
   try {
-    return new Intl.DateTimeFormat(locale, {
+    return new Intl.DateTimeFormat(intlLocale(), {
       weekday: "short",
       day: "numeric",
       month: "short",

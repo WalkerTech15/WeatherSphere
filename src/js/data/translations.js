@@ -1,5 +1,6 @@
-/* i18n dictionary — English / Français. */
+/* i18n dictionary — English / Français / Español (translations-es.js). */
 import { footerProviderNames } from "./attributions.js";
+import { ES } from "./translations-es.js";
 
 export const I18N = {
   en: {
@@ -105,6 +106,7 @@ export const I18N = {
     removeFavorite: "Remove from favorites",
     openLocation: "Open {name}",
     photoCredit: "Photo by {photographer} on Pexels",
+    photoCreditUnsplash: "Photo by {photographer} on Unsplash",
     photoApproximate: "Photo of {area}, not of this place itself",
     photoCreditWikimedia: "Photo by {photographer} ({license}) via Wikimedia Commons",
     photoCreditGoogle: "Photo by {photographer} via Google",
@@ -203,6 +205,7 @@ export const I18N = {
     advDenseFogDesc: "Visibility may drop to about {value}.",
     advDenseFogTip: "Use dipped headlights and keep a longer distance.",
     hourlyForecast: "Hourly forecast",
+    hourNow: "Now",
     precipitation: "Precipitation",
     rainPct: "% rain",
     precipMaxTpl: "Maximum chance: {pct}% around {time}",
@@ -745,6 +748,7 @@ export const I18N = {
     removeFavorite: "Retirer des favoris",
     openLocation: "Ouvrir {name}",
     photoCredit: "Photo de {photographer} sur Pexels",
+    photoCreditUnsplash: "Photo de {photographer} sur Unsplash",
     photoApproximate: "Photo de {area}, et non du lieu lui-même",
     photoCreditWikimedia: "Photo de {photographer} ({license}) via Wikimedia Commons",
     photoCreditGoogle: "Photo de {photographer} via Google",
@@ -842,6 +846,7 @@ export const I18N = {
     advDenseFogDesc: "La visibilité peut descendre à environ {value}.",
     advDenseFogTip: "Allumez les feux de croisement et gardez vos distances.",
     hourlyForecast: "Prévisions horaires",
+    hourNow: "Maint.",
     precipitation: "Précipitations",
     rainPct: "% de pluie",
     precipMaxTpl: "Risque maximal : {pct} % vers {time}",
@@ -1306,3 +1311,5 @@ export const I18N = {
     ],
   },
 };
+
+I18N.es = ES;

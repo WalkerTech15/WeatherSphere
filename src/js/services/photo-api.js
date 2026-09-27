@@ -48,7 +48,7 @@
 import { state } from "../core/state.js";
 import { PEXELS_PROXY_URL, FETCH_TIMEOUT_MS } from "../core/config.js";
 import { flagHtml } from "../data/flags.js";
-import { locCountry } from "../core/location.js";
+import { locCountry, locName, localText } from "../core/location.js";
 import { t } from "../core/i18n.js";
 import { wikimediaGeosearch, wikimediaSearch } from "./wikimedia-api.js";
 import { fetchGooglePlacePhoto, __resetPlacesCacheForTests } from "./places-api.js";
@@ -1063,7 +1063,7 @@ function renderPhotoCredit(host, photo, extraClass = "") {
 /* One entry per provider whose terms demand specific wording. Pexels is
    absent on purpose — it is the default. */
 const ATTRIBUTION = {
-  unsplash: (p) => `Photo by ${p.photographer} on Unsplash`,
+  unsplash: (p) => t("photoCreditUnsplash").replace("{photographer}", p.photographer),
   google: (p) => t("photoCreditGoogle").replace("{photographer}", p.photographer),
   wikimedia: (p) =>
     t("photoCreditWikimedia")
@@ -1207,9 +1207,7 @@ export async function hydrateLocPhoto(el, loc, opts = {}) {
          sentence naming the place and the tier rather than leaving a
          screen-reader user at an unlabelled image. Assigned via the
          property, so the value is escaped by the DOM rather than by us. */
-      img.alt = opts.decorative
-        ? ""
-        : photoAltText(photo, (loc.name && (loc.name[state.lang] || loc.name.en)) || "");
+      img.alt = opts.decorative ? "" : photoAltText(photo, locName(loc));
       if (srcset) {
         img.sizes = sizesAttr;
         img.srcset = srcset;
@@ -1244,16 +1242,12 @@ export async function hydrateLocPhoto(el, loc, opts = {}) {
   if (stale()) return;
   /* Open water has no "exact" photo, whichever provider answered: say so. */
   if (photo && isMarineKind(loc.kind)) {
-    photo = asWaterOverview(photo, (loc.name && (loc.name[state.lang] || loc.name.en)) || "");
+    photo = asWaterOverview(photo, locName(loc));
   }
   /* A curated landmark photo on a state, province or country shows the
      landmark, not the area: labelled as such rather than as an exact photo. */
   if (photo && byId && (REGION_KINDS.has(loc.kind) || loc.kind === "country")) {
-    photo = asAreaLandmark(
-      photo,
-      loc.landmark.en && (loc.landmark[state.lang] || loc.landmark.en),
-      loc.kind,
-    );
+    photo = asAreaLandmark(photo, loc.landmark.en && localText(loc.landmark), loc.kind);
   }
   /* A by-ID photo is a manually reviewed, exact match — never re-checked. A
      Wikimedia result was already filtered by fetchBestPhoto/resolveWikimedia-

@@ -1,5 +1,6 @@
 /* Curated location intelligence.
    kind: country → flag only · state/province/city → landmark */
+import { PLACE_TEXT_ES } from "./place-text-es.js";
 
 /* Quick facts shown on the Map page for countries */
 export const COUNTRY_FACTS = {
@@ -674,7 +675,9 @@ export function findLocations(query, lang) {
   if (!q) return [];
   const scored = [];
   for (const loc of LOCATIONS) {
-    const names = [loc.name.en, loc.name.fr, ...loc.aliases].map(normalize);
+    const names = [loc.name.en, loc.name.fr, PLACE_TEXT_ES[loc.name.en], ...loc.aliases]
+      .filter(Boolean)
+      .map(normalize);
     let score = -1;
     for (const n of names) {
       if (n === q) {
@@ -686,6 +689,8 @@ export function findLocations(query, lang) {
     }
     if (score >= 0) scored.push({ loc, score });
   }
-  scored.sort((a, b) => b.score - a.score || a.loc.name[lang].localeCompare(b.loc.name[lang]));
+  /* the name as the visitor reads it, for the tie-break between equal scores */
+  const shown = ({ name }) => name[lang] || (lang === "es" && PLACE_TEXT_ES[name.en]) || name.en;
+  scored.sort((a, b) => b.score - a.score || shown(a.loc).localeCompare(shown(b.loc)));
   return scored.slice(0, 7).map((s) => s.loc);
 }

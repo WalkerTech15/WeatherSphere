@@ -152,18 +152,20 @@ describe("featureToLoc — a country", () => {
     expect([loc.lon, loc.lat]).toEqual(center);
   });
 
-  it("carries both languages, so 'Japon' and 'Japan' both find it", () => {
+  it("carries every language, so 'Japon', 'Japón' and 'Japan' all find it", () => {
     const loc = __featureToLoc({
       id: "country.jp",
       text: "Japan",
       text_en: "Japan",
       text_fr: "Japon",
+      text_es: "Japón",
       place_type: ["country"],
       center: [138.25, 36.2],
       properties: { country_code: "jp" },
     });
-    expect(loc.name).toEqual({ en: "Japan", fr: "Japon" });
-    expect(loc.country).toEqual({ en: "Japan", fr: "Japon" });
+    expect(loc.name).toEqual({ en: "Japan", fr: "Japon", es: "Japón" });
+    expect(loc.country).toEqual({ en: "Japan", fr: "Japon", es: "Japón" });
+    expect(isRelevantGeocodeResult("Japón", loc)).toBe(true);
   });
 
   it("a namesake city elsewhere stays a city in its own country", () => {

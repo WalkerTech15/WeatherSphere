@@ -9,6 +9,7 @@
 import { state } from "../core/state.js";
 import { normalize } from "../data/locations.js";
 import { marineRegionByName } from "../core/marine-regions.js";
+import { localText } from "../core/location.js";
 import {
   MAPTILER_KEY,
   FETCH_TIMEOUT_MS,
@@ -85,12 +86,12 @@ function ccFromFeature(f) {
   return "";
 }
 
-/* The two interface languages, requested together so a country/state/region
-   carries BOTH its English and French name in one response. That is what lets
+/* The interface languages, requested together so a country/state/region
+   carries its English, French AND Spanish name in one response. That is what lets
    a selected administrative area stay correctly named when the user switches
    language, without a second round trip — and the plain `text` fallback keeps
    the local name whenever the provider has no translation for that tier. */
-export const GEOCODE_LANGS = ["en", "fr"];
+export const GEOCODE_LANGS = ["en", "fr", "es"];
 
 /* MapTiler returns `text_<lang>` / `place_name_<lang>` alongside `text` when
    the request asked for several languages. */
@@ -272,10 +273,10 @@ function tokenMatches(queryToken, candidateToken) {
   return editDistance(queryToken, candidateToken) <= tolerance;
 }
 
-/* A place's name in BOTH interface languages: "Mexique" must find Mexico
-   whichever language the visitor is reading, exactly as "Mexico" does. */
-function bothLanguages(field) {
-  return field ? [field.en, field.fr] : [];
+/* A place's name in EVERY interface language: "Mexique" or "Méjico" must find
+   Mexico whichever language the visitor is reading, exactly as "Mexico" does. */
+function everyLanguage(field) {
+  return field ? GEOCODE_LANGS.map((lang) => field[lang]) : [];
 }
 
 export function isRelevantGeocodeResult(query, loc) {
@@ -283,9 +284,9 @@ export function isRelevantGeocodeResult(query, loc) {
   if (!queryTokens.length || !loc) return false;
   const candidateTokens = searchTokens(
     [
-      ...bothLanguages(loc.name),
-      ...bothLanguages(loc.region),
-      ...bothLanguages(loc.country),
+      ...everyLanguage(loc.name),
+      ...everyLanguage(loc.region),
+      ...everyLanguage(loc.country),
       loc.fullName,
       loc.cc,
       loc.regionCode,
@@ -403,6 +404,6 @@ export function reverseGeocodeLocation(lat, lon) {
 export async function reverseGeocode(lat, lon) {
   const loc = await reverseGeocodeLocation(lat, lon);
   if (!loc) return { name: "", region: "", cc: "", country: "" };
-  const pick = (value) => (value && (value[state.lang] || value.en || value.fr)) || "";
+  const pick = (value) => localText(value);
   return { name: pick(loc.name), region: pick(loc.region), cc: loc.cc, country: pick(loc.country) };
 }

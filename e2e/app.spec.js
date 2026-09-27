@@ -2058,27 +2058,26 @@ test.describe("language menu accessibility", () => {
     await expect(page.locator("#sidebar")).toHaveAttribute("aria-hidden", "false");
   });
 
-  test("lists Français first, English second, with French selected by default", async ({ app }) => {
+  test("lists Français first, English second, Español third, with French selected by default", async ({
+    app,
+  }) => {
     const buttons = app.locator("#langMenu button");
     const order = await buttons.evaluateAll((els) => els.map((el) => el.dataset.lang));
-    expect(order).toEqual(["fr", "en"]);
+    expect(order).toEqual(["fr", "en", "es"]);
 
     const labels = await buttons.evaluateAll((els) =>
       els.map((el) => el.textContent.trim().replace(/\s+/g, " ")),
     );
-    expect(labels).toEqual(["Français", "English"]);
+    expect(labels).toEqual(["Français", "English", "Español"]);
 
     /* flags, roles and aria-checked are preserved on the reordered items */
-    await expect(app.locator('#langMenu button[data-lang="fr"]')).toHaveAttribute(
-      "role",
-      "menuitemradio",
-    );
-    await expect(app.locator('#langMenu button[data-lang="en"]')).toHaveAttribute(
-      "role",
-      "menuitemradio",
-    );
-    await expect(app.locator('#langMenu button[data-lang="fr"] [data-flag]')).toHaveCount(1);
-    await expect(app.locator('#langMenu button[data-lang="en"] [data-flag]')).toHaveCount(1);
+    for (const lang of ["fr", "en", "es"]) {
+      await expect(app.locator(`#langMenu button[data-lang="${lang}"]`)).toHaveAttribute(
+        "role",
+        "menuitemradio",
+      );
+      await expect(app.locator(`#langMenu button[data-lang="${lang}"] [data-flag]`)).toHaveCount(1);
+    }
 
     /* app boots in French (state.js default) — Français is the checked item */
     await expect(app.locator('#langMenu button[data-lang="fr"]')).toHaveAttribute(
@@ -2086,6 +2085,10 @@ test.describe("language menu accessibility", () => {
       "true",
     );
     await expect(app.locator('#langMenu button[data-lang="en"]')).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+    await expect(app.locator('#langMenu button[data-lang="es"]')).toHaveAttribute(
       "aria-checked",
       "false",
     );

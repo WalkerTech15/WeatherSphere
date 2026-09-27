@@ -14,7 +14,14 @@ import { t } from "../core/i18n.js";
 import { findLocations, LOCATIONS } from "../data/locations.js";
 import { maptilerGeocode, geocode } from "../services/geocoding-api.js";
 import { locVisual } from "../services/photo-api.js";
-import { locName, locRegion, locCountry, locKindLabel, flagsHtml } from "../core/location.js";
+import {
+  locName,
+  locRegion,
+  locCountry,
+  locKindLabel,
+  flagsHtml,
+  localText,
+} from "../core/location.js";
 import { selectLocation } from "./location.js";
 import { geoState } from "./geolocation.js";
 import { recentToLocation } from "./recent-locations.js";
@@ -154,7 +161,7 @@ function optionHtml(loc, i) {
           <span class="si-sub">${
             loc.kind === "country"
               ? esc(locRegion(loc))
-              : `${esc(locRegion(loc))}${locRegion(loc) ? ", " : ""}${esc(locCountry(loc))}${loc.landmark ? ` · ${esc(loc.landmark[state.lang] || loc.landmark.en)}` : ""}`
+              : `${esc(locRegion(loc))}${locRegion(loc) ? ", " : ""}${esc(locCountry(loc))}${loc.landmark ? ` · ${esc(localText(loc.landmark))}` : ""}`
           }</span>
         </span>
         <span class="si-kind">${locKindLabel(loc)}</span>

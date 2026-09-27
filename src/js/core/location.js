@@ -4,6 +4,7 @@
 import { state } from "./state.js";
 import { t } from "./i18n.js";
 import { normalize } from "../data/locations.js";
+import { PLACE_TEXT_ES } from "../data/place-text-es.js";
 import {
   countryFlagSrc,
   flagImgTag,
@@ -16,8 +17,24 @@ import {
   RC_TO_KEY,
 } from "../data/flags.js";
 
+/* The Intl locale behind each interface language (Spanish is es-ES). */
+const INTL_LOCALES = { en: "en-US", fr: "fr-FR", es: "es-ES" };
+export const intlLocale = () => INTL_LOCALES[state.lang] || INTL_LOCALES.en;
+
+/* One {en, fr[, es]} text field in the active language. Curated data carries
+   English and French; its Spanish is the English text through a small table
+   (data/place-text-es.js), and a place a geocoder returned in Spanish brings
+   its own `es`. Anything else stays as written rather than disappearing. */
+export function localText(field) {
+  if (!field) return "";
+  const own = field[state.lang];
+  if (own) return own;
+  if (state.lang === "es" && PLACE_TEXT_ES[field.en]) return PLACE_TEXT_ES[field.en];
+  return field.en || field.fr || "";
+}
+
 export function locName(loc) {
-  return loc.name[state.lang] || loc.name.en;
+  return localText(loc.name);
 }
 
 /* Local clock at the selected city, not the visitor's. Falls back silently to
@@ -27,7 +44,7 @@ export function locName(loc) {
 const _clockFmt = {};
 export function localTimeStr(tz) {
   if (!tz) return null;
-  const locale = state.lang === "fr" ? "fr-FR" : "en-US";
+  const locale = intlLocale();
   const hourCycle = state.clockFormat === "12" ? "h12" : "h23";
   const key = `${locale}::${tz}::${hourCycle}::${state.clockSeconds ? 1 : 0}`;
   try {
@@ -67,10 +84,10 @@ export function countryName(cc, fallback = "") {
   return fallback;
 }
 export function locCountry(loc) {
-  return countryName(loc.cc, (loc.country && (loc.country[state.lang] || loc.country.en)) || "");
+  return countryName(loc.cc, localText(loc.country));
 }
 export function locRegion(loc) {
-  const r = loc.region[state.lang] || loc.region.en || "";
+  const r = localText(loc.region);
   /* display-only: geocoders return the anglicized "Quebec" in both languages */
   return state.lang === "fr" ? r.replace(/\bQuebec\b/g, "Québec") : r;
 }

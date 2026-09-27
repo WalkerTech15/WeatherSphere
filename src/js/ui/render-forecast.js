@@ -45,7 +45,7 @@ export function bindForecastCarousel() {
 /* Forecast-page hourly strip — samples every 3rd hour over a wider span
    (unlike the home view's renderHomeHourly, which shows 6 consecutive hours). */
 export function renderHourly() {
-  const nowLabel = state.lang === "fr" ? "Maint." : "Now";
+  const nowLabel = t("hourNow");
   const cells = state.wx.hourly.filter((_, i) => i % 3 === 0).slice(0, 8);
   $("#hourlyStrip").innerHTML = cells
     .map(

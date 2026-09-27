@@ -6,7 +6,14 @@ import { t } from "../core/i18n.js";
 import { weatherIcon } from "../data/icons.js";
 import { wmo, wxDesc } from "../data/weather-codes.js";
 import { fmtTemp, tempUnit } from "../core/units.js";
-import { flagsHtml, locRegion, locCountry, locName, locKindLabel } from "../core/location.js";
+import {
+  flagsHtml,
+  locRegion,
+  locCountry,
+  locName,
+  locKindLabel,
+  localText,
+} from "../core/location.js";
 
 /* zoom per location type; huge countries get a wider view */
 export function zoomFor(loc) {
@@ -26,7 +33,7 @@ export function popupHtml(loc) {
   const c = state.wx && state.wx.current;
   return `<div class="map-popup">
     <div class="mp-name">${flagsHtml(loc, "small")} <b>${esc(locName(loc))}</b></div>
-    <div class="mp-sub">${line2}${loc.landmark ? ` · ${esc(loc.landmark[state.lang] || loc.landmark.en)}` : ""}</div>
+    <div class="mp-sub">${line2}${loc.landmark ? ` · ${esc(localText(loc.landmark))}` : ""}</div>
     ${
       c
         ? `<div class="mp-wx">${weatherIcon(wmo(c.code).icon, c.isDay)}

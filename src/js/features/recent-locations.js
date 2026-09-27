@@ -25,7 +25,11 @@ export const RECENTS_LIMIT = 5;
 const DEVICE_ID_PREFIX = "geo-me-";
 
 function localized(value) {
-  if (value && typeof value === "object") return { en: value.en || "", fr: value.fr || "" };
+  if (value && typeof value === "object") {
+    /* Spanish only when the geocoder supplied it, so a stored entry keeps the
+       {en, fr} shape it always had for the other two languages */
+    return { en: value.en || "", fr: value.fr || "", ...(value.es ? { es: value.es } : {}) };
+  }
   const text = typeof value === "string" ? value : "";
   return { en: text, fr: text };
 }

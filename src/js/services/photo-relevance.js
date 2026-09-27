@@ -80,7 +80,7 @@ export function significantWords(value) {
 function localizedVariants(value) {
   if (!value) return [];
   if (typeof value === "string") return [value];
-  return [...new Set([value.en, value.fr].filter(Boolean))];
+  return [...new Set([value.en, value.fr, value.es].filter(Boolean))];
 }
 
 /* Tokens for one localized field, from all of its spellings at once. */

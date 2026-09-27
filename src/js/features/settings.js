@@ -121,7 +121,7 @@ export function closeThemeMenu() {
 /* Native names, not translated — the language menu itself shows "English"/
    "Français" the same way regardless of the active interface language, so
    the trigger's accessible label follows the same convention. */
-const LANG_NAMES = { en: "English", fr: "Français" };
+const LANG_NAMES = { en: "English", fr: "Français", es: "Español" };
 
 export function syncLangBtnLabel() {
   const name = LANG_NAMES[state.lang] || state.lang;

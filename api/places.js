@@ -215,7 +215,7 @@ export default async function handler(req, res) {
   const body = {
     textQuery: query,
     maxResultCount: CANDIDATE_COUNT,
-    languageCode: req.query.lang === "fr" ? "fr" : "en",
+    languageCode: ["fr", "es"].includes(req.query.lang) ? req.query.lang : "en",
   };
   /* A bias, not a restriction: the geocoder's coordinate is authoritative for
      WHERE the place is, but Google may legitimately place a city's own entry

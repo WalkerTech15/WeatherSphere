@@ -349,7 +349,10 @@ export function fetchPlaceCandidates(loc) {
   if (providerUnavailable) return Promise.resolve([]);
   const query = placesQuery(loc);
   if (!query) return Promise.resolve([]);
-  const params = new URLSearchParams({ query, lang: state.lang === "fr" ? "fr" : "en" });
+  const params = new URLSearchParams({
+    query,
+    lang: ["fr", "es"].includes(state.lang) ? state.lang : "en",
+  });
   if (Number.isFinite(loc.lat) && Number.isFinite(loc.lon)) {
     params.set("lat", String(loc.lat));
     params.set("lon", String(loc.lon));

@@ -30,6 +30,7 @@ import {
   flagsHtml,
   locCountryFlagHtml,
   locRegionFlagHtml,
+  localText,
 } from "../core/location.js";
 import { isFav, toggleFavorite } from "../features/favorites.js";
 import { locVisual, locPhotoHtml, hydrateLocPhoto, gradBg } from "../services/photo-api.js";
@@ -85,7 +86,7 @@ export function renderHero() {
   const fav = isFav(loc);
   const landmarkLine =
     loc.kind !== "country" && loc.landmark
-      ? `<span aria-hidden="true">·</span> ${esc(loc.landmark[state.lang] || loc.landmark.en)}`
+      ? `<span aria-hidden="true">·</span> ${esc(localText(loc.landmark))}`
       : "";
   const localTime = localTimeStr(wx.timezone);
 
@@ -581,7 +582,7 @@ export function renderInsights() {
 export function renderHomeHourly() {
   const el = $("#homeHourlyStrip");
   if (!el) return;
-  const nowLabel = state.lang === "fr" ? "Maint." : "Now";
+  const nowLabel = t("hourNow");
   const cells = state.wx.hourly.slice(0, 6);
   el.innerHTML = cells
     .map((h, i) => {

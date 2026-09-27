@@ -59,7 +59,7 @@ function words(value) {
 function variants(field) {
   if (!field) return [];
   if (typeof field === "string") return [field];
-  return [field.en, field.fr].filter(Boolean);
+  return [field.en, field.fr, field.es].filter(Boolean);
 }
 
 /* Every spelling the place answers to, as normalized word strings. */

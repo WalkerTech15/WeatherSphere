@@ -8,7 +8,14 @@ import { LOCATIONS } from "../data/locations.js";
 import { weatherIcon } from "../data/icons.js";
 import { wmo, wxDesc } from "../data/weather-codes.js";
 import { fmtTemp, tempUnit, fmtWind, windUnit, fmtDistance, distanceUnit } from "../core/units.js";
-import { locName, locRegion, locCountry, locKindLabel, flagsHtml } from "../core/location.js";
+import {
+  locName,
+  locRegion,
+  locCountry,
+  locKindLabel,
+  flagsHtml,
+  localText,
+} from "../core/location.js";
 import { coordLabel } from "../core/coord-location.js";
 import { geoIdentityHtml } from "../core/geo-identity.js";
 import { loadPopularWeather } from "../features/popular-weather.js";
@@ -62,7 +69,7 @@ function hourlyHtml(wx) {
 function panelSubtitle(loc) {
   const landmark = loc.landmark;
   if (landmark && (landmark.en || landmark.fr)) {
-    const name = landmark[state.lang] || landmark.en || landmark.fr;
+    const name = localText(landmark);
     return t("nearLandmark").replace("{landmark}", name);
   }
   return locKindLabel(loc);

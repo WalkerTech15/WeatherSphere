@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:stable": "vite --host localhost --strictPort",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
