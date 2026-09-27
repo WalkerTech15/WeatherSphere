@@ -55,6 +55,14 @@ This document defines how Claude Code and Codex collaborate on WeatherSphere.
   complete, fixed, tested, or ready to commit when the evidence does not prove
   it. Clearly separate verified facts, suspected issues, blocked work, and
   remaining risks.
+- When the user asks whether they can commit, give a direct **Yes** or **No**
+  first. Name the exact blocker if the answer is No. If a failure is known to
+  pre-date the current change and is outside its scope, say so clearly and give
+  a conditional commit recommendation instead of treating it as a new blocker.
+- Do not make the user wait indefinitely for a long-running check. Report the
+  current progress, remaining checks, and whether the available evidence is
+  enough for a documented commit decision. Continue testing only when it can
+  materially improve that decision.
 - Do not silently expand the scope or change unrelated behavior.
 - Do not make product, design, provider, dependency, deletion, commit, push, or
   deployment decisions without explicit authorization when they materially
