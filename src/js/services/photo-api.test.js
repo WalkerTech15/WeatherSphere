@@ -26,6 +26,7 @@ import {
   bumpPhotoToken,
   withTextProvenance,
   isCoordinateOnly,
+  isSearchThumbEligible,
   __resetPhotoCacheForTests,
 } from "./photo-api.js";
 import { photoProvenance, photoConfidence } from "../ui/photo-provenance.js";
@@ -673,6 +674,29 @@ describe("resolveLocationImage — ocean/sea fallback glyph", () => {
 
   it("still shows the generic city glyph for an ordinary unknown place", () => {
     expect(resolveLocationImage({ kind: "city", name: { en: "Somewhere" } })).toBe("🏙️");
+  });
+});
+
+/* Which kinds get a live thumbnail lookup in the search dropdown (features/
+ * search.js) — every kind the photo rules call out, and nothing else. */
+describe("isSearchThumbEligible — which search-result kinds get a live photo lookup", () => {
+  it.each(["city", "town", "village", "country", "region", "state", "province", "ocean", "sea"])(
+    "%s is eligible",
+    (kind) => {
+      expect(isSearchThumbEligible({ kind })).toBe(true);
+    },
+  );
+
+  it.each(["address", "poi", undefined, "county", "gulf"])(
+    "%s is not eligible — too granular or unrecognised for a compact list",
+    (kind) => {
+      expect(isSearchThumbEligible({ kind })).toBe(false);
+    },
+  );
+
+  it("a missing location is never eligible", () => {
+    expect(isSearchThumbEligible(null)).toBe(false);
+    expect(isSearchThumbEligible(undefined)).toBe(false);
   });
 });
 

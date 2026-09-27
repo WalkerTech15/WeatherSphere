@@ -1,14 +1,19 @@
-/* One picture, one owner.
+/* One picture, one owner — per instance.
  *
- * Every location image has exactly one place it may be rendered as a photo: the
- * photo container (`.loc-photo`) that hydrateLocPhoto fills — the hero's
- * background layer, the map panel thumbnail, a Favorites card, an Explore
- * card. Everything else that "shows" a place — the City badge, a search row, a
- * card's emoji — is a compact glyph (an emoji or a flag), never an <img>.
+ * Every location image has exactly one place it may be rendered as a photo
+ * for a given INSTANCE of that place on screen: the `.loc-photo` container
+ * that hydrateLocPhoto fills. The hero's background layer, the map panel
+ * thumbnail, a Favorites card, an Explore card, and (see features/search.js)
+ * a search-result row are each their own instance and may each hold their
+ * own photo — but within ONE instance, everything else that "shows" the
+ * place — the City badge, a card's decorative emoji layer — stays a compact
+ * glyph (an emoji or a flag), never a second, redundant <img> of the same
+ * picture right next to the real one.
  *
  * Lourdes is the case that used to break this rule: it is the one curated
- * place with its own reviewed photograph, and that photograph came out of the
- * badge, the container fallback AND the async hydration.
+ * place with its own reviewed photograph, and that photograph used to come
+ * out of the badge, the container fallback AND the async hydration all at
+ * once, for the SAME hero instance.
  */
 import { test, expect, installMocks, json } from "./mocks.js";
 import { EXPLORE_IDS } from "../src/js/data/locations.js";
@@ -188,19 +193,48 @@ test.describe("a place with no photo keeps its emoji and gradient", () => {
 
 test.describe("search suggestions", () => {
   for (const lang of ["fr", "en"]) {
-    test(`list Lourdes once, as a glyph, never as a picture (${lang})`, async ({ page }) => {
+    test(`lists Lourdes once, its own curated thumbnail — never a second copy, never a credit link (${lang})`, async ({
+      page,
+    }) => {
       await open(page, { lang });
       await typeQuery(page, "Lourdes");
       const rows = page.locator("#searchResults .search-item");
       await expect(rows.first()).toContainText("Lourdes");
       /* let the online lookup land and merge with the curated hit */
       await expect(page.locator("#searchStatus .map-panel-spinner")).toHaveCount(0);
-
       await expect(page.locator("#searchResults .si-name", { hasText: "Lourdes" })).toHaveCount(1);
-      await expect(page.locator(`#searchResults ${PICTURE}`)).toHaveCount(0);
-      await expect(rows.first().locator(".si-visual")).toHaveText("⛪");
+
+      /* the row's own thumbnail (a NEW, separate instance of the same curated
+         image — see photo-api.js's updated file header) — never a second
+         instance anywhere else in the list, and never the search-panel's own
+         emoji fallback once the real photo has loaded */
+      const thumb = rows.first().locator(".si-visual");
+      await expect(thumb).toHaveClass(/has-photo/);
+      await expect(thumb.locator(PICTURE)).toHaveAttribute("src", new RegExp(LOURDES_IMG));
+      await expect(page.locator(`#searchResults ${PICTURE}`)).toHaveCount(1);
+
+      /* a search row is a <button>, which cannot legally contain an <a> — the
+         credit link only ever appears once the place is actually selected
+         (the hero, covered by the tests above); the thumbnail alone never
+         renders one */
+      await expect(page.locator("#searchResults .loc-credit")).toHaveCount(0);
     });
   }
+
+  test("a namesake the pipeline cannot verify keeps its plain emoji, never a stretched guess", async ({
+    page,
+  }) => {
+    /* Paris, Texas has no curated photo and nothing in this suite's mocks
+       claims to picture it — the row must stay on the glyph, exactly like
+       every other unverified place, rather than show a stray, unrelated
+       image. */
+    await open(page);
+    await typeQuery(page, "Paris");
+    const texasRow = page.locator("#searchResults .search-item", { hasText: "Texas" }).first();
+    await expect(texasRow).toBeVisible();
+    await expect(texasRow.locator(".si-visual")).not.toHaveClass(/has-photo/);
+    await expect(texasRow.locator(PICTURE)).toHaveCount(0);
+  });
 
   test("never list two identical rows", async ({ page }) => {
     await open(page);
@@ -239,7 +273,15 @@ test.describe("search suggestions", () => {
     const names = await page.locator("#searchResults .si-name").allTextContents();
     const clean = names.map((name) => name.replace(/\s+/g, " ").trim());
     expect(new Set(clean).size, clean.join(" | ")).toBe(clean.length);
-    await expect(page.locator(`#searchResults ${PICTURE}`)).toHaveCount(0);
+    /* Paris and Lourdes both now have a cached photo (warmed by the two
+       select() calls above) and both appear once each in this menu — one
+       thumbnail per row, never a row with two, and never more pictures than
+       there are rows at all. */
+    const pictureCount = await page.locator(`#searchResults ${PICTURE}`).count();
+    expect(pictureCount).toBeLessThanOrEqual(clean.length);
+    for (const row of await rows.all()) {
+      expect(await row.locator(PICTURE).count()).toBeLessThanOrEqual(1);
+    }
   });
 });
 

@@ -377,10 +377,16 @@ test.describe("an exact country name ranks the country first", () => {
       /* the URL carries the country's own coordinates */
       await expect.poll(() => inside(selFromUrl(page), c.bounds)).toBe(true);
 
-      /* the photo was asked for the country by name — never the namesake's region */
-      await expect.poll(() => photoQueries.length).toBeGreaterThan(0);
+      /* the photo was asked for the country by name — never the namesake's region.
+         (The dropdown's own row thumbnails — see features/search.js — can add
+         entries of their own before or after this one; waiting for the
+         country's own query specifically, rather than "whatever landed
+         first", is what keeps this assertion meaningful regardless of which
+         row's thumbnail lookup happens to resolve first.) */
+      await expect
+        .poll(() => photoQueries.some((q) => q.includes(c.en) || q.includes(c.fr)))
+        .toBe(true);
       expect(photoQueries.join(" | ")).not.toContain(c.namesakeRegion);
-      expect(photoQueries.some((q) => q.includes(c.en) || q.includes(c.fr))).toBe(true);
 
       /* and it never claims to be a photo of the exact place */
       const credit = page.locator("#heroInner .loc-credit");
@@ -406,8 +412,11 @@ test.describe("an exact country name ranks the country first", () => {
         page.locator(`#heroInner img[src*='/countries/${c.namesakeCc}.']`).first(),
       ).toBeAttached();
       await expect.poll(() => near(selFromUrl(page), c.namesake.center, 0.05)).toBe(true);
-      await expect.poll(() => photoQueries.length).toBeGreaterThan(0);
-      expect(photoQueries.join(" | ")).toContain(c.namesakeRegion);
+      /* The dropdown's own row thumbnails (features/search.js) can record a
+         query of their own — for the country row shown a moment earlier —
+         before the namesake's own hero photo is asked for, so this waits for
+         THAT specific query rather than just "any query at all". */
+      await expect.poll(() => photoQueries.some((q) => q.includes(c.namesakeRegion))).toBe(true);
     });
   }
 });

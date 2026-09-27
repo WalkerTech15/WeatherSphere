@@ -13,7 +13,12 @@ import { $, $$, esc } from "../core/dom.js";
 import { t } from "../core/i18n.js";
 import { findLocations, LOCATIONS } from "../data/locations.js";
 import { maptilerGeocode, geocode } from "../services/geocoding-api.js";
-import { locVisual } from "../services/photo-api.js";
+import {
+  locVisual,
+  gradBg,
+  hydrateLocPhoto,
+  isSearchThumbEligible,
+} from "../services/photo-api.js";
 import {
   locName,
   locRegion,
@@ -72,6 +77,7 @@ function closeSearchPanel() {
   $("#searchCombo").setAttribute("aria-expanded", "false");
   $("#searchInput").removeAttribute("aria-activedescendant");
   searchIndex = -1;
+  cancelThumbHydration(); /* nothing left on screen for a debounced fetch to land on */
   setStatus("");
   announce("");
 }
@@ -151,11 +157,27 @@ export function closeMobileSearch({ focusTrigger = false } = {}) {
   if (focusTrigger && wasOpen) $("#mobileSearchBtn")?.focus();
 }
 
+/* The compact visual next to a result: a plain glyph for most rows, or — for
+   a kind the photo pipeline actually covers (see SEARCH_THUMB_KINDS) — the
+   same `.loc-photo` skeleton the hero/Favorites/Explore cards use, so a real
+   thumbnail can fade in over it later without ever shifting the row's
+   layout. Still aria-hidden: the row's accessible name comes from the text
+   beside it (si-name/si-sub/si-kind), exactly as before this photo was
+   possible — a picture appearing asynchronously must never change what a
+   screen reader has already announced for this option. */
+function optionVisualHtml(loc) {
+  if (!isSearchThumbEligible(loc))
+    return `<span class="si-visual" aria-hidden="true">${locVisual(loc)}</span>`;
+  return `<span class="si-visual loc-photo loading" style="${gradBg(loc)}" aria-hidden="true">
+      <span class="loc-photo-fallback">${locVisual(loc)}</span>
+    </span>`;
+}
+
 function optionHtml(loc, i) {
   return `
     <li role="option" id="sr-${i}" aria-selected="${i === searchIndex}">
       <button class="search-item" data-i="${i}" tabindex="-1">
-        <span class="si-visual" aria-hidden="true">${locVisual(loc)}</span>
+        ${optionVisualHtml(loc)}
         <span>
           <span class="si-name">${esc(locName(loc))} ${loc.kind !== "country" ? flagsHtml(loc, "small") : ""}</span><br>
           <span class="si-sub">${
@@ -192,6 +214,54 @@ function bindOptionClicks(ul) {
 
 const optionCount = () => $$("#searchResults [role=option]").length;
 
+/* Thumbnail hydration: debounced and generation-guarded, entirely separate
+   from search-ranking.js's own network cancellation (searchAbort/geoTimer) —
+   this guards the PHOTO lookups the rows themselves kick off, not the
+   geocoding request that produced the rows.
+
+   `thumbGen` is bumped on every repaint; a row's own hydrateLocPhoto call
+   captures it and is told it is stale the moment a NEWER repaint happens,
+   independent of the app-wide photoToken (the currently selected place's own
+   hero photo) — a search row and the hero never race each other, only a
+   search row and a later search row. The lookups themselves are cheap to
+   start and stop this way because they share hydrateLocPhoto/fetchBestPhoto's
+   own PHOTO_CACHE/CANDIDATE_CACHE/WIKIMEDIA_CACHE: a row for a place already
+   looked up (by an earlier query, or by the currently selected hero) resolves
+   from cache instantly, with no new request at all. */
+let thumbTimer = null;
+let thumbGen = 0;
+const THUMB_DEBOUNCE_MS = 250;
+/* 36–40px source is enough for every hit; a 4x-larger Pexels/Commons
+   original would cost real bytes for a thumbnail this small. */
+const THUMB_SIZES = "40px";
+
+function cancelThumbHydration() {
+  clearTimeout(thumbTimer);
+  thumbGen++; // orphans any row hydration already past its debounce
+}
+
+function scheduleThumbHydration() {
+  clearTimeout(thumbTimer);
+  const gen = ++thumbGen;
+  thumbTimer = setTimeout(() => hydrateVisibleThumbs(gen), THUMB_DEBOUNCE_MS);
+}
+
+function hydrateVisibleThumbs(gen) {
+  if (gen !== thumbGen) return; /* superseded before the debounce even fired */
+  $$("#searchResults .search-item[data-i]").forEach((btn) => {
+    const loc = searchResults[Number(btn.dataset.i)];
+    const el = btn.querySelector(".si-visual.loc-photo");
+    if (!loc || !el) return; /* "More results" row, or an ineligible kind */
+    hydrateLocPhoto(el, loc, {
+      isStale: () => gen !== thumbGen,
+      decorative: true /* aria-hidden container — see optionVisualHtml */,
+      noCredit: true /* a <button> row can't hold the credit's <a> */,
+      excludeGeneric: true /* no room here to disclose "not verified" */,
+      sizes: THUMB_SIZES,
+    });
+  });
+}
+
 /* Rows for the typed query: the best few, then "More results" while any are
    hidden. `active` is the row to highlight — the clear best answer, or none. */
 function paintResults(active = -1) {
@@ -201,6 +271,7 @@ function paintResults(active = -1) {
   const ul = $("#searchResults");
   ul.innerHTML = shown.map(optionHtml).join("") + (hidden ? moreHtml(shown.length, hidden) : "");
   bindOptionClicks(ul);
+  scheduleThumbHydration();
   announce(t("searchCount").replace("{n}", shown.length));
   const input = $("#searchInput");
   if (active >= 0) input.setAttribute("aria-activedescendant", `sr-${active}`);
@@ -214,6 +285,7 @@ function renderSearchResults(ranked) {
     searchIndex = -1;
     $("#searchInput").removeAttribute("aria-activedescendant");
     ul.innerHTML = `<li class="search-empty" role="presentation">${t("searchNoResult")}</li>`;
+    cancelThumbHydration(); /* nothing left on screen for a debounced fetch to land on */
     announce(t("searchNoResult"));
     openSearchPanel();
     return;
@@ -286,6 +358,7 @@ function showSuggestions() {
     )
     .join("");
   bindOptionClicks($("#searchResults"));
+  scheduleThumbHydration();
   setStatus("");
   announce(t("searchCount").replace("{n}", searchResults.length));
   openSearchPanel();
@@ -339,6 +412,7 @@ function onSearchInput() {
     $("#searchResults").replaceChildren();
     searchIndex = -1;
     $("#searchInput").removeAttribute("aria-activedescendant");
+    cancelThumbHydration(); /* nothing left on screen for a debounced fetch to land on */
   }
   if (q.length < 2) {
     setStatus("");
@@ -376,6 +450,7 @@ function onSearchInput() {
         else {
           searchResults = [];
           $("#searchResults").replaceChildren();
+          cancelThumbHydration(); /* nothing left on screen for a debounced fetch to land on */
           announce(t("searchError"));
           setStatus("error");
         }

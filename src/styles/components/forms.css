@@ -124,15 +124,22 @@ body[data-theme="dark"] .search-kbd {
   outline: 2px solid var(--primary);
   outline-offset: -2px;
 }
+/* 36px: inside the 32-40px range a compact thumbnail can sit at without
+   crowding the name/subtitle text beside it. Eligible rows (see
+   features/search.js optionVisualHtml) reuse the shared `.loc-photo` system
+   here — same fixed box, same gradient+glyph skeleton, same fade-in once a
+   verified thumbnail loads, no reserved space ever changing size. */
 .search-item .si-visual {
+  position: relative;
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
-  font-size: 24px;
-  border-radius: 12px;
+  font-size: 19px;
+  border-radius: 10px;
   background: var(--bg);
+  overflow: hidden;
 }
 .search-item .si-name {
   font-weight: 600;

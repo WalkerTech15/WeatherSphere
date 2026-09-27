@@ -1,8 +1,13 @@
 /* Location visuals: a compact glyph (country flag or emoji — locVisual) that
    is the only thing rendered up front, with the real photo layered on top by
    hydrateLocPhoto once it loads (never blocking the initial render, never
-   causing layout shift). A photo has exactly one owner: hydrateLocPhoto fills
-   a `.loc-photo` container, and no other slot ever renders an <img> of it.
+   causing layout shift). A photo has exactly one owner PER visible instance
+   of a place: hydrateLocPhoto fills a `.loc-photo` container, and no other
+   slot for that SAME instance ever renders an <img> of it — the hero, a
+   Favorites card, an Explore card and a search-result row (features/
+   search.js) are each their own instance and may each hold their own
+   `.loc-photo`, but a City badge or card emoji stays a plain glyph, never a
+   second copy of the photo shown right next to it.
 
    The real photo comes from a chain of sources ordered by how well each can
    PROVE the picture shows this place, not by how attractive it is — see
@@ -595,6 +600,29 @@ async function requestPhotoList(cacheKey, url, cache) {
    to a text search instead (see resolveWikimediaPhoto). */
 const GEOSEARCH_KINDS = new Set(["city", "town", "village", "address", "poi", "ocean", "sea"]);
 
+/* Which kinds are worth a live thumbnail lookup in a compact list (the search
+   dropdown — see features/search.js). Everything the photo rules call out —
+   city/town/village, country, region/state/province, ocean/sea — qualifies.
+   `address` and `poi` are deliberately excluded: they are the most granular,
+   least-covered kinds (a raw pin dropped on a street, not a named place any
+   provider photographs), so a live lookup for one of these rows would mostly
+   just spend a request confirming there is nothing to show — the existing
+   emoji/flag glyph already is the right answer there. */
+export const SEARCH_THUMB_KINDS = new Set([
+  "city",
+  "town",
+  "village",
+  "country",
+  "region",
+  "state",
+  "province",
+  "ocean",
+  "sea",
+]);
+export function isSearchThumbEligible(loc) {
+  return Boolean(loc) && SEARCH_THUMB_KINDS.has(loc.kind);
+}
+
 /* How close a coordinate-matched photo has to be before it can be called a
    photo OF the place rather than one taken NEAR it.
 
@@ -1158,8 +1186,16 @@ export async function hydrateLocPhoto(el, loc, opts = {}) {
   /* The token guards the ONE visual that tracks the selected location (hero,
      map info): a new selection must cancel the previous fetch's swap. Cards
      that show a fixed place of their own — the explore carousel — opt out, or
-     picking a location mid-load would leave them stuck on the fallback. */
-  const stale = () => opts.raceGuard !== false && token !== photoToken;
+     picking a location mid-load would leave them stuck on the fallback.
+     A caller that races against something OTHER than the selected place (a
+     search row, invalidated by the next keystroke rather than by
+     selectLocation) supplies its own predicate instead — the two guards never
+     need to interact, since a search row and the hero are different elements
+     with different lifetimes. */
+  const stale = () =>
+    typeof opts.isStale === "function"
+      ? opts.isStale()
+      : opts.raceGuard !== false && token !== photoToken;
   /* The image model's outcome, on the element itself: what the visible
      picture can be trusted to show (ui/photo-provenance.js photoConfidence).
      "none" means the local visual fallback is what stays on screen. */
@@ -1214,7 +1250,11 @@ export async function hydrateLocPhoto(el, loc, opts = {}) {
       }
       img.src = src;
       el.classList.add("has-photo");
-      if (photo) renderPhotoCredit(creditHost, photo, opts.creditClass);
+      /* opts.noCredit: a slot with no room for a visible source link (the
+         search dropdown's 36px thumbnail) — never a caller that could show
+         one but chooses not to; the accessible alt text and the eventual
+         hero/full view still carry the real attribution. */
+      if (photo && !opts.noCredit) renderPhotoCredit(creditHost, photo, opts.creditClass);
       /* A curated local image (photo === null) is a reviewed picture of the
          place itself. */
       settle(photo ? photoConfidence(photo) : "exact");
@@ -1277,6 +1317,18 @@ export async function hydrateLocPhoto(el, loc, opts = {}) {
     photo?.source === "google" ||
     photo?.source === "mapillary" ||
     isRelevantPhoto(loc, photo);
+  /* A compact context (opts.excludeGeneric — the search dropdown) has no room
+     to disclose "illustrative, not verified": rather than show a "generic"-
+     tier photo (a stock/Commons match that only NAMES the place, the one tier
+     the pipeline itself documents as "nothing proves it" — see
+     ui/photo-provenance.js) with no caveat attached, it keeps the emoji/flag
+     fallback instead. Every stronger tier (exact/nearby/regional/country/
+     overview) is still shown — only the single unverified tier is held back.
+     Never applies to a curated byId photo, which is manually reviewed and
+     never tagged "generic". */
+  if (opts.excludeGeneric && photo && !byId && photoProvenance(photo) === "generic") {
+    return done();
+  }
   if (photo && photo.src && verified) swap(photo.src, photo);
   else done(); // keep gradient/SVG fallback
 }
