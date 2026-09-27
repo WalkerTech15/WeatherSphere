@@ -56,17 +56,23 @@
 .chip.is-active:active {
   background: var(--primary-600);
 }
-/* Keep flags at a consistent height while allowing each asset to retain its
-   natural aspect ratio. The width cap prevents an unusually wide flag from
-   pushing the country chip out of alignment without cropping the artwork. */
+/* A fixed-size slot next to each chip's label — the globe icon and every
+   country flag (US 1.9:1, France 3:2, Canada 2:1 — all different real
+   ratios) sit in the exact same box so the four pills read as one row,
+   never wider or narrower depending on which flag happens to be shown.
+   34px is wide enough at this height (16.5px) to hold the widest of the
+   four (Canada, 2:1 = 33px) without ever clipping it, so every flag still
+   renders at its own true width — centered in the shared slot, not
+   stretched or cropped to fill it — while the slot itself never changes
+   size. (Keep this in sync with .flag's own contract in
+   components/flags.css: height-based sizing, auto width, object-fit:
+   contain — this box only bounds it, it never overrides it.) */
 .chip-icon {
   display: flex;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: auto;
-  min-width: 22px;
-  max-width: 34px;
+  width: 34px;
   height: 16.5px;
 }
 .chip-icon svg {
@@ -78,7 +84,6 @@
 .chip-icon .flag {
   display: block;
   height: 16.5px;
-  max-width: 34px;
   width: auto;
   object-fit: contain;
   border-radius: 3px;

@@ -504,6 +504,15 @@ test.describe("state across the round trip", () => {
     await expect
       .poll(() => page.url(), { timeout: MAP_TIMEOUT })
       .toContain(`c=${CLICK_CITY.lat}%2C`);
+    /* the URL updates the instant the hash changes, but the camera itself
+       flies there over map-url-sync.js's 800ms (non-initial) duration —
+       clicking before that flight lands hits whatever point is still under
+       the cursor mid-flight, not Tarbes. Same wait used for this same
+       flyTo elsewhere in the suite (e.g. spanish.spec.js, weather-animations
+       .spec.js). Under CPU contention (the full serial suite) rAF frames
+       lag, so the flight can still be short of its target well past a
+       lighter, idle-machine timing — this was the flaky test's root cause. */
+    await page.waitForTimeout(800);
     await page.mouse.click(720, 450); // Tarbes — fast
 
     await expect(panelName(page)).toHaveText("Tarbes");
