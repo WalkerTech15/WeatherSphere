@@ -152,20 +152,37 @@ describe("featureToLoc — a country", () => {
     expect([loc.lon, loc.lat]).toEqual(center);
   });
 
-  it("carries every language, so 'Japon', 'Japón' and 'Japan' all find it", () => {
+  it("carries every language, so 'Japon', 'Japón' and 'Nhật Bản' all find it", () => {
     const loc = __featureToLoc({
       id: "country.jp",
       text: "Japan",
       text_en: "Japan",
       text_fr: "Japon",
       text_es: "Japón",
+      text_vi: "Nhật Bản",
       place_type: ["country"],
       center: [138.25, 36.2],
       properties: { country_code: "jp" },
     });
-    expect(loc.name).toEqual({ en: "Japan", fr: "Japon", es: "Japón" });
-    expect(loc.country).toEqual({ en: "Japan", fr: "Japon", es: "Japón" });
+    expect(loc.name).toEqual({ en: "Japan", fr: "Japon", es: "Japón", vi: "Nhật Bản" });
+    expect(loc.country).toEqual({ en: "Japan", fr: "Japon", es: "Japón", vi: "Nhật Bản" });
     expect(isRelevantGeocodeResult("Japón", loc)).toBe(true);
+    expect(isRelevantGeocodeResult("Nhật Bản", loc)).toBe(true);
+  });
+
+  it("falls back to the plain text when a provider has no translation for a language", () => {
+    const loc = __featureToLoc({
+      id: "country.de",
+      text: "Germany",
+      text_en: "Germany",
+      text_fr: "Allemagne",
+      place_type: ["country"],
+      center: [10.45, 51.16],
+      properties: { country_code: "de" },
+    });
+    /* no text_es/text_vi from the provider — the plain `text` stands in, so
+       the field is never missing or empty */
+    expect(loc.name).toEqual({ en: "Germany", fr: "Allemagne", es: "Germany", vi: "Germany" });
   });
 
   it("a namesake city elsewhere stays a city in its own country", () => {

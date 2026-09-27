@@ -5,6 +5,7 @@ import { state } from "./state.js";
 import { t } from "./i18n.js";
 import { normalize } from "../data/locations.js";
 import { PLACE_TEXT_ES } from "../data/place-text-es.js";
+import { PLACE_TEXT_VI } from "../data/place-text-vi.js";
 import {
   countryFlagSrc,
   flagImgTag,
@@ -17,19 +18,29 @@ import {
   RC_TO_KEY,
 } from "../data/flags.js";
 
-/* The Intl locale behind each interface language (Spanish is es-ES). */
-const INTL_LOCALES = { en: "en-US", fr: "fr-FR", es: "es-ES" };
+/* The Intl locale behind each interface language (Spanish is es-ES, Vietnamese
+   is vi-VN). */
+const INTL_LOCALES = { en: "en-US", fr: "fr-FR", es: "es-ES", vi: "vi-VN" };
 export const intlLocale = () => INTL_LOCALES[state.lang] || INTL_LOCALES.en;
 
-/* One {en, fr[, es]} text field in the active language. Curated data carries
-   English and French; its Spanish is the English text through a small table
-   (data/place-text-es.js), and a place a geocoder returned in Spanish brings
-   its own `es`. Anything else stays as written rather than disappearing. */
+/* Per-language table of a place's {en, fr[, es][, vi]} text, keyed by the
+   English spelling — one entry per language that needs its own fallback
+   table. Curated data carries English and French only; a place a geocoder
+   returned in the active language brings its own field already, ahead of
+   this. */
+const PLACE_TEXT_FALLBACK = { es: PLACE_TEXT_ES, vi: PLACE_TEXT_VI };
+
+/* One {en, fr[, es][, vi]} text field in the active language. Its translation
+   in a language curated data doesn't carry is the English text through a
+   small table (data/place-text-es.js, data/place-text-vi.js), and a place a
+   geocoder returned in that language brings its own field. Anything else
+   stays as written rather than disappearing. */
 export function localText(field) {
   if (!field) return "";
   const own = field[state.lang];
   if (own) return own;
-  if (state.lang === "es" && PLACE_TEXT_ES[field.en]) return PLACE_TEXT_ES[field.en];
+  const fallback = PLACE_TEXT_FALLBACK[state.lang];
+  if (fallback && fallback[field.en]) return fallback[field.en];
   return field.en || field.fr || "";
 }
 
@@ -63,11 +74,23 @@ export function localTimeStr(tz) {
   }
 }
 
+/* Intl.DisplayNames' CLDR data is occasionally incomplete for a locale: as of
+   this writing "vi" has no translated name for Italy and returns the English
+   word verbatim (verified against Node's ICU data — every other country code
+   this app curates, AU/CA/DE/ES/FR/GB/JP/US/VN, comes back correctly
+   localized). A silent English word in an otherwise-Vietnamese interface is
+   exactly what this table exists to catch; extend it if a future country or
+   locale turns up the same gap. */
+const COUNTRY_NAME_OVERRIDES = { vi: { IT: "Ý" } };
+
 /* Country names come from Intl.DisplayNames (ISO alpha-2 code + active
    language) — no manual translation table. Manual strings stay as fallback. */
 const _displayNames = {};
 export function countryName(cc, fallback = "") {
   if (cc && cc.length === 2) {
+    const code = cc.toUpperCase();
+    const override = COUNTRY_NAME_OVERRIDES[state.lang]?.[code];
+    if (override) return override;
     try {
       const dn =
         _displayNames[state.lang] ||
@@ -75,8 +98,8 @@ export function countryName(cc, fallback = "") {
           type: "region",
           fallback: "code",
         }));
-      const name = dn.of(cc.toUpperCase());
-      if (name && name !== cc.toUpperCase()) return name;
+      const name = dn.of(code);
+      if (name && name !== code) return name;
     } catch {
       /* unsupported code or runtime — fall back below */
     }

@@ -87,11 +87,11 @@ function ccFromFeature(f) {
 }
 
 /* The interface languages, requested together so a country/state/region
-   carries its English, French AND Spanish name in one response. That is what lets
+   carries its English, French, Spanish AND Vietnamese name in one response. That is what lets
    a selected administrative area stay correctly named when the user switches
    language, without a second round trip — and the plain `text` fallback keeps
    the local name whenever the provider has no translation for that tier. */
-export const GEOCODE_LANGS = ["en", "fr", "es"];
+export const GEOCODE_LANGS = ["en", "fr", "es", "vi"];
 
 /* MapTiler returns `text_<lang>` / `place_name_<lang>` alongside `text` when
    the request asked for several languages. */

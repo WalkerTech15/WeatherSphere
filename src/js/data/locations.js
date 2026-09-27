@@ -1,6 +1,7 @@
 /* Curated location intelligence.
    kind: country → flag only · state/province/city → landmark */
 import { PLACE_TEXT_ES } from "./place-text-es.js";
+import { PLACE_TEXT_VI } from "./place-text-vi.js";
 
 /* Quick facts shown on the Map page for countries */
 export const COUNTRY_FACTS = {
@@ -670,12 +671,21 @@ export function normalize(str) {
   return str.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
 }
 
+/* the name as the visitor reads it, for a search's display/tie-break */
+const PLACE_TEXT_FALLBACK = { es: PLACE_TEXT_ES, vi: PLACE_TEXT_VI };
+
 export function findLocations(query, lang) {
   const q = normalize(query);
   if (!q) return [];
   const scored = [];
   for (const loc of LOCATIONS) {
-    const names = [loc.name.en, loc.name.fr, PLACE_TEXT_ES[loc.name.en], ...loc.aliases]
+    const names = [
+      loc.name.en,
+      loc.name.fr,
+      PLACE_TEXT_ES[loc.name.en],
+      PLACE_TEXT_VI[loc.name.en],
+      ...loc.aliases,
+    ]
       .filter(Boolean)
       .map(normalize);
     let score = -1;
@@ -689,8 +699,8 @@ export function findLocations(query, lang) {
     }
     if (score >= 0) scored.push({ loc, score });
   }
-  /* the name as the visitor reads it, for the tie-break between equal scores */
-  const shown = ({ name }) => name[lang] || (lang === "es" && PLACE_TEXT_ES[name.en]) || name.en;
+  /* for the tie-break between equal scores */
+  const shown = ({ name }) => name[lang] || PLACE_TEXT_FALLBACK[lang]?.[name.en] || name.en;
   scored.sort((a, b) => b.score - a.score || shown(a.loc).localeCompare(shown(b.loc)));
   return scored.slice(0, 7).map((s) => s.loc);
 }

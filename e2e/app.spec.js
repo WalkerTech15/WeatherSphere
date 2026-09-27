@@ -2058,20 +2058,20 @@ test.describe("language menu accessibility", () => {
     await expect(page.locator("#sidebar")).toHaveAttribute("aria-hidden", "false");
   });
 
-  test("lists Français first, English second, Español third, with French selected by default", async ({
+  test("lists Français first, English second, Español third, Tiếng Việt fourth, with French selected by default", async ({
     app,
   }) => {
     const buttons = app.locator("#langMenu button");
     const order = await buttons.evaluateAll((els) => els.map((el) => el.dataset.lang));
-    expect(order).toEqual(["fr", "en", "es"]);
+    expect(order).toEqual(["fr", "en", "es", "vi"]);
 
     const labels = await buttons.evaluateAll((els) =>
       els.map((el) => el.textContent.trim().replace(/\s+/g, " ")),
     );
-    expect(labels).toEqual(["Français", "English", "Español"]);
+    expect(labels).toEqual(["Français", "English", "Español", "Tiếng Việt"]);
 
     /* flags, roles and aria-checked are preserved on the reordered items */
-    for (const lang of ["fr", "en", "es"]) {
+    for (const lang of ["fr", "en", "es", "vi"]) {
       await expect(app.locator(`#langMenu button[data-lang="${lang}"]`)).toHaveAttribute(
         "role",
         "menuitemradio",
@@ -2084,14 +2084,12 @@ test.describe("language menu accessibility", () => {
       "aria-checked",
       "true",
     );
-    await expect(app.locator('#langMenu button[data-lang="en"]')).toHaveAttribute(
-      "aria-checked",
-      "false",
-    );
-    await expect(app.locator('#langMenu button[data-lang="es"]')).toHaveAttribute(
-      "aria-checked",
-      "false",
-    );
+    for (const lang of ["en", "es", "vi"]) {
+      await expect(app.locator(`#langMenu button[data-lang="${lang}"]`)).toHaveAttribute(
+        "aria-checked",
+        "false",
+      );
+    }
     await expect(app.locator("html")).toHaveAttribute("lang", "fr");
   });
 });

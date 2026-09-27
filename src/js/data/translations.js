@@ -1,6 +1,8 @@
-/* i18n dictionary — English / Français / Español (translations-es.js). */
+/* i18n dictionary — English / Français / Español (translations-es.js) /
+   Tiếng Việt (translations-vi.js). */
 import { footerProviderNames } from "./attributions.js";
 import { ES } from "./translations-es.js";
+import { VI } from "./translations-vi.js";
 
 export const I18N = {
   en: {
@@ -1313,3 +1315,4 @@ export const I18N = {
 };
 
 I18N.es = ES;
+I18N.vi = VI;

@@ -26,9 +26,14 @@ const DEVICE_ID_PREFIX = "geo-me-";
 
 function localized(value) {
   if (value && typeof value === "object") {
-    /* Spanish only when the geocoder supplied it, so a stored entry keeps the
-       {en, fr} shape it always had for the other two languages */
-    return { en: value.en || "", fr: value.fr || "", ...(value.es ? { es: value.es } : {}) };
+    /* Spanish/Vietnamese only when the geocoder supplied them, so a stored
+       entry keeps the {en, fr} shape it always had for the other languages */
+    return {
+      en: value.en || "",
+      fr: value.fr || "",
+      ...(value.es ? { es: value.es } : {}),
+      ...(value.vi ? { vi: value.vi } : {}),
+    };
   }
   const text = typeof value === "string" ? value : "";
   return { en: text, fr: text };

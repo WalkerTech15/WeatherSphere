@@ -382,6 +382,7 @@ export function flagImgTag(src, alt, cls = "") {
 export function flagAlt(name, lang) {
   if (lang === "fr") return `Drapeau : ${name}`;
   if (lang === "es") return `Bandera: ${name}`;
+  if (lang === "vi") return `Cờ: ${name}`;
   return `${name} flag`;
 }
 

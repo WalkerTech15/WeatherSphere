@@ -7,7 +7,7 @@ import { intlLocale } from "./location.js";
 export function fmtHour(iso) {
   const h = parseInt(iso.slice(11, 13), 10);
   if (state.lang === "fr") return `${h} h`;
-  if (state.lang === "es") return `${h}:00`;
+  if (state.lang === "es" || state.lang === "vi") return `${h}:00`;
   const ampm = h >= 12 ? "PM" : "AM";
   return `${h % 12 === 0 ? 12 : h % 12} ${ampm}`;
 }
@@ -16,7 +16,7 @@ export function fmtClock(iso) {
   const h = iso.slice(11, 13),
     m = iso.slice(14, 16);
   if (state.lang === "fr") return `${parseInt(h, 10)} h ${m}`;
-  if (state.lang === "es") return `${parseInt(h, 10)}:${m}`;
+  if (state.lang === "es" || state.lang === "vi") return `${parseInt(h, 10)}:${m}`;
   const hh = parseInt(h, 10);
   return `${hh % 12 === 0 ? 12 : hh % 12}:${m} ${hh >= 12 ? "PM" : "AM"}`;
 }
