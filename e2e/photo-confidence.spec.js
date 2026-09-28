@@ -77,7 +77,7 @@ test.describe("an illustrative stock photo is never passed off as the place", ()
   test("is labelled on the image and to a screen reader, in French", async ({ page }) => {
     await openAndSearch(page, { photoProxy: illustrativePexels });
     await expect(heroSlot(page)).toHaveAttribute("data-photo-confidence", "generic");
-    await expect(credit(page)).toHaveText("Image générique · Pexels ↗");
+    await expect(credit(page)).toHaveText("Pexels ↗");
     await expect(credit(page)).toHaveAttribute(
       "aria-label",
       /^Image générique — lieu exact non vérifié — Photo de Stock Shooter sur Pexels$/,
@@ -99,7 +99,7 @@ test.describe("an illustrative stock photo is never passed off as the place", ()
 
   test("the label follows a language switch after the photo is shown", async ({ page }) => {
     await openAndSearch(page, { photoProxy: illustrativePexels });
-    await expect(credit(page)).toHaveText("Image générique · Pexels ↗");
+    await expect(credit(page)).toHaveText("Pexels ↗");
     await page.locator("#langBtn").click();
     await page.locator('#langMenu button[data-lang="en"]').click();
     await expect(credit(page)).toHaveText("Generic image · Pexels ↗");

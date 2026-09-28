@@ -1600,7 +1600,7 @@ test.describe("explore carousel photos", () => {
 
     const credit = paris.locator("a.explore-credit");
     await expect(credit).toBeVisible();
-    await expect(credit).toHaveText("Photo exacte du lieu · Pexels ↗");
+    await expect(credit).toHaveText("Pexels ↗");
     await expect(credit).toHaveAttribute(
       "aria-label",
       `Photo exacte du lieu — Photo de ${PEXELS_PHOTOGRAPHER} sur Pexels`,
@@ -1753,7 +1753,7 @@ test.describe("favorites", () => {
     await expect(card.locator("img.loc-photo-img")).toHaveCount(1);
     await expect(card.locator("img.loc-photo-img")).toHaveAttribute("alt", "");
     await expect(card.locator("a.favx-credit")).toBeVisible();
-    await expect(card.locator("a.favx-credit")).toHaveText("Photo exacte du lieu · Pexels ↗");
+    await expect(card.locator("a.favx-credit")).toHaveText("Pexels ↗");
     await expect(card.locator("a.favx-credit")).toHaveAttribute(
       "aria-label",
       `Photo exacte du lieu — Photo de ${PEXELS_PHOTOGRAPHER} sur Pexels`,
@@ -1837,7 +1837,7 @@ test.describe("photo attribution", () => {
   test("9a. a Pexels photo renders a compact, linked source", async ({ app }) => {
     const credit = app.locator("#heroInner .loc-credit");
     await expect(credit).toBeVisible();
-    await expect(credit).toHaveText("Photo exacte du lieu · Pexels ↗");
+    await expect(credit).toHaveText("Pexels ↗");
     await expect(credit).toHaveAttribute(
       "aria-label",
       `Photo exacte du lieu — Photo de ${PEXELS_PHOTOGRAPHER} sur Pexels`,
@@ -1857,7 +1857,7 @@ test.describe("photo attribution", () => {
 
     await app.locator("#langBtn").click();
     await app.locator('#langMenu button[data-lang="en"]').click();
-    await expect(app.locator("#heroInner .loc-credit")).toHaveText("Exact place photo · Pexels ↗");
+    await expect(app.locator("#heroInner .loc-credit")).toHaveText("Pexels ↗");
     await expect(app.locator("#heroInner .loc-credit")).toHaveAttribute(
       "aria-label",
       `Exact place photo — Photo by ${PEXELS_PHOTOGRAPHER} on Pexels`,
@@ -2993,7 +2993,7 @@ test.describe("map detail panel — photo, subtitle, share", () => {
     await expect(photo.locator("img.loc-photo-img")).toHaveCount(1);
     const credit = photo.locator("a.loc-credit");
     await expect(credit).toBeVisible();
-    await expect(credit).toHaveText("Photo exacte du lieu · Pexels ↗");
+    await expect(credit).toHaveText("Pexels ↗");
     await expect(credit).toHaveAttribute(
       "aria-label",
       `Photo exacte du lieu — Photo de ${PEXELS_PHOTOGRAPHER} sur Pexels`,

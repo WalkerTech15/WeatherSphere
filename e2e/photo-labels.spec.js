@@ -62,11 +62,11 @@ test.describe("Exact place photo", () => {
     await chooseFromSearch(page, "Tokyo");
     await expect(page.locator("#heroCityName")).toHaveText("Tokyo");
     await expect(slot(page)).toHaveAttribute("data-photo-confidence", "exact");
-    await expect(credit(page)).toHaveText("Photo exacte du lieu · Pexels ↗");
+    await expect(credit(page)).toHaveText("Pexels ↗");
     await expect(credit(page)).toHaveAttribute("data-provenance", "exact");
     await page.locator("#langBtn").click();
     await page.locator('#langMenu button[data-lang="en"]').click();
-    await expect(credit(page)).toHaveText("Exact place photo · Pexels ↗");
+    await expect(credit(page)).toHaveText("Pexels ↗");
     await expect(credit(page)).toHaveAttribute(
       "aria-label",
       `Exact place photo — Photo by ${PEXELS_PHOTOGRAPHER} on Pexels`,
@@ -77,7 +77,7 @@ test.describe("Exact place photo", () => {
     await installMocks(page, { placesProxy: placesProxy() });
     await page.goto("/");
     await chooseFromSearch(page, GEOCODE_LABEL, { lang: "en" });
-    await expect(credit(page)).toHaveText(`Exact place photo · ${GOOGLE_CONTRIBUTOR} · Google ↗`);
+    await expect(credit(page)).toHaveText(`${GOOGLE_CONTRIBUTOR} · Google ↗`);
     await expect(credit(page)).toHaveAttribute("data-provider", "google");
     await expect(slot(page)).toHaveAttribute("data-photo-confidence", "exact");
   });
@@ -92,10 +92,10 @@ test.describe("Nearby photo", () => {
     await page.goto("/");
     await chooseFromSearch(page, GEOCODE_LABEL);
     await expect(slot(page)).toHaveAttribute("data-photo-confidence", "nearby");
-    await expect(credit(page)).toContainText("Photo à proximité ·");
+    await expect(credit(page)).toContainText("Pexels ↗");
     await page.locator("#langBtn").click();
     await page.locator('#langMenu button[data-lang="en"]').click();
-    await expect(credit(page)).toContainText("Nearby photo ·");
+    await expect(credit(page)).toContainText("Pexels ↗");
   });
 });
 
@@ -108,7 +108,7 @@ test.describe("Regional photo", () => {
     await chooseFromSearch(page, "Texas");
     await expect(page.locator("#heroCityName")).toHaveText("Texas");
     await expect(slot(page)).toHaveAttribute("data-photo-confidence", "regional");
-    await expect(credit(page)).toHaveText("Photo régionale · Pexels ↗");
+    await expect(credit(page)).toHaveText("Pexels ↗");
     await expect(credit(page)).toHaveAttribute("data-provenance", "regional");
     /* the full sentence says WHICH landmark, and that it is not the place itself */
     await expect(credit(page)).toHaveAttribute(
@@ -117,7 +117,7 @@ test.describe("Regional photo", () => {
     );
     await page.locator("#langBtn").click();
     await page.locator('#langMenu button[data-lang="en"]').click();
-    await expect(credit(page)).toHaveText("Regional photo · Pexels ↗");
+    await expect(credit(page)).toHaveText("Pexels ↗");
     await expect(credit(page)).toHaveAttribute(
       "aria-label",
       `Photo of The Alamo, not of this place itself — Photo by ${PEXELS_PHOTOGRAPHER} on Pexels`,
@@ -139,7 +139,7 @@ test.describe("Country photo and Generic image", () => {
     await chooseFromSearch(page, "France");
     await expect(page.locator("#heroCityName")).toContainText("France");
     await expect(slot(page)).toHaveAttribute("data-photo-confidence", "generic");
-    await expect(credit(page)).toHaveText("Image générique · Pexels ↗");
+    await expect(credit(page)).toHaveText("Pexels ↗");
     await expect(credit(page)).not.toContainText("exacte");
   });
 });
@@ -164,7 +164,7 @@ test.describe("the longer label fits every layout", () => {
       await expect(credit(page)).toBeVisible();
       /* Google requires the contributor to be visible, not truncated */
       await expect(credit(page)).toContainText(LONG_NAME);
-      await expect(credit(page)).toContainText("Photo exacte du lieu");
+      await expect(credit(page)).toContainText("Pexels ↗");
 
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
