@@ -86,7 +86,11 @@
   transform: none;
   animation: none;
 }
-/* dark left→right overlay so the location + weather text stay readable */
+/* Dark left→right overlay so the location + weather text stay readable —
+   lightened from an earlier 0.74/0.48/0.12 ramp that read as almost
+   monochrome over a bright photo. Text contrast was re-checked after this
+   change (city name/temp/description/high-low all stay comfortably above
+   the 3:1 large-text minimum; see AI_REPORT.md). */
 .loc-photo.hero-photo.has-photo::after {
   content: "";
   position: absolute;
@@ -95,9 +99,9 @@
   border-radius: inherit;
   background: linear-gradient(
     to right,
-    rgba(2, 6, 23, 0.74) 0%,
-    rgba(2, 6, 23, 0.48) 42%,
-    rgba(2, 6, 23, 0.12) 100%
+    rgba(2, 6, 23, 0.6) 0%,
+    rgba(2, 6, 23, 0.36) 42%,
+    rgba(2, 6, 23, 0.08) 100%
   );
 }
 /* hide the decorative mountain silhouette while a real photo is active */
@@ -134,6 +138,7 @@
   margin-top: var(--s-3);
   font-size: 13px;
   opacity: 0.92;
+  text-shadow: 0 1px 8px rgba(2, 6, 23, 0.55);
 }
 .hero-live {
   display: inline-flex;
@@ -267,6 +272,9 @@
   font-size: 15px;
   font-weight: 500;
   opacity: 0.95;
+  /* small text over a real photo needs its own edge, now that the overlay
+     behind it is lighter — same treatment as .hero-city/.hero-temp below */
+  text-shadow: 0 1px 8px rgba(2, 6, 23, 0.55);
 }
 .hero-hl b {
   font-weight: 700;
@@ -573,19 +581,22 @@ body[data-mode="detailed"] .home-grid {
   text-overflow: ellipsis;
 }
 /* Sun cycle: sunrise/sunset carry equal weight — two plain rows, no single
-   dominant primary value (unlike every other group here) */
+   dominant primary value (unlike every other group here). Sized up from an
+   earlier 13px/plain-weight pairing that read as noticeably lighter than
+   every neighbouring card's bold .mg-primary figure in the same grid row. */
 .mg-rows-eq {
-  margin-top: 4px;
+  margin-top: 9px;
   padding-top: 0;
   border-top: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 7px;
 }
 .mg-rows-eq .mg-row {
-  font-size: 13px;
+  font-size: 14px;
 }
 .mg-rows-eq .mg-row-value {
+  font-size: 16px;
   font-weight: 700;
 }
 /* longer FR labels/values ("Direction du vent", "Lever du soleil", "6 h 22")
