@@ -73,6 +73,14 @@ import {
   clearOfflineCaches,
 } from "./services/offline.js";
 import { renderFavorites } from "./ui/render-favorites.js";
+import { renderNotifications } from "./ui/render-notifications.js";
+import {
+  loadFavoritesAlerts,
+  markNotificationRead,
+  clearAllNotifications,
+  bindFavoritesNotificationsRefresh,
+  notifications as favNotifications,
+} from "./features/favorites-notifications.js";
 import { renderDataSources } from "./ui/render-sources.js";
 import { bindWeatherNotice } from "./ui/render-weather-notice.js";
 import { bindAmbient } from "./ui/render-ambient.js";
@@ -124,6 +132,7 @@ document.addEventListener("click", (e) => {
   if (!insideSearch) closeMobileSearch();
   if (!e.target.closest(".lang-wrap")) closeLanguageMenu();
   if (!e.target.closest(".theme-wrap")) closeThemeMenu();
+  if (!e.target.closest(".notif-wrap")) closeNotifPanel();
 });
 document.addEventListener("keydown", (e) => {
   /* Ctrl/Cmd+K: the command-menu shortcut. Works from anywhere, including
@@ -148,6 +157,7 @@ document.addEventListener("keydown", (e) => {
       closeThemeMenu();
       $("#themeBtn").focus();
     }
+    closeNotifPanel({ focusTrigger: true });
     closeMobileSearch({ focusTrigger: true });
     /* mobile bottom sheet (map detail panel): collapse rather than fully
        hide it — hiding it entirely is the close button's own, confirmed
@@ -179,6 +189,53 @@ $$("#langMenu button").forEach((b) =>
     closeLanguageMenu({ focusTrigger: true });
   }),
 );
+
+/* ── Notifications panel — same open/close contract as the language menu.
+   Opening it always tries a fresh check (loadFavoritesAlerts no-ops if the
+   list was fetched within the last few minutes, so this never floods the
+   provider just because the visitor opens and closes the panel). ── */
+function closeNotifPanel({ focusTrigger = false } = {}) {
+  const panel = $("#notifPanel");
+  if (panel.hidden) return;
+  panel.hidden = true;
+  $("#notifBtn").setAttribute("aria-expanded", "false");
+  if (focusTrigger) $("#notifBtn").focus();
+}
+$("#notifBtn").addEventListener("click", () => {
+  const panel = $("#notifPanel");
+  if (panel.hidden) {
+    panel.hidden = false;
+    $("#notifBtn").setAttribute("aria-expanded", "true");
+    loadFavoritesAlerts();
+  } else {
+    closeNotifPanel();
+  }
+});
+$("#notifPanelBody").addEventListener("click", (e) => {
+  const openBtn = e.target.closest("[data-notif-open]");
+  if (!openBtn) return;
+  const key = openBtn.dataset.notifOpen;
+  const notif = favNotifications.find((n) => n.key === key);
+  markNotificationRead(key);
+  closeNotifPanel();
+  const loc = notif && state.favorites.find((f) => f.id === notif.locId);
+  if (loc) {
+    selectLocation(loc);
+    switchView("home");
+  }
+});
+$("#notifClearAll").addEventListener("click", async () => {
+  const accepted = await confirmAction({
+    title: t("notifTitle"),
+    message: t("notifClearAll") + "?",
+    confirmLabel: t("notifClearAll"),
+    cancelLabel: t("cancelAction"),
+    trigger: $("#notifClearAll"),
+    danger: false,
+  });
+  if (!accepted) return;
+  clearAllNotifications();
+});
 
 /* ── Theme menu — same open/close contract as the language menu, plus roving
    ArrowUp/ArrowDown since these are role="menuitemradio" items (tabindex=-1,
@@ -344,6 +401,13 @@ on("search:requested", () => focusSearch());
 on("view:changed", (view) => {
   if (view === "map") loadNearbyIfMapVisible();
 });
+/* features/favorites-notifications.js announces this way rather than
+   importing render-favorites.js/render-notifications.js directly — same
+   reasoning as the two subscriptions above. */
+on("favorites:notifications-changed", () => {
+  renderNotifications();
+  renderFavorites();
+});
 
 /* ── Resize: realign toggle thumbs, resize maps, redraw charts ── */
 let resizeTimer = null;
@@ -393,11 +457,16 @@ $$("#langMenu button").forEach((b) =>
 syncLangBtnLabel(); /* applyStaticI18n() above set the static fallback; name the actual language */
 renderExplore();
 renderFavorites();
+renderNotifications();
 
 /* Re-resolve stored locations against the current dataset (old saves may lack new fields) */
 const freshen = (loc) =>
   loc && (LOCATIONS.find((l) => l.id === loc.id || isSamePlace(l, loc)) || loc);
 state.favorites = state.favorites.map(freshen);
+/* One batched check at boot, then features/favorites-notifications.js's own
+   poll (bound below) keeps it current while the tab stays open. */
+loadFavoritesAlerts();
+bindFavoritesNotificationsRefresh();
 /* re-sanitized on read, so an older or hand-edited store can never
    reintroduce a shape the current privacy rules would refuse to write */
 state.recents = loadRecents();
@@ -434,7 +503,10 @@ loadPopular();
    because losing connectivity must be visible whether or not a worker is
    caching anything. */
 registerServiceWorker();
-bindOfflineStatus(() => updateHeroLiveStatus());
+bindOfflineStatus((offline) => {
+  updateHeroLiveStatus();
+  if (!offline) loadFavoritesAlerts();
+});
 updateHeroLiveStatus();
 
 /* Refresh "updated x min ago" line periodically */

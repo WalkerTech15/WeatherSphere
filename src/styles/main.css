@@ -21,6 +21,7 @@
 @import "./components/cards.css";
 @import "./components/toast.css";
 @import "./components/dialog.css";
+@import "./components/notifications.css";
 @import "./components/tooltip.css";
 @import "./components/weather-fx.css";
 @import "./components/charts.css";

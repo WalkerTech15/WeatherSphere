@@ -11,6 +11,7 @@ import { renderHero } from "../ui/render-home.js";
 import { renderFavorites } from "../ui/render-favorites.js";
 import { refreshComparison } from "../ui/render-comparison.js";
 import { pruneComparison } from "./comparison.js";
+import { loadFavoritesAlerts, pruneFavoritesNotifications } from "./favorites-notifications.js";
 
 export function isFav(loc) {
   return state.favorites.some((f) => f.id === loc.id);
@@ -81,10 +82,12 @@ export function toggleFavorite() {
   if (isFav(loc)) {
     state.favorites = state.favorites.filter((f) => f.id !== loc.id);
     showToast(t("removedFav"));
+    pruneFavoritesNotifications();
   } else {
     state.favorites.push(loc);
     showToast(t("addedFav"));
     loadFavWeather(true);
+    loadFavoritesAlerts(true);
   }
   persistFavs();
   /* Un-favouriting a place must not leave it sitting in the comparison —

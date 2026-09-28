@@ -21,6 +21,10 @@ export const KEYS = {
      stored only as an explicit "0"; absent means the default, on. */
   animations: "ws_anim",
   favorites: "ws_favs",
+  /* Persisted official-alert notifications for favorites (phase 1 — in-app
+     only). Stores normalized records, never raw provider payloads or map
+     geometry. See features/favorites-notifications.js. */
+  favNotifications: "ws_fav_notifs",
   lastLocation: "ws_lastLoc",
   geo: "ws_geo",
   /* Recent searches are opt-IN: the flag key is absent for a new visitor,

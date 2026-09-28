@@ -7,6 +7,7 @@ import { emit } from "../core/app-bus.js";
 import { closeThemeMenu } from "../features/settings.js";
 import { renderMap, updateMapLayerFades } from "../features/map.js";
 import { loadFavWeather } from "../features/favorites.js";
+import { loadFavoritesAlerts } from "../features/favorites-notifications.js";
 import { loadComparison } from "./render-comparison.js";
 import { renderChart } from "./render-home.js";
 import { renderForecastPage } from "./render-forecast.js";
@@ -31,6 +32,7 @@ export function switchView(view) {
   if (view === "map" || view === "home") renderMap();
   if (view === "favorites") {
     loadFavWeather();
+    loadFavoritesAlerts();
     /* the comparison lives inside this view — see ui/render-comparison.js */
     loadComparison();
   }

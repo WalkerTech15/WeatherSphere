@@ -171,6 +171,58 @@
             </button>
           </div>
 
+          <!-- Favorites notifications: official severe-weather alerts only —
+               see features/favorites-notifications.js -->
+          <div class="notif-wrap">
+            <button
+              class="icon-btn notif-btn"
+              id="notifBtn"
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-controls="notifPanel"
+              aria-label="Notifications"
+              data-i18n-aria="notifBtnLabel"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="19"
+                height="19"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M6 8a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6" />
+                <path d="M10 20a2 2 0 0 0 4 0" />
+              </svg>
+              <span class="notif-badge" id="notifBadge" hidden>0</span>
+            </button>
+            <div
+              class="menu notif-panel"
+              id="notifPanel"
+              hidden
+              role="region"
+              aria-label="Notifications"
+              data-i18n-aria="notifBtnLabel"
+            >
+              <div class="notif-panel-head">
+                <h2 data-i18n="notifTitle">Notifications</h2>
+                <button
+                  type="button"
+                  class="notif-clear"
+                  id="notifClearAll"
+                  hidden
+                  data-i18n="notifClearAll"
+                >
+                  Clear all
+                </button>
+              </div>
+              <div id="notifPanelBody"></div>
+            </div>
+          </div>
+
           <!-- Theme -->
           <div class="theme-wrap">
             <button

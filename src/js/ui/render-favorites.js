@@ -10,6 +10,12 @@ import { locName, locCountry, kindLabel, flagsHtml } from "../core/location.js";
 import { flagHtml } from "../data/flags.js";
 import { gradBg, locVisual, hydrateLocPhoto } from "../services/photo-api.js";
 import { favWx, favWxAt, favStatus, loadFavWeather, persistFavs } from "../features/favorites.js";
+import {
+  loadFavoritesAlerts,
+  pruneFavoritesNotifications,
+  activeAlertFor,
+  severityTone,
+} from "../features/favorites-notifications.js";
 import { agoOrNotUpdated, updatedPhrase } from "../core/time-ago.js";
 import { showToast } from "./notifications.js";
 import { confirmAction } from "./confirm-dialog.js";
@@ -50,6 +56,21 @@ function cardMissingHtml() {
 function cardFootText(hasWeather) {
   if (hasWeather) return updatedPhrase(favWxAt);
   return missingWeatherState() === "unavailable" ? t("notUpdated") : "";
+}
+
+/* One badge for the favorite's single most urgent active official alert —
+   never for "clear" or "no coverage", so a badge's absence never reads as a
+   reassurance the app cannot back up. The provider name is the badge's own
+   title, matching the map's Alerts layer discipline of always naming who
+   issued it. */
+function alertBadgeHtml(loc) {
+  const alert = activeAlertFor(loc.id);
+  if (!alert) return "";
+  const title = t("mapAlertsSource").replace("{name}", alert.source.name);
+  return `<span class="fav-alert-badge" data-tone="${esc(severityTone(alert.severity))}" title="${esc(title)}">
+    <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M12 2 1 21h22L12 2Zm0 6.5 6.6 11.5H5.4L12 8.5ZM11 11h2v5h-2v-5Zm0 6.5h2v2h-2v-2Z"/></svg>
+    ${esc(alert.event)}
+  </span>`;
 }
 
 let favPhotoObserver;
@@ -112,6 +133,7 @@ function favCardHtml(loc, i) {
           <svg viewBox="0 0 24 24" width="16" height="16" fill="#FBBF24" stroke="#FBBF24" stroke-width="1.6" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.3.9-4.5 4.4 1 6.1L12 17l-5.5 3 1-6.1L3 9.5l6.3-.9L12 3z"/></svg>
         </button>
       </span>
+      ${alertBadgeHtml(loc)}
       <span class="favx-main">
         ${
           w
@@ -155,6 +177,7 @@ function favRowHtml(loc) {
           </span>
           <span class="ft-names">${flagHtml(loc.cc, "", state.lang)} <b>${esc(locName(loc))}</b><span>${favSubtitle(loc)}</span></span>
         </button>
+        ${alertBadgeHtml(loc)}
       </td>
       <td><span class="ft-cond">${w ? `<span class="ft-wicon">${weatherIcon(wmo(w.code).icon, w.isDay)}</span> ${wxDesc(w.code, state.lang)}` : rowMissingHtml()}</span></td>
       <td><b>${w ? fmtTemp(w.temp) + tempUnit() : "—"}</b></td>
@@ -200,6 +223,7 @@ async function favClickHandler(e) {
 
     state.favorites.splice(index, 1);
     persistFavs();
+    pruneFavoritesNotifications();
     renderFavorites();
     if (state.loc) renderHero();
     showToast(t("removedFav"), {
@@ -209,6 +233,7 @@ async function favClickHandler(e) {
         state.favorites.splice(Math.min(index, state.favorites.length), 0, removed);
         persistFavs();
         renderFavorites();
+        loadFavoritesAlerts(true);
         if (state.loc) renderHero();
         showToast(t("restoredFav"));
       },

@@ -128,6 +128,35 @@
   background: var(--rose);
   box-shadow: 0 0 0 4px var(--rose-soft);
 }
+/* One official active alert, at most — see ui/render-favorites.js's
+   alertBadgeHtml(). Colour follows the tone tokens in
+   components/notifications.css; never shown for "clear" or "no coverage". */
+.fav-alert-badge {
+  position: relative;
+  z-index: 2;
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  margin-top: 8px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fav-alert-badge svg {
+  flex-shrink: 0;
+}
+.ft-place-cell .fav-alert-badge {
+  margin: 4px 0 0 58px;
+  align-self: flex-start;
+}
+
 .favx-main {
   margin-top: auto;
   display: flex;

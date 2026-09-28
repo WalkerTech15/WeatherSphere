@@ -334,6 +334,29 @@ export const I18N = {
     mapAlertsHttpError: "Official alerts could not be loaded.",
     mapAlertsMalformed: "Official alerts came back in an unexpected format.",
     mapAlertsError: "Official alerts could not be loaded.",
+
+    /* Favorites notification center — official severe-weather alerts across
+       every saved place, phase 1 (in-app only). Reuses the same verified
+       provider seam as the map's Alerts layer above; see
+       features/favorites-notifications.js. */
+    notifBtnLabel: "Notifications",
+    notifBtnUnread: "Notifications ({n} unread)",
+    notifBellLabel: "Notifications",
+    notifTitle: "Notifications",
+    notifClearAll: "Clear all",
+    notifSince: "Since",
+    notifNoFavorites: "Add a favorite to get official alert notifications for it.",
+    notifOffline: "You're offline — alerts could not be checked.",
+    notifLoading: "Checking official alerts for your favorites…",
+    notifError: "Official alerts could not be loaded.",
+    /* deliberately not "no alerts" — no favorite here has a verified issuer */
+    notifNoCoverage: "No official alert coverage available for your favorites.",
+    notifEmpty: "No active official alerts for your favorites.",
+    notifToneSevere: "Severe",
+    notifToneWarning: "Warning",
+    notifToneCaution: "Caution",
+    notifToneNormal: "Minor",
+    notifToneInfo: "Information",
     mapLightningRecent: "{n} recent lightning observation(s)",
     mapLightningStrike: "Lightning strike",
     mapLightningProvider: "Lightning data provided by Xweather",
@@ -974,6 +997,26 @@ export const I18N = {
     mapAlertsHttpError: "Les alertes officielles n'ont pas pu être chargées.",
     mapAlertsMalformed: "Les alertes officielles ont été reçues dans un format inattendu.",
     mapAlertsError: "Les alertes officielles n'ont pas pu être chargées.",
+
+    /* Centre de notifications des favoris — alertes météo officielles pour
+       chaque lieu enregistré, phase 1 (dans l'application uniquement). */
+    notifBtnLabel: "Notifications",
+    notifBtnUnread: "Notifications ({n} non lues)",
+    notifBellLabel: "Notifications",
+    notifTitle: "Notifications",
+    notifClearAll: "Tout effacer",
+    notifSince: "Depuis",
+    notifNoFavorites: "Ajoutez un favori pour recevoir ses alertes officielles.",
+    notifOffline: "Vous êtes hors ligne — alertes non vérifiables.",
+    notifLoading: "Vérification des alertes officielles pour vos favoris…",
+    notifError: "Les alertes officielles n'ont pas pu être chargées.",
+    notifNoCoverage: "Aucune couverture d'alertes officielles pour vos favoris.",
+    notifEmpty: "Aucune alerte officielle active pour vos favoris.",
+    notifToneSevere: "Extrême",
+    notifToneWarning: "Alerte",
+    notifToneCaution: "Prudence",
+    notifToneNormal: "Mineure",
+    notifToneInfo: "Information",
     mapLightningRecent: "{n} observation(s) récente(s) de foudre",
     mapLightningStrike: "Impact de foudre",
     mapLightningProvider: "Données de foudre fournies par Xweather",

@@ -7,6 +7,7 @@ import { t, applyStaticI18n } from "../core/i18n.js";
 import { syncSegToggle, syncSidebarA11y } from "../ui/navigation.js";
 import { renderChart, renderExplore, updateHeroClock } from "../ui/render-home.js";
 import { renderFavorites } from "../ui/render-favorites.js";
+import { renderNotifications } from "../ui/render-notifications.js";
 import { renderAllWeather } from "./location.js";
 import { refreshMapLanguage, resizeMaps } from "./map.js";
 
@@ -180,6 +181,7 @@ export function setLang(lang) {
   syncSegToggle($("#modeToggleSide"), "mode", state.mode);
   renderExplore();
   renderFavorites();
+  renderNotifications();
   renderAllWeather();
   refreshMapLanguage(); /* localize map labels instantly, no recreation */
 }
