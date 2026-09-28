@@ -13,6 +13,9 @@ import {
   setMode,
   setUnitTemp,
   setUnitWind,
+  setUnitPressure,
+  setUnitPrecip,
+  setUnitVisibility,
   setTheme,
   setLang,
   setClockFormat,
@@ -218,6 +221,15 @@ bindSegToggle($("#modeToggleSide"), "mode", setMode);
 /* ── Settings page controls ── */
 $$("#chipTemp button").forEach((b) => b.addEventListener("click", () => setUnitTemp(b.dataset.ut)));
 $$("#chipWind button").forEach((b) => b.addEventListener("click", () => setUnitWind(b.dataset.uw)));
+$$("#chipPressure button").forEach((b) =>
+  b.addEventListener("click", () => setUnitPressure(b.dataset.up)),
+);
+$$("#chipPrecip button").forEach((b) =>
+  b.addEventListener("click", () => setUnitPrecip(b.dataset.upr)),
+);
+$$("#chipVisibility button").forEach((b) =>
+  b.addEventListener("click", () => setUnitVisibility(b.dataset.uv)),
+);
 $$("#langTiles .set-tile").forEach((b) =>
   b.addEventListener("click", () => setLang(b.dataset.lang)),
 );

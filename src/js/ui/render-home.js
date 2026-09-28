@@ -12,6 +12,10 @@ import {
   uvLabel,
   convTemp,
   convWind,
+  fmtPressure,
+  pressureUnit,
+  fmtVisibility,
+  visibilityUnit,
 } from "../core/units.js";
 import { fmtHour, fmtClock, fmtDay, fmtDate } from "../core/datetime.js";
 import { weatherIcon, METRIC_ICONS } from "../data/icons.js";
@@ -241,7 +245,10 @@ const METRICS = [
     key: "pressure",
     icon: "pressure",
     tint: "tint-violet",
-    val: (c) => `${Math.round(c.pressure)}<span class="unit">hPa</span>`,
+    val: (c) => `${fmtPressure(c.pressure)}<span class="unit">${pressureUnit()}</span>`,
+    /* classification stays on the RAW hPa value — a display unit must never
+       change whether the reading counts as high/low, only how it's printed
+       (see advisories.js's own comment on the same principle) */
     foot: (c) =>
       c.pressure > 1020
         ? t("highPressure")
@@ -260,7 +267,9 @@ const METRICS = [
     key: "visibility",
     icon: "visibility",
     tint: "tint-blue",
-    val: (c) => `${Math.round(c.visibility)}<span class="unit">km</span>`,
+    val: (c) => `${fmtVisibility(c.visibility)}<span class="unit">${visibilityUnit()}</span>`,
+    /* classification stays on the RAW km value — same reasoning as pressure
+       above */
     foot: (c) =>
       c.visibility >= 20
         ? t("excellent")

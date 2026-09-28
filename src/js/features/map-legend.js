@@ -12,8 +12,8 @@
  *   temperature  °C     (builtin TEMPERATURE_2 ramp)
  *   rain         mm/h   (builtin PRECIPITATION ramp)
  *   wind         m/s    (builtin VIRIDIS scaled to 0–40 m/s)
- *   pressure     hPa    (builtin PRESSURE ramp — already the display unit,
- *                        so it needs no conversion)
+ *   pressure     hPa    (builtin PRESSURE ramp — converted to inHg when
+ *                        that's the visitor's chosen pressure unit)
  *
  * Satellite has no weather data, so it deliberately has no legend.
  *
@@ -27,6 +27,8 @@ import {
   windUnit,
   convPrecip,
   precipUnit,
+  convPressure,
+  pressureUnit,
   MS_TO_KMH,
 } from "../core/units.js";
 
@@ -137,9 +139,9 @@ const CONVERTERS = {
   rain: { convert: convPrecip, unit: precipUnit },
   /* the ramp is metres per second; convWind() takes km/h */
   wind: { convert: (mps) => convWind(mps * MS_TO_KMH), unit: windUnit },
-  /* the ramp is already hPa, the unit this app displays pressure in
-     elsewhere (see core/units.js) — pass the value through unchanged */
-  pressure: { convert: (hpa) => hpa, unit: () => "hPa" },
+  /* the ramp is already hPa — convPressure only converts on when the visitor
+     picked inHg, exactly like every other layer here */
+  pressure: { convert: convPressure, unit: pressureUnit },
 };
 
 /**

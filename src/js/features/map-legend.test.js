@@ -53,6 +53,8 @@ function fakeColorRamp(stops) {
 beforeEach(() => {
   state.unitTemp = "c";
   state.unitWind = "kmh";
+  state.unitPrecip = "mm";
+  state.unitPressure = "hpa";
 });
 
 describe("hasLegend", () => {
@@ -165,15 +167,21 @@ describe("legendModel — units follow the user's settings", () => {
     expect(mph.maxLabel).toBe("89"); /* 40 m/s */
   });
 
-  it("rain follows the imperial/metric choice, in the provider's own units", () => {
+  it("rain follows its OWN precipitation-unit setting, in the provider's own units", () => {
     const metric = legendModel("rain", RAIN_STOPS);
     expect(metric.unit).toBe("mm/h");
     expect(metric.maxLabel).toBe("50");
 
-    state.unitTemp = "f";
+    state.unitPrecip = "in";
     const imperial = legendModel("rain", RAIN_STOPS);
     expect(imperial.unit).toBe("in/h");
     expect(imperial.maxLabel).toBe("1.97"); /* 50 mm/h */
+  });
+
+  it("rain ignores the temperature unit — precipitation has its own setting", () => {
+    state.unitTemp = "f";
+    const legend = legendModel("rain", RAIN_STOPS);
+    expect(legend.unit).toBe("mm/h"); // unitPrecip is still "mm" by default
   });
 
   it("keeps sub-millimetre precipitation readable instead of rounding it to 0", () => {
@@ -193,12 +201,20 @@ describe("legendModel — units follow the user's settings", () => {
     expect(legendModel("clouds", TEMPERATURE_STOPS)).toBeNull();
   });
 
-  it("pressure passes hPa through unchanged, regardless of other unit settings", () => {
+  it("pressure passes hPa through unchanged when hPa is selected, regardless of other unit settings", () => {
     state.unitTemp = "f";
     state.unitWind = "mph";
     const legend = legendModel("pressure", PRESSURE_STOPS);
     expect(legend.unit).toBe("hPa");
     expect(legend.minLabel).toBe("900");
     expect(legend.maxLabel).toBe("1080");
+  });
+
+  it("pressure converts to inHg once that's the visitor's own setting", () => {
+    state.unitPressure = "inhg";
+    const legend = legendModel("pressure", PRESSURE_STOPS);
+    expect(legend.unit).toBe("inHg");
+    expect(legend.minLabel).toBe("26.6"); /* 900 hPa */
+    expect(legend.maxLabel).toBe("31.9"); /* 1080 hPa */
   });
 });

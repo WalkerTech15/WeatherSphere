@@ -39,6 +39,27 @@ export function setUnitWind(v) {
   renderAllWeather();
 }
 
+export function setUnitPressure(v) {
+  state.unitPressure = v;
+  setStr(KEYS.unitPressure, v);
+  updateSettingsUI();
+  renderAllWeather();
+}
+
+export function setUnitPrecip(v) {
+  state.unitPrecip = v;
+  setStr(KEYS.unitPrecip, v);
+  updateSettingsUI();
+  renderAllWeather();
+}
+
+export function setUnitVisibility(v) {
+  state.unitVisibility = v;
+  setStr(KEYS.unitVisibility, v);
+  updateSettingsUI();
+  renderAllWeather();
+}
+
 export function setTheme(v) {
   state.theme = v;
   setStr(KEYS.theme, v);
@@ -75,6 +96,15 @@ export function updateSettingsUI() {
   );
   $$("#chipWind button").forEach((b) =>
     b.setAttribute("aria-checked", b.dataset.uw === state.unitWind),
+  );
+  $$("#chipPressure button").forEach((b) =>
+    b.setAttribute("aria-checked", b.dataset.up === state.unitPressure),
+  );
+  $$("#chipPrecip button").forEach((b) =>
+    b.setAttribute("aria-checked", b.dataset.upr === state.unitPrecip),
+  );
+  $$("#chipVisibility button").forEach((b) =>
+    b.setAttribute("aria-checked", b.dataset.uv === state.unitVisibility),
   );
   $$("#langTiles .set-tile").forEach((b) =>
     b.setAttribute("aria-checked", b.dataset.lang === state.lang),

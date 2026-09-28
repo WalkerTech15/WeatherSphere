@@ -11,6 +11,13 @@ export const state = {
   mode: getStr(KEYS.mode, "simple"),
   unitTemp: getStr(KEYS.unitTemp, legacyImperial ? "f" : "c"),
   unitWind: getStr(KEYS.unitWind, legacyImperial ? "mph" : "kmh"),
+  /* Independent of unitTemp on purpose — a metric-leaning visitor may still
+     prefer inHg, and vice versa. Each defaults to its own metric unit,
+     never to the legacy combined imperial flag (that flag only ever meant
+     "temperature and wind"). */
+  unitPressure: getStr(KEYS.unitPressure, "hpa"),
+  unitPrecip: getStr(KEYS.unitPrecip, "mm"),
+  unitVisibility: getStr(KEYS.unitVisibility, "km"),
   theme: getStr(KEYS.theme, "light"),
   /* "24" matches the previous unconfigurable default (fr-FR's Intl default,
      and the app's own default language) — introducing the setting changes

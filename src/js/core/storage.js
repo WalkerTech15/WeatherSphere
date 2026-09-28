@@ -7,6 +7,12 @@ export const KEYS = {
   mode: "ws_mode",
   unitTemp: "ws_unit_t",
   unitWind: "ws_unit_w",
+  /* Pressure/precipitation/visibility each get their own setting — unlike
+     distance and precipitation's old behavior, these never followed the
+     temperature unit and start from their own metric default. */
+  unitPressure: "ws_unit_p",
+  unitPrecip: "ws_unit_pr",
+  unitVisibility: "ws_unit_v",
   legacyUnits: "ws_units", // old combined key, read-only, never written by current code
   theme: "ws_theme",
   clockFormat: "ws_clock_fmt",

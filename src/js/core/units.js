@@ -24,15 +24,40 @@ export const fmtDistance = (km) => {
 };
 export const distanceUnit = () => (state.unitTemp === "f" ? "mi" : "km");
 
-/* Precipitation intensity. There is no separate precipitation unit in
-   Settings, so it follows the temperature unit — the app's only imperial/
-   metric signal, and the same pairing the old combined `ws_units` preference
-   used. mm/h and in/h are exactly the two units the MapTiler precipitation
-   layer itself reports (PrecipitationPickAt.value / .valueImperial), so a
-   legend built on them can never disagree with the map. */
+/* Precipitation intensity has its own Settings control (state.unitPrecip) —
+   unlike distance above, it no longer follows the temperature unit. mm/h and
+   in/h are exactly the two units the MapTiler precipitation layer itself
+   reports (PrecipitationPickAt.value / .valueImperial), so a legend built on
+   them can never disagree with the map. */
 export const toInPerHour = (mm) => mm / 25.4;
-export const convPrecip = (mm) => (state.unitTemp === "f" ? toInPerHour(mm) : mm);
-export const precipUnit = () => (state.unitTemp === "f" ? "in/h" : "mm/h");
+export const convPrecip = (mm) => (state.unitPrecip === "in" ? toInPerHour(mm) : mm);
+export const precipUnit = () => (state.unitPrecip === "in" ? "in/h" : "mm/h");
+
+/* Atmospheric pressure. 33.8639 is the NIST-standard hPa-per-inHg figure
+   (1013.25 hPa, standard atmospheric pressure, is 29.92 inHg with this
+   divisor — the commonly quoted reference value). inHg always prints two
+   decimal places (it's a private, spec-style rounding: 29.9 vs 29.92 reads
+   as a materially different reading in aviation/weather-station contexts,
+   unlike hPa's whole-number convention). */
+export const toInHg = (hpa) => hpa / 33.8639;
+export const convPressure = (hpa) => (state.unitPressure === "inhg" ? toInHg(hpa) : hpa);
+export const fmtPressure = (hpa) => {
+  const value = convPressure(hpa);
+  return state.unitPressure === "inhg" ? value.toFixed(2) : String(Math.round(value));
+};
+export const pressureUnit = () => (state.unitPressure === "inhg" ? "inHg" : "hPa");
+
+/* Visibility — its own Settings control (state.unitVisibility), reusing
+   toMiles() above rather than a second km→mi conversion. Same sub-10
+   rounding as fmtDistance: a value under 10 (mi or km) keeps one decimal so
+   fog/poor-visibility readings — the cases actually worth reading precisely
+   — don't all collapse to the same whole number. */
+export const convVisibility = (km) => (state.unitVisibility === "mi" ? toMiles(km) : km);
+export const fmtVisibility = (km) => {
+  const value = convVisibility(km);
+  return value < 10 ? Math.round(value * 10) / 10 : Math.round(value);
+};
+export const visibilityUnit = () => (state.unitVisibility === "mi" ? "mi" : "km");
 
 /* m/s is the MapTiler wind layer's own unit; convWind() speaks km/h. */
 export const MS_TO_KMH = 3.6;

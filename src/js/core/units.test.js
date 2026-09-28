@@ -8,6 +8,16 @@ import {
   toMiles,
   fmtDistance,
   distanceUnit,
+  toInHg,
+  convPressure,
+  fmtPressure,
+  pressureUnit,
+  toInPerHour,
+  convPrecip,
+  precipUnit,
+  convVisibility,
+  fmtVisibility,
+  visibilityUnit,
 } from "./units.js";
 
 describe("toF", () => {
@@ -89,5 +99,105 @@ describe("distance (nearby places)", () => {
   it("fmtDistance converts to miles under an imperial setting", () => {
     state.unitTemp = "f";
     expect(fmtDistance(16.0934)).toBe(10); // 10 mi, whole-number branch
+  });
+});
+
+describe("pressure — its own setting, independent of temperature and wind", () => {
+  const original = state.unitPressure;
+  afterEach(() => {
+    state.unitPressure = original;
+  });
+
+  it("toInHg converts standard atmospheric pressure to the textbook 29.92 inHg", () => {
+    expect(Number(toInHg(1013.25).toFixed(2))).toBe(29.92);
+  });
+
+  it("toInHg converts 0 hPa to 0 inHg", () => {
+    expect(toInHg(0)).toBe(0);
+  });
+
+  it("pressureUnit reflects the setting, defaulting to hPa", () => {
+    state.unitPressure = "hpa";
+    expect(pressureUnit()).toBe("hPa");
+    state.unitPressure = "inhg";
+    expect(pressureUnit()).toBe("inHg");
+  });
+
+  it("convPressure passes hPa through unchanged, converts only under inHg", () => {
+    state.unitPressure = "hpa";
+    expect(convPressure(1013.25)).toBe(1013.25);
+    state.unitPressure = "inhg";
+    expect(convPressure(1013.25)).toBeCloseTo(29.92, 2);
+  });
+
+  it("fmtPressure rounds hPa to a whole number, and inHg to two decimals", () => {
+    state.unitPressure = "hpa";
+    expect(fmtPressure(1013.6)).toBe("1014");
+    state.unitPressure = "inhg";
+    expect(fmtPressure(1013.25)).toBe("29.92");
+    expect(fmtPressure(900)).toBe("26.58");
+  });
+
+  it("changing wind or temperature units never changes the pressure unit", () => {
+    state.unitPressure = "hpa";
+    state.unitTemp = "f";
+    state.unitWind = "mph";
+    expect(pressureUnit()).toBe("hPa");
+    state.unitTemp = "c";
+    state.unitWind = "kmh";
+  });
+});
+
+describe("precipitation intensity — its own setting, independent of temperature", () => {
+  const original = state.unitPrecip;
+  afterEach(() => {
+    state.unitPrecip = original;
+  });
+
+  it("toInPerHour converts mm/h to in/h using the standard 25.4mm-per-inch factor", () => {
+    expect(toInPerHour(25.4)).toBe(1);
+    expect(toInPerHour(0)).toBe(0);
+  });
+
+  it("precipUnit and convPrecip follow unitPrecip, not unitTemp", () => {
+    state.unitPrecip = "mm";
+    state.unitTemp = "f"; // deliberately mismatched — must have no effect
+    expect(precipUnit()).toBe("mm/h");
+    expect(convPrecip(10)).toBe(10);
+
+    state.unitPrecip = "in";
+    state.unitTemp = "c"; // deliberately mismatched the other way
+    expect(precipUnit()).toBe("in/h");
+    expect(convPrecip(25.4)).toBe(1);
+    state.unitTemp = "c";
+  });
+});
+
+describe("visibility — its own setting, independent of temperature", () => {
+  const original = state.unitVisibility;
+  afterEach(() => {
+    state.unitVisibility = original;
+  });
+
+  it("visibilityUnit and convVisibility follow unitVisibility, not unitTemp", () => {
+    state.unitVisibility = "km";
+    state.unitTemp = "f"; // deliberately mismatched — must have no effect
+    expect(visibilityUnit()).toBe("km");
+    expect(convVisibility(10)).toBe(10);
+
+    state.unitVisibility = "mi";
+    state.unitTemp = "c";
+    expect(visibilityUnit()).toBe("mi");
+    expect(convVisibility(1.60934)).toBeCloseTo(1, 5);
+    state.unitTemp = "c";
+  });
+
+  it("fmtVisibility keeps one decimal under 10 units, rounds at/above 10 — same shape as fmtDistance", () => {
+    state.unitVisibility = "km";
+    expect(fmtVisibility(4.26)).toBe(4.3);
+    expect(fmtVisibility(23.4)).toBe(23);
+
+    state.unitVisibility = "mi";
+    expect(fmtVisibility(16.0934)).toBe(10); // 10 mi, whole-number branch
   });
 });
