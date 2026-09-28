@@ -13,7 +13,34 @@
  *   - failure       → `geocodeFailed`; the caller shows a translated,
  *                     non-blocking notice while the weather still loads. */
 import { coordLocation } from "../core/coord-location.js";
+import { LOCATIONS, normalize } from "../data/locations.js";
+import { haversineKm } from "../core/geo.js";
 import { reverseGeocodeLocation } from "../services/geocoding-api.js";
+
+/* URL restores carry coordinates, while a curated search result may also
+   carry reviewed landmark/photo data. Reattach that richer record only when
+   the reverse-geocoder independently agrees on the place identity. */
+function curatedMatch(lat, lon, info) {
+  const nameValues =
+    typeof info?.name === "string"
+      ? [info.name]
+      : [info?.name?.en, info?.name?.fr];
+  const names = new Set(
+    nameValues
+      .filter(Boolean)
+      .map((value) => normalize(value)),
+  );
+  if (!names.size || !info?.cc) return null;
+  return (
+    LOCATIONS.find((candidate) => {
+      if (candidate.cc !== info.cc || candidate.kind !== info.kind) return false;
+      if (!names.has(normalize(candidate.name?.en)) && !names.has(normalize(candidate.name?.fr))) {
+        return false;
+      }
+      return haversineKm(lat, lon, candidate.lat, candidate.lon) <= 5;
+    }) || null
+  );
+}
 
 export async function resolveCoordinateLocation(
   lat,
@@ -28,7 +55,7 @@ export async function resolveCoordinateLocation(
     geocodeFailed = true;
   }
   return {
-    loc: coordLocation(lat, lon, info || {}, { idPrefix: "map" }),
+    loc: curatedMatch(lat, lon, info) || coordLocation(lat, lon, info || {}, { idPrefix: "map" }),
     geocodeFailed,
   };
 }

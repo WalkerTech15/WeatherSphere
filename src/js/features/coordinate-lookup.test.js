@@ -4,6 +4,18 @@ import { describe, it, expect, vi } from "vitest";
 import { resolveCoordinateLocation } from "./coordinate-lookup.js";
 
 describe("resolveCoordinateLocation", () => {
+  it("restores the curated location record for a matching named coordinate", async () => {
+    const { loc } = await resolveCoordinateLocation(43.0951, -0.0457, {
+      lookup: async () => ({
+        kind: "city",
+        cc: "FR",
+        name: { en: "Lourdes", fr: "Lourdes" },
+      }),
+    });
+    expect(loc.id).toBe("lourdes");
+    expect(loc.landmark?.photo).toMatchObject({ source: "unsplash" });
+  });
+
   it("uses the provider's localized names for a real place", async () => {
     const lookup = vi.fn(async () => ({
       kind: "city",
