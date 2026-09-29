@@ -342,6 +342,7 @@ export const VI = {
   notifBellLabel: "Thông báo",
   notifTitle: "Thông báo",
   notifClearAll: "Xóa tất cả",
+  notifMarkRead: "Đánh dấu đã đọc",
   notifSince: "Từ",
   notifNoFavorites: "Thêm một mục yêu thích để nhận cảnh báo chính thức cho nơi đó.",
   notifOffline: "Bạn đang ngoại tuyến — không thể kiểm tra cảnh báo.",

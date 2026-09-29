@@ -51,7 +51,8 @@
 /* `.notif-panel` also carries `.menu` (topnav.css), whose `.menu button` rule
    — same specificity as a single class, element selectors included — would
    otherwise stretch this to the header's full width. */
-.notif-panel-head button.notif-clear {
+.notif-panel-head button.notif-clear,
+.notif-panel-head button.notif-mark-read {
   width: auto;
   flex-shrink: 0;
   padding: 6px 10px;
@@ -64,7 +65,8 @@
     color 0.2s,
     border-color 0.2s;
 }
-.notif-panel-head button.notif-clear:hover {
+.notif-panel-head button.notif-clear:hover,
+.notif-panel-head button.notif-mark-read:hover {
   color: var(--text);
   border-color: var(--primary);
 }

@@ -346,6 +346,7 @@ export const ES = {
   notifBellLabel: "Notificaciones",
   notifTitle: "Notificaciones",
   notifClearAll: "Borrar todo",
+  notifMarkRead: "Marcar todo como leído",
   notifSince: "Desde",
   notifNoFavorites: "Añade un favorito para recibir sus alertas oficiales.",
   notifOffline: "Sin conexión — no se pudieron comprobar las alertas.",

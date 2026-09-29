@@ -78,6 +78,7 @@ import {
   loadFavoritesAlerts,
   markNotificationRead,
   clearAllNotifications,
+  markAllNotificationsRead,
   bindFavoritesNotificationsRefresh,
   notifications as favNotifications,
 } from "./features/favorites-notifications.js";
@@ -223,6 +224,9 @@ $("#notifPanelBody").addEventListener("click", (e) => {
     selectLocation(loc);
     switchView("home");
   }
+});
+$("#notifMarkRead").addEventListener("click", () => {
+  markAllNotificationsRead();
 });
 $("#notifClearAll").addEventListener("click", async () => {
   const accepted = await confirmAction({

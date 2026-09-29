@@ -138,6 +138,16 @@ export function markNotificationRead(key) {
   announceChange();
 }
 
+export function markAllNotificationsRead() {
+  const unread = notifications.filter((n) => !n.read);
+  if (!unread.length) return;
+  unread.forEach((n) => {
+    n.read = true;
+  });
+  persist();
+  announceChange();
+}
+
 export function clearAllNotifications() {
   if (!notifications.length) return;
   notifications = [];

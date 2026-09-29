@@ -87,6 +87,7 @@ export function renderNotifications() {
   const badge = $("#notifBadge");
   const body = $("#notifPanelBody");
   const clearBtn = $("#notifClearAll");
+  const markReadBtn = $("#notifMarkRead");
   if (!btn || !badge || !body) return;
 
   const count = unreadCount();
@@ -99,6 +100,7 @@ export function renderNotifications() {
 
   const s = panelState();
   clearBtn.hidden = notifications.length === 0;
+  markReadBtn.hidden = count === 0;
   body.innerHTML =
     s === "active"
       ? `<ul class="notif-list">${sortedNotifications().map(itemHtml).join("")}</ul>`
