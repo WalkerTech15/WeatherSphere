@@ -45,12 +45,15 @@ body[data-theme="dark"] .topnav {
    Both outer tracks share the identical minmax(), so they always resolve to
    the same pixel width as each other regardless of their real content size,
    which is what keeps the center track (and the search bar inside it)
-   genuinely centered at every width. 280px comfortably fits the wider
-   (actions) group so its content never gets clipped by its own track. */
+   genuinely centered whenever there is room. The outer tracks floor at their
+   content's own size (`auto`), not a fixed 280px: the actions group (display
+   toggle + bell + theme + language) is ~334px, so a 280px floor let it spill
+   left over the search bar on 901–1440px laptops and zoomed windows. Now the
+   search column is the one that gives way. */
 @media (min-width: 901px) {
   .topnav-inner {
     display: grid;
-    grid-template-columns: minmax(280px, 1fr) minmax(200px, 660px) minmax(280px, 1fr);
+    grid-template-columns: minmax(auto, 1fr) minmax(200px, 660px) minmax(auto, 1fr);
     max-width: 1440px;
     margin-inline: auto;
   }

@@ -328,3 +328,21 @@ test("a real touch tablet in landscape gets the same 44px targets", async ({ bro
   }
   await context.close();
 });
+
+test.describe("top bar: the search field gives way, never the controls", () => {
+  for (const width of [901, 960, 1024, 1100, 1280, 1440]) {
+    for (const lang of ["fr", "en"]) {
+      test(`search never overlaps the display toggle or actions at ${width}px (${lang})`, async ({
+        page,
+      }) => {
+        await boot(page, { lang, width });
+        const search = await page.locator("#searchWrap").boundingBox();
+        const actions = await page.locator(".topnav-actions").boundingBox();
+        const toggle = await page.locator("#modeToggle").boundingBox();
+        expect(search.x + search.width).toBeLessThanOrEqual(toggle.x - 8);
+        expect(actions.x + actions.width).toBeLessThanOrEqual(width);
+        expect(await sideways(page)).toBeLessThanOrEqual(0);
+      });
+    }
+  }
+});
