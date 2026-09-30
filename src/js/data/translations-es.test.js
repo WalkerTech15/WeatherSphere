@@ -105,7 +105,7 @@ describe("Spanish dictionary", () => {
     expect(I18N.es.tipLayerClouds).toContain("OpenWeatherMap");
     expect(I18N.es.mapAlertsOfficial).toContain("NWS");
     expect(I18N.es.footerData).toBe("Datos: Open-Meteo · OpenStreetMap · MapTiler");
-    expect(I18N.es.aboutTitle2).toContain("WeatherSphere");
+    expect(I18N.es.aboutTitle2).toContain("Saint-Pierre Weather");
   });
 
   it("does not change English or French", () => {

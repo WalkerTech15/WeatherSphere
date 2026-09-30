@@ -1,4 +1,4 @@
-# WeatherSphere
+# Saint-Pierre Weather
 
 A premium, modern weather dashboard: live conditions, 7-day/hourly forecasts,
 an interactive world map, favorites, and French/English support — built with

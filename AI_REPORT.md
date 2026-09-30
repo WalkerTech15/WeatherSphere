@@ -1,41 +1,28 @@
 # AI_REPORT.md
 
-**Task:** Fix responsive header overlap (search bar over Simple/Detailed toggle).
-**Model:** Claude Sonnet 5.5 — Reasoning: low/medium
+**Task:** Align the site with the Saint-Pierre Weather brand. Model: Claude Sonnet 5.5, medium.
 
-## Root cause
-At ≥901px `.topnav-inner` is a 3-column grid whose outer tracks were
-`minmax(280px, 1fr)`. The right group (display toggle + bell + theme + language)
-is ~360–380px, so it overflowed its 280px track to the LEFT and sat on top of
-the search bar (measured: toggle started up to 47px inside the search field
-at 1280px, 7px at 1440px). The bell added in the notifications phase made the
-group wider than the old 280px assumption.
-
-## Fix (1 CSS line + comment)
-- `src/styles/layout/topnav.css`: outer tracks `minmax(280px, 1fr)` →
-  `minmax(auto, 1fr)`. Outer groups now never shrink below their content, so
-  the search column is what gives way. Still centered when there is room.
-  No fixed widths, no negative margins, no new classes.
-- Below 901px nothing changed: the existing drawer layout already hides the
-  navbar toggle (a copy lives in the sidebar) and the search uses the full row;
-  ≤520px it becomes the full-width mobile search overlay.
-- `e2e/responsive-quality.spec.js`: new regression test (901/960/1024/1100/
-  1280/1440px × fr/en): search ends ≥8px before the toggle, no overflow.
+## Files changed
+- `src/index.html`, `translations.js` / `-es.js` / `-vi.js` (+ es/vi unit tests): every visible "WeatherSphere" → "Saint-Pierre Weather" (title, meta, aria-label, About, Help, Privacy, Settings, footer). Removed "premium" wording.
+- Logo: 624 KB PNG → 41 KB WebP (`public/assets/saint-pierre-weather-logo.webp`, PNG removed; it was only used in index.html). New compact mark `saint-pierre-weather-mark.svg` (<1 KB), also used as favicon (one asset, no duplicates).
+- CSS: `topnav.css`, `footer.css`, `responsive.css`, `map.css` (mark shown ≤640px and in the expanded map instead of the wordmark; dark theme puts the wordmark on a soft white plate so the navy lettering stays readable), `tokens.css` + `cards.css` (dark theme moved to a deeper navy: bg #0a1428, card #112240).
+- Tests/comments: e2e specs updated for the new name; removed a dead `.logo-text em` contrast case; comments/package.json/README/sw.js/.htaccess renamed.
+- Colours: the app was already logo-blue (primary) with amber for favorites/sun, so no broad recolour was made; only the navy dark theme changed. No new gradients or glow.
 
 ## Verified
-- Before/after measurement 901–1440px (en/fr/es/vi): no overlap after fix,
-  gap between search and toggle ≥24px, no horizontal scroll. Search is 234px
-  wide at 901px, 640px at 1440px.
-- New tests FAIL without the fix and PASS with it (12/12).
-- `playwright` responsive-quality + accessibility-quality + favorites-
-  notifications (desktop): 80/80 passed.
-- stylelint, prettier, eslint on touched files: clean.
-- Screenshots at 901 and 1024px inspected: layout clean.
-- Not run: full unit suite / full e2e suite / build (CSS-only change plus
-  one test; no JS touched). Map-expanded header uses its own flex rules and
-  was not changed.
+- vitest 104 files / 2867 tests pass; eslint, stylelint, prettier clean; `npm run build` OK.
+- Playwright (desktop) responsive-quality, accessibility-quality, spanish, vietnamese, favorites-notifications, app: 327 pass, 3 fail (below).
+- Screenshots: light/dark at 1440 and 390px, About at 1024 dark; no horizontal overflow.
+- Not run: mobile Playwright project, full suite, manual Tab test of the new mark.
 
-## Direct commit verdict: **Yes**
-Suggested message: `fix: stop search bar overlapping header controls on laptop widths`
+## Failures
+- Pre-existing (fail on clean HEAD too): es/vi "Lourdes … Unsplash credit" (photo label text changed in an earlier commit, unrelated).
+- Flaky, passed on re-run: a11y "every Tab stop on Home (dark)".
 
+## Remaining
+- "WeatherSphere" remains only in `AI_WORKFLOW.md`, `docs/`, `perf-reports/`, and server comments/User-Agent strings in `api/` and `public/api/` (not visible to users; left untouched).
+- The logo is transparent with navy text, so it needs the white plate in dark mode.
+
+## Commit verdict: **Yes** (pre-existing es/vi failures documented).
+Message: `style: align website with Saint-Pierre Weather branding`
 Nothing committed, pushed, or deployed.

@@ -172,7 +172,7 @@ export const I18N = {
     rain: "Rain",
 
     /* Forecast advisories. Deliberately worded as forecast-derived guidance:
-       WeatherSphere has no access to any official warning service. */
+       Saint-Pierre Weather has no access to any official warning service. */
     advRegion: "Forecast advisories",
     advKicker: "Forecast advisory",
     advDisclaimer: "Based on forecast data, not an official emergency alert.",
@@ -486,17 +486,17 @@ export const I18N = {
     favRetryFor: "Try loading the weather again",
 
     aboutText1:
-      "WeatherSphere is a premium weather experience — live conditions, rich forecasts and beautiful charts for any place on Earth.",
+      "Saint-Pierre Weather is a modern weather experience — live conditions, rich forecasts and beautiful charts for any place on Earth.",
     aboutText2:
       "Weather data is provided by the Open-Meteo public API. If a request fails while the app is open, a realistic demo dataset takes over so the interface stays explorable. The app itself still needs a network connection to load.",
     aboutMadeWith: "Designed with care",
-    aboutTitle2: "About WeatherSphere",
+    aboutTitle2: "About Saint-Pierre Weather",
     aboutMission:
-      "WeatherSphere was created to offer a modern, reliable weather experience for everyone. Our mission is simple: give you accurate, clear and elegant weather information to help you plan your day, wherever you are.",
+      "Saint-Pierre Weather was created to offer a modern, reliable weather experience for everyone. Our mission is simple: give you accurate, clear and elegant weather information to help you plan your day, wherever you are.",
     aboutPrivacyNote:
-      "Your location is used only after you grant permission, to show local weather. Necessary coordinates may be sent to the weather or geocoding services used by the application. WeatherSphere does not operate a user-account database.",
+      "Your location is used only after you grant permission, to show local weather. Necessary coordinates may be sent to the weather or geocoding services used by the application. Saint-Pierre Weather does not operate a user-account database.",
     aboutEduNote:
-      "WeatherSphere is an educational school project and does not replace official meteorological services.",
+      "Saint-Pierre Weather is an educational school project and does not replace official meteorological services.",
     feat1T: "Accurate data",
     feat1X: "We use reliable data sources and advanced weather models to guarantee accuracy.",
     feat2T: "Regular updates",
@@ -508,7 +508,7 @@ export const I18N = {
       "Your location is used only after you grant permission. Favorites and preferences stay stored locally in your browser.",
     techTitle: "Technologies used",
     techSub:
-      "WeatherSphere is built with modern technologies for performance, reliability and scalability.",
+      "Saint-Pierre Weather is built with modern technologies for performance, reliability and scalability.",
     techGroupCore: "Core",
     techGroupApp: "Mapping & application",
     techGroupQuality: "Code quality",
@@ -542,9 +542,9 @@ export const I18N = {
     srcMapillary: "Street-level photos of small places (CC BY-SA), credited on each image.",
     compareSource: "Weather and air quality: {provider}.",
     srcNote: "Data may be subject to slight variations.",
-    contactNote: "WeatherSphere is a student project built for school. It has no support address.",
+    contactNote: "Saint-Pierre Weather is a student project built for school. It has no support address.",
     helpTitle: "Help centre",
-    helpSub: "Find the main features of WeatherSphere and how to use them.",
+    helpSub: "Find the main features of Saint-Pierre Weather and how to use them.",
     helpSearchT: "Search for a place",
     helpSearchX: "Use the search bar to find a city, town, region, state, province or country.",
     helpMapT: "Explore the map",
@@ -553,7 +553,7 @@ export const I18N = {
     helpFavX: "Select the star beside a location to save it in your favourites list.",
     helpSchoolT: "School project",
     helpSchoolX:
-      "WeatherSphere is a school project. It is designed for learning and does not replace official weather warnings.",
+      "Saint-Pierre Weather is a school project. It is designed for learning and does not replace official weather warnings.",
     helpStepsTitle: "Start with these three steps",
     helpGoHome: "Open home",
     helpGoMap: "Open map",
@@ -567,9 +567,9 @@ export const I18N = {
       "Yes. Click or tap a point on the map to identify the nearest place and view its weather.",
     faqDataQ: "Are the weather alerts official?",
     faqDataA:
-      "No. WeatherSphere is a school project and does not replace official weather warnings.",
+      "No. Saint-Pierre Weather is a school project and does not replace official weather warnings.",
     privacyTitle: "Privacy",
-    privacySub: "A clear explanation of the information WeatherSphere uses and stores.",
+    privacySub: "A clear explanation of the information Saint-Pierre Weather uses and stores.",
     privacyLocalT: "Stored on this device",
     privacyLocalX:
       "Your display preferences and favourites stay in this browser. Recent searches are stored only when you turn that option on.",
@@ -578,14 +578,14 @@ export const I18N = {
       "Your position is used only after your browser gives permission. You can change that permission in your browser settings.",
     privacyAccountsT: "No user account",
     privacyAccountsX:
-      "WeatherSphere does not require an account and does not operate a user-profile database.",
+      "Saint-Pierre Weather does not require an account and does not operate a user-profile database.",
     privacyControlT: "You stay in control",
     privacyControlX:
       "You can clear recent searches, export stored data, reset the application, or change location permission from the Settings page.",
     privacyKicker: "Your privacy at a glance",
     privacyPromiseT: "No account. No user profile.",
     privacyPromiseX:
-      "WeatherSphere stores only the preferences you choose to keep in this browser.",
+      "Saint-Pierre Weather stores only the preferences you choose to keep in this browser.",
     privacyRecentsT: "Recent searches",
     privacyRecentsX:
       "Recent locations are optional, limited to five places and can be cleared at any time.",
@@ -597,7 +597,7 @@ export const I18N = {
     setLangSub: "Select the interface language.",
     setMode: "Display mode",
     setModeSub: "Choose how you want to see the information.",
-    settingsSub: "Customise your WeatherSphere experience.",
+    settingsSub: "Customise your Saint-Pierre Weather experience.",
     modeDetailedDesc: "Shows all weather data and analyses.",
     modeSimpleDesc: "Shows only the essentials, to get to the point.",
     themeTitle: "Theme",
@@ -1149,17 +1149,17 @@ export const I18N = {
     favRetryFor: "Réessayer de charger la météo",
 
     aboutText1:
-      "WeatherSphere est une expérience météo haut de gamme — conditions en direct, prévisions riches et graphiques élégants pour n'importe quel endroit sur Terre.",
+      "Saint-Pierre Weather est une expérience météo haut de gamme — conditions en direct, prévisions riches et graphiques élégants pour n'importe quel endroit sur Terre.",
     aboutText2:
       "Les données météo proviennent de l'API publique Open-Meteo. Si une requête échoue pendant que l'application est ouverte, un jeu de données de démonstration réaliste prend le relais pour garder l'interface explorable. L'application a toujours besoin d'une connexion réseau pour se charger.",
     aboutMadeWith: "Conçu avec soin",
-    aboutTitle2: "À propos de WeatherSphere",
+    aboutTitle2: "À propos de Saint-Pierre Weather",
     aboutMission:
-      "WeatherSphere a été créé pour offrir une expérience météo moderne, fiable et accessible à tous. Notre mission est simple : vous fournir des informations météorologiques précises, claires et élégantes pour vous aider à planifier votre journée, où que vous soyez.",
+      "Saint-Pierre Weather a été créé pour offrir une expérience météo moderne, fiable et accessible à tous. Notre mission est simple : vous fournir des informations météorologiques précises, claires et élégantes pour vous aider à planifier votre journée, où que vous soyez.",
     aboutPrivacyNote:
-      "Votre position n'est utilisée qu'après votre autorisation, afin d'afficher la météo locale. Les coordonnées nécessaires peuvent être transmises aux services météo ou de géocodage utilisés par l'application. WeatherSphere ne gère pas de base de données de comptes utilisateurs.",
+      "Votre position n'est utilisée qu'après votre autorisation, afin d'afficher la météo locale. Les coordonnées nécessaires peuvent être transmises aux services météo ou de géocodage utilisés par l'application. Saint-Pierre Weather ne gère pas de base de données de comptes utilisateurs.",
     aboutEduNote:
-      "WeatherSphere est un projet scolaire à vocation pédagogique et ne remplace pas les services météorologiques officiels.",
+      "Saint-Pierre Weather est un projet scolaire à vocation pédagogique et ne remplace pas les services météorologiques officiels.",
     feat1T: "Données précises",
     feat1X:
       "Nous utilisons des sources de données fiables et des modèles météorologiques avancés pour garantir l'exactitude.",
@@ -1173,7 +1173,7 @@ export const I18N = {
       "Votre position n'est utilisée qu'après votre autorisation. Vos favoris et préférences restent stockés localement dans votre navigateur.",
     techTitle: "Technologies utilisées",
     techSub:
-      "WeatherSphere est construit avec des technologies modernes pour assurer performance, fiabilité et évolutivité.",
+      "Saint-Pierre Weather est construit avec des technologies modernes pour assurer performance, fiabilité et évolutivité.",
     techGroupCore: "Fondamentaux",
     techGroupApp: "Cartographie et application",
     techGroupQuality: "Qualité du code",
@@ -1210,9 +1210,9 @@ export const I18N = {
     compareSource: "Météo et qualité de l’air : {provider}.",
     srcNote: "Les données peuvent être sujettes à de légers écarts.",
     contactNote:
-      "WeatherSphere est un projet scolaire réalisé par un élève. Il n'a pas d'adresse de contact.",
+      "Saint-Pierre Weather est un projet scolaire réalisé par un élève. Il n'a pas d'adresse de contact.",
     helpTitle: "Aide",
-    helpSub: "Retrouvez les principales fonctionnalités de WeatherSphere et leur utilisation.",
+    helpSub: "Retrouvez les principales fonctionnalités de Saint-Pierre Weather et leur utilisation.",
     helpSearchT: "Rechercher un lieu",
     helpSearchX:
       "Utilisez la barre de recherche pour trouver une ville, un village, une région, un État, une province ou un pays.",
@@ -1223,7 +1223,7 @@ export const I18N = {
     helpFavX: "Sélectionnez l'étoile près d'un lieu pour l'ajouter à votre liste de favoris.",
     helpSchoolT: "Projet scolaire",
     helpSchoolX:
-      "WeatherSphere est un projet scolaire. Il est conçu pour l'apprentissage et ne remplace pas les alertes météorologiques officielles.",
+      "Saint-Pierre Weather est un projet scolaire. Il est conçu pour l'apprentissage et ne remplace pas les alertes météorologiques officielles.",
     helpStepsTitle: "Commencez par ces trois étapes",
     helpGoHome: "Ouvrir l'accueil",
     helpGoMap: "Ouvrir la carte",
@@ -1237,10 +1237,10 @@ export const I18N = {
       "Oui. Cliquez ou touchez un point sur la carte pour identifier le lieu le plus proche et consulter sa météo.",
     faqDataQ: "Les alertes météo sont-elles officielles ?",
     faqDataA:
-      "Non. WeatherSphere est un projet scolaire et ne remplace pas les alertes météorologiques officielles.",
+      "Non. Saint-Pierre Weather est un projet scolaire et ne remplace pas les alertes météorologiques officielles.",
     privacyTitle: "Confidentialité",
     privacySub:
-      "Une explication claire des informations utilisées et enregistrées par WeatherSphere.",
+      "Une explication claire des informations utilisées et enregistrées par Saint-Pierre Weather.",
     privacyLocalT: "Enregistré sur cet appareil",
     privacyLocalX:
       "Vos préférences d'affichage et vos favoris restent dans ce navigateur. Les recherches récentes ne sont enregistrées que si vous activez cette option.",
@@ -1249,14 +1249,14 @@ export const I18N = {
       "Votre position est utilisée seulement après l'autorisation de votre navigateur. Vous pouvez modifier cette autorisation dans les réglages du navigateur.",
     privacyAccountsT: "Aucun compte utilisateur",
     privacyAccountsX:
-      "WeatherSphere ne nécessite pas de compte et ne gère pas de base de données de profils utilisateurs.",
+      "Saint-Pierre Weather ne nécessite pas de compte et ne gère pas de base de données de profils utilisateurs.",
     privacyControlT: "Vous gardez le contrôle",
     privacyControlX:
       "Vous pouvez effacer les recherches récentes, exporter les données enregistrées, réinitialiser l'application ou modifier l'autorisation de localisation depuis les réglages.",
     privacyKicker: "Votre confidentialité en bref",
     privacyPromiseT: "Aucun compte. Aucun profil utilisateur.",
     privacyPromiseX:
-      "WeatherSphere enregistre uniquement les préférences que vous choisissez de conserver dans ce navigateur.",
+      "Saint-Pierre Weather enregistre uniquement les préférences que vous choisissez de conserver dans ce navigateur.",
     privacyRecentsT: "Recherches récentes",
     privacyRecentsX:
       "Les lieux récents sont facultatifs, limités à cinq et peuvent être effacés à tout moment.",
@@ -1268,7 +1268,7 @@ export const I18N = {
     setLangSub: "Sélectionnez la langue de l'interface.",
     setMode: "Mode d'affichage",
     setModeSub: "Choisissez la manière dont vous souhaitez voir les informations.",
-    settingsSub: "Personnalisez votre expérience WeatherSphere.",
+    settingsSub: "Personnalisez votre expérience Saint-Pierre Weather.",
     modeDetailedDesc: "Affiche toutes les données et analyses météorologiques.",
     modeSimpleDesc: "Affiche uniquement les informations essentielles.",
     themeTitle: "Thème",

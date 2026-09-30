@@ -11,7 +11,7 @@
   border-bottom: 1px solid var(--border);
 }
 body[data-theme="dark"] .topnav {
-  background: rgba(11, 18, 32, 0.85);
+  background: rgba(10, 20, 40, 0.85);
 }
 
 /* Three named groups (start/center/end) instead of one flat flex row, so
@@ -67,39 +67,26 @@ body[data-theme="dark"] .topnav {
   color: var(--text);
   flex-shrink: 0;
 }
+/* Saint-Pierre Weather wordmark (webp, ~40 KB) and its compact mark (svg,
+   <1 KB). The mark replaces the wordmark on phones and in the expanded map
+   (responsive.css / map.css); only one of the two is ever displayed. The
+   wordmark's navy lettering disappears on the dark navy bar, so in the dark
+   theme both sit on a soft white plate. */
 .brand-logo {
   display: block;
-  width: 190px;
-  height: 42px;
+  width: auto;
+  height: 46px;
   object-fit: contain;
-  object-position: left center;
 }
-.logo-mark {
-  display: grid;
-  place-items: center;
+.brand-mark {
+  display: none;
   width: 40px;
   height: 40px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #eff6ff, #dbeafe);
-  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.1);
 }
-.logo-text {
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-.logo-text em {
-  font-style: normal;
-  color: var(--primary);
-}
-/* The brand blue stays as-is on light surfaces (5.2:1), but on the dark
-   card it is only 3.2:1 — the dark theme's lighter ink step keeps it legible
-   there without touching the light-theme brand colour. */
-body[data-theme="dark"] .logo-text em {
-  color: var(--ink-primary);
-}
-.logo-text.sm {
-  font-size: 16px;
+body[data-theme="dark"] .brand-logo {
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: rgba(241, 245, 249, 0.94);
 }
 
 .topnav-actions {

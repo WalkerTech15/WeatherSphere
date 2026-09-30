@@ -1,4 +1,4 @@
-# WeatherSphere — Apache config for Hostinger (public_html)
+# Saint-Pierre Weather — Apache config for Hostinger (public_html)
 
 # Disable directory listing (no "Index of /")
 Options -Indexes

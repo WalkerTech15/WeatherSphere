@@ -132,6 +132,9 @@
   .brand-logo {
     display: none;
   }
+  .brand-mark {
+    display: block;
+  }
   .hero {
     min-height: 420px;
   }

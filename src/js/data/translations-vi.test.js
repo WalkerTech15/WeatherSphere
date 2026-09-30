@@ -100,7 +100,7 @@ describe("Vietnamese dictionary", () => {
     expect(I18N.vi.tipLayerClouds).toContain("OpenWeatherMap");
     expect(I18N.vi.mapAlertsOfficial).toContain("NWS");
     expect(I18N.vi.footerData).toBe("Dữ liệu: Open-Meteo · OpenStreetMap · MapTiler");
-    expect(I18N.vi.aboutTitle2).toContain("WeatherSphere");
+    expect(I18N.vi.aboutTitle2).toContain("Saint-Pierre Weather");
   });
 
   it("preserves Vietnamese diacritics correctly (not mangled/stripped)", () => {

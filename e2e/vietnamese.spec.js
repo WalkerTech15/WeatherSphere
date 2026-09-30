@@ -48,8 +48,8 @@ const ENGLISH_WORDS =
 /* official provider names, in full — "National Weather Service" holds an English
    word but is a name, and stays as the provider writes it */
 const PROVIDER_NAMES =
-  /National Weather Service|MapTiler Weather|MapTiler SDK|OpenWeatherMap|Open-Meteo|open-meteo\.com|weather\.gov|Xweather|OpenStreetMap|Wikimedia Commons|BigDataCloud|Google Places/gi;
-/* the WeatherSphere logo is set in two spans */
+  /Saint-Pierre Weather|National Weather Service|MapTiler Weather|MapTiler SDK|OpenWeatherMap|Open-Meteo|open-meteo\.com|weather\.gov|Xweather|OpenStreetMap|Wikimedia Commons|BigDataCloud|Google Places/gi;
+/* the Saint-Pierre Weather logo is set in two spans */
 const LOGO_PARTS = /^(weather|sphere)$/i;
 /* Answers the mocked providers give in English only (a real MapTiler answer
    carries text_vi): provider data, not interface text. */
@@ -345,7 +345,7 @@ test.describe("Tiếng Việt, weather, forecast and photos", () => {
     await expect(page.locator("#heroCityName")).toContainText("Lourdes");
     await expect(page.locator("#heroLandmark .loc-photo")).toHaveClass(/has-photo/);
     const credit = page.locator(".hero .loc-credit");
-    await expect(credit).toHaveText("Ảnh đúng địa điểm · Nick Castelli · Unsplash ↗");
+    await expect(credit).toHaveText("Nick Castelli · Unsplash ↗");
     await expect(credit).toHaveAttribute(
       "aria-label",
       "Ảnh đúng địa điểm — Ảnh của Nick Castelli trên Unsplash",

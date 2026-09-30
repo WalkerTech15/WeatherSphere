@@ -134,7 +134,7 @@ function marineFields(name, kind, cc, region, country) {
   };
 }
 
-/* Convert one MapTiler GeoJSON feature into a WeatherSphere loc object. */
+/* Convert one MapTiler GeoJSON feature into a Saint-Pierre Weather loc object. */
 function featureToLoc(f) {
   const primary = (f.place_type && f.place_type[0]) || "place";
   const map = MT_KIND[primary] || { kind: "city", zoom: 11 };

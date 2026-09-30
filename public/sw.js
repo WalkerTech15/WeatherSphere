@@ -1,4 +1,4 @@
-/* WeatherSphere service worker — offline support for the app shell and for
+/* Saint-Pierre Weather service worker — offline support for the app shell and for
  * data the visitor has already loaded once.
  *
  * Deliberately a plain classic worker with no imports and no build step: it

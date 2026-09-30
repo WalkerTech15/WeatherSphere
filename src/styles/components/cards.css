@@ -213,7 +213,7 @@ body[data-theme="dark"] .skeleton {
   background: linear-gradient(180deg, #fbfdff, #f3f7fe);
 }
 body[data-theme="dark"] .forecast-card.is-today {
-  background: linear-gradient(180deg, #17233c, #151e31);
+  background: linear-gradient(180deg, #172a4a, #112240);
 }
 .fc-day {
   font-size: 14px;

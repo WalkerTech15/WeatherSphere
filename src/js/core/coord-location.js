@@ -1,4 +1,4 @@
-/* Build a canonical WeatherSphere location object from a raw coordinate.
+/* Build a canonical Saint-Pierre Weather location object from a raw coordinate.
  *
  * Two callers share this: the "my location" widget (a browser geolocation fix)
  * and the map's click-to-select. Both start from a lat/lon plus whatever a

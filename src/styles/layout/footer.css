@@ -26,13 +26,8 @@
   gap: 8px;
 }
 .footer-brand-logo {
-  width: 170px;
-  height: 42px;
-}
-.logo-mark.sm {
-  width: 30px;
-  height: 30px;
-  border-radius: 10px;
+  width: auto;
+  height: 44px;
 }
 .footer-brand p {
   font-size: 13.5px;

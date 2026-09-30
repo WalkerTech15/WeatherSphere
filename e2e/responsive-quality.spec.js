@@ -1,4 +1,4 @@
-/* Responsive quality across the widths WeatherSphere is used at.
+/* Responsive quality across the widths Saint-Pierre Weather is used at.
  *
  * Each assertion here guards a real defect found by auditing every route at
  * 320 / 375 / 390 / 768 / 820 / 1024 / 1440 px in both languages:

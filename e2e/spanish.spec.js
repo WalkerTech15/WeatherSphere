@@ -48,8 +48,8 @@ const ENGLISH_WORDS =
 /* official provider names, in full — "National Weather Service" holds an English
    word but is a name, and stays as the provider writes it */
 const PROVIDER_NAMES =
-  /National Weather Service|MapTiler Weather|MapTiler SDK|OpenWeatherMap|Open-Meteo|open-meteo\.com|weather\.gov|Xweather|OpenStreetMap|Wikimedia Commons|BigDataCloud|Google Places/gi;
-/* the WeatherSphere logo is set in two spans */
+  /Saint-Pierre Weather|National Weather Service|MapTiler Weather|MapTiler SDK|OpenWeatherMap|Open-Meteo|open-meteo\.com|weather\.gov|Xweather|OpenStreetMap|Wikimedia Commons|BigDataCloud|Google Places/gi;
+/* the Saint-Pierre Weather logo is set in two spans */
 const LOGO_PARTS = /^(weather|sphere)$/i;
 /* Answers the mocked providers give in English only (a real MapTiler answer
    carries text_es): provider data, not interface text. */
@@ -164,7 +164,7 @@ const VIEWS = [
   { view: "map", root: "#view-map", title: /Mapa/ },
   { view: "forecast", root: "#view-forecast", title: /Pronóstico/ },
   { view: "favorites", root: "#view-favorites", title: /Favoritos/ },
-  { view: "about", root: "#view-about", title: /WeatherSphere/ },
+  { view: "about", root: "#view-about", title: /Saint-Pierre Weather/ },
   { view: "settings", root: "#view-settings", title: /Configuración/ },
 ];
 
@@ -344,7 +344,7 @@ test.describe("Español, weather, forecast and photos", () => {
     await expect(page.locator("#heroCityName")).toContainText("Lourdes");
     await expect(page.locator("#heroLandmark .loc-photo")).toHaveClass(/has-photo/);
     const credit = page.locator(".hero .loc-credit");
-    await expect(credit).toHaveText("Foto del lugar exacto · Nick Castelli · Unsplash ↗");
+    await expect(credit).toHaveText("Nick Castelli · Unsplash ↗");
     await expect(credit).toHaveAttribute(
       "aria-label",
       "Foto del lugar exacto — Foto de Nick Castelli en Unsplash",

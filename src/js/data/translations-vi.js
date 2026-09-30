@@ -174,7 +174,7 @@ export const VI = {
   rain: "Mưa",
 
   /* Forecast advisories. Deliberately worded as forecast-derived guidance:
-     WeatherSphere has no access to any official warning service. */
+     Saint-Pierre Weather has no access to any official warning service. */
   advRegion: "Cảnh báo từ dự báo",
   advKicker: "Cảnh báo dự báo",
   advDisclaimer: "Dựa trên dữ liệu dự báo, không phải cảnh báo khẩn cấp chính thức.",
@@ -483,17 +483,17 @@ export const VI = {
   favRetryFor: "Thử tải lại thời tiết",
 
   aboutText1:
-    "WeatherSphere là một trải nghiệm thời tiết cao cấp — điều kiện trực tiếp, dự báo chi tiết và biểu đồ đẹp mắt cho mọi nơi trên Trái Đất.",
+    "Saint-Pierre Weather là một trải nghiệm thời tiết cao cấp — điều kiện trực tiếp, dự báo chi tiết và biểu đồ đẹp mắt cho mọi nơi trên Trái Đất.",
   aboutText2:
     "Dữ liệu thời tiết được cung cấp bởi API công khai Open-Meteo. Nếu một yêu cầu thất bại khi ứng dụng đang mở, một bộ dữ liệu minh họa thực tế sẽ thay thế để giao diện vẫn có thể khám phá được. Bản thân ứng dụng vẫn cần kết nối mạng để tải.",
   aboutMadeWith: "Được thiết kế cẩn thận",
-  aboutTitle2: "Giới thiệu về WeatherSphere",
+  aboutTitle2: "Giới thiệu về Saint-Pierre Weather",
   aboutMission:
-    "WeatherSphere được tạo ra để mang đến một trải nghiệm thời tiết hiện đại, đáng tin cậy cho mọi người. Sứ mệnh của chúng tôi rất đơn giản: cung cấp thông tin thời tiết chính xác, rõ ràng và tinh tế để giúp bạn lên kế hoạch cho ngày của mình, dù ở bất cứ đâu.",
+    "Saint-Pierre Weather được tạo ra để mang đến một trải nghiệm thời tiết hiện đại, đáng tin cậy cho mọi người. Sứ mệnh của chúng tôi rất đơn giản: cung cấp thông tin thời tiết chính xác, rõ ràng và tinh tế để giúp bạn lên kế hoạch cho ngày của mình, dù ở bất cứ đâu.",
   aboutPrivacyNote:
-    "Vị trí của bạn chỉ được sử dụng sau khi bạn cấp quyền, để hiển thị thời tiết địa phương. Tọa độ cần thiết có thể được gửi đến các dịch vụ thời tiết hoặc định vị địa lý mà ứng dụng sử dụng. WeatherSphere không vận hành cơ sở dữ liệu tài khoản người dùng.",
+    "Vị trí của bạn chỉ được sử dụng sau khi bạn cấp quyền, để hiển thị thời tiết địa phương. Tọa độ cần thiết có thể được gửi đến các dịch vụ thời tiết hoặc định vị địa lý mà ứng dụng sử dụng. Saint-Pierre Weather không vận hành cơ sở dữ liệu tài khoản người dùng.",
   aboutEduNote:
-    "WeatherSphere là một dự án học tập tại trường và không thay thế các dịch vụ khí tượng chính thức.",
+    "Saint-Pierre Weather là một dự án học tập tại trường và không thay thế các dịch vụ khí tượng chính thức.",
   feat1T: "Dữ liệu chính xác",
   feat1X:
     "Chúng tôi sử dụng các nguồn dữ liệu đáng tin cậy và mô hình thời tiết tiên tiến để đảm bảo độ chính xác.",
@@ -506,7 +506,7 @@ export const VI = {
     "Vị trí của bạn chỉ được sử dụng sau khi bạn cấp quyền. Mục yêu thích và tùy chọn được lưu trữ cục bộ trên trình duyệt của bạn.",
   techTitle: "Công nghệ sử dụng",
   techSub:
-    "WeatherSphere được xây dựng bằng các công nghệ hiện đại để đảm bảo hiệu năng, độ tin cậy và khả năng mở rộng.",
+    "Saint-Pierre Weather được xây dựng bằng các công nghệ hiện đại để đảm bảo hiệu năng, độ tin cậy và khả năng mở rộng.",
   techGroupCore: "Cốt lõi",
   techGroupApp: "Bản đồ & ứng dụng",
   techGroupQuality: "Chất lượng mã nguồn",
@@ -541,9 +541,9 @@ export const VI = {
   compareSource: "Thời tiết và chất lượng không khí: {provider}.",
   srcNote: "Dữ liệu có thể có sai lệch nhỏ.",
   contactNote:
-    "WeatherSphere là dự án của học sinh, thực hiện cho trường học. Không có địa chỉ hỗ trợ.",
+    "Saint-Pierre Weather là dự án của học sinh, thực hiện cho trường học. Không có địa chỉ hỗ trợ.",
   helpTitle: "Trung tâm trợ giúp",
-  helpSub: "Tìm hiểu các tính năng chính của WeatherSphere và cách sử dụng.",
+  helpSub: "Tìm hiểu các tính năng chính của Saint-Pierre Weather và cách sử dụng.",
   helpSearchT: "Tìm một địa điểm",
   helpSearchX: "Dùng thanh tìm kiếm để tìm thành phố, thị trấn, khu vực, bang, tỉnh hoặc quốc gia.",
   helpMapT: "Khám phá bản đồ",
@@ -552,7 +552,7 @@ export const VI = {
   helpFavX: "Chọn ngôi sao bên cạnh một địa điểm để lưu vào danh sách yêu thích.",
   helpSchoolT: "Dự án học tập",
   helpSchoolX:
-    "WeatherSphere là một dự án học tập tại trường. Được thiết kế để học tập và không thay thế các cảnh báo thời tiết chính thức.",
+    "Saint-Pierre Weather là một dự án học tập tại trường. Được thiết kế để học tập và không thay thế các cảnh báo thời tiết chính thức.",
   helpStepsTitle: "Bắt đầu với ba bước sau",
   helpGoHome: "Mở trang chủ",
   helpGoMap: "Mở bản đồ",
@@ -566,9 +566,9 @@ export const VI = {
     "Có. Nhấp hoặc chạm vào một điểm trên bản đồ để xác định địa điểm gần nhất và xem thời tiết.",
   faqDataQ: "Các cảnh báo thời tiết có phải là chính thức không?",
   faqDataA:
-    "Không. WeatherSphere là dự án học tập tại trường và không thay thế các cảnh báo thời tiết chính thức.",
+    "Không. Saint-Pierre Weather là dự án học tập tại trường và không thay thế các cảnh báo thời tiết chính thức.",
   privacyTitle: "Quyền riêng tư",
-  privacySub: "Giải thích rõ ràng về thông tin mà WeatherSphere sử dụng và lưu trữ.",
+  privacySub: "Giải thích rõ ràng về thông tin mà Saint-Pierre Weather sử dụng và lưu trữ.",
   privacyLocalT: "Lưu trên thiết bị này",
   privacyLocalX:
     "Tùy chọn hiển thị và mục yêu thích của bạn được lưu trên trình duyệt này. Tìm kiếm gần đây chỉ được lưu khi bạn bật tùy chọn đó.",
@@ -577,14 +577,14 @@ export const VI = {
     "Vị trí của bạn chỉ được sử dụng sau khi trình duyệt cấp quyền. Bạn có thể thay đổi quyền này trong cài đặt trình duyệt.",
   privacyAccountsT: "Không có tài khoản người dùng",
   privacyAccountsX:
-    "WeatherSphere không yêu cầu tài khoản và không vận hành cơ sở dữ liệu hồ sơ người dùng.",
+    "Saint-Pierre Weather không yêu cầu tài khoản và không vận hành cơ sở dữ liệu hồ sơ người dùng.",
   privacyControlT: "Bạn luôn kiểm soát",
   privacyControlX:
     "Bạn có thể xóa tìm kiếm gần đây, xuất dữ liệu đã lưu, đặt lại ứng dụng, hoặc thay đổi quyền vị trí từ trang Cài đặt.",
   privacyKicker: "Tóm tắt về quyền riêng tư của bạn",
   privacyPromiseT: "Không tài khoản. Không hồ sơ người dùng.",
   privacyPromiseX:
-    "WeatherSphere chỉ lưu trữ những tùy chọn mà bạn chọn giữ lại trên trình duyệt này.",
+    "Saint-Pierre Weather chỉ lưu trữ những tùy chọn mà bạn chọn giữ lại trên trình duyệt này.",
   privacyRecentsT: "Tìm kiếm gần đây",
   privacyRecentsX:
     "Địa điểm gần đây là tùy chọn, giới hạn ở năm địa điểm và có thể xóa bất cứ lúc nào.",
@@ -596,7 +596,7 @@ export const VI = {
   setLangSub: "Chọn ngôn ngữ giao diện.",
   setMode: "Chế độ hiển thị",
   setModeSub: "Chọn cách bạn muốn xem thông tin.",
-  settingsSub: "Tùy chỉnh trải nghiệm WeatherSphere của bạn.",
+  settingsSub: "Tùy chỉnh trải nghiệm Saint-Pierre Weather của bạn.",
   modeDetailedDesc: "Hiển thị toàn bộ dữ liệu thời tiết và phân tích.",
   modeSimpleDesc: "Chỉ hiển thị những thông tin cần thiết, đi thẳng vào trọng tâm.",
   themeTitle: "Giao diện",

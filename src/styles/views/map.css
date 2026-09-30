@@ -2704,9 +2704,12 @@ body.map-expanded .map-show-panel {
      shows on a phone — and drops the wordmark, which is what leaves the
      search field room for its whole placeholder beside the exit control.
      The link's accessible name comes from its aria-label ("Accueil
-     WeatherSphere"), not this text, so it is unchanged. */
+     Saint-Pierre Weather"), not this text, so it is unchanged. */
   body.map-expanded .topnav .brand-logo {
     display: none;
+  }
+  body.map-expanded .topnav .brand-mark {
+    display: block;
   }
 }
 /* Below 520px the search field becomes the icon button that opens the

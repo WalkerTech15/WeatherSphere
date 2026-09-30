@@ -94,8 +94,8 @@
    (JS resolves "system" to a concrete light/dark value before setting it),
    not read directly from prefers-color-scheme in CSS. */
 body[data-theme="dark"] {
-  --bg: #0b1220;
-  --card: #151e31;
+  --bg: #0a1428;
+  --card: #112240;
   --text: #f1f5f9;
   --text-2: #b3c0d4; /* raised from #94A3B8 for readable secondary text on dark */
   --text-3: #8b99ae; /* raised from #64748B for better muted-text contrast */

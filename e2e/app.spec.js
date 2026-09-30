@@ -1195,13 +1195,13 @@ test.describe("about page", () => {
     await goToAbout(app);
     const note = app.locator('[data-i18n="aboutEduNote"]');
     await expect(note).toHaveText(
-      "WeatherSphere est un projet scolaire à vocation pédagogique et ne remplace pas les services météorologiques officiels.",
+      "Saint-Pierre Weather est un projet scolaire à vocation pédagogique et ne remplace pas les services météorologiques officiels.",
     );
 
     await app.locator("#langBtn").click();
     await app.locator('#langMenu button[data-lang="en"]').click();
     await expect(note).toHaveText(
-      "WeatherSphere is an educational school project and does not replace official meteorological services.",
+      "Saint-Pierre Weather is an educational school project and does not replace official meteorological services.",
     );
   });
 

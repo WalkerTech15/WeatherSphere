@@ -317,7 +317,6 @@ test.describe("small text reaches 4.5:1", () => {
     ["settings", '[data-i18n="providerOpenMeteoSub"]'],
     ["about", ".tech-group-title"],
     ["home", ".side-item.is-active"],
-    ["home", ".logo-text em"],
   ];
   for (const theme of ["light", "dark"]) {
     test(`previously failing text, ${theme} theme`, async ({ page }) => {

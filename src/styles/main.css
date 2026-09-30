@@ -1,4 +1,4 @@
-/* WeatherSphere — stylesheet entry point.
+/* Saint-Pierre Weather — stylesheet entry point.
    Import order is the cascade order: foundation → layout → components →
    views → utilities. Later files may rely on custom properties and base
    element styles defined earlier, so don't reorder these groups. */

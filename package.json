@@ -2,7 +2,7 @@
   "name": "weathersphere",
   "version": "1.0.0",
   "private": true,
-  "description": "WeatherSphere — a premium, modern weather dashboard built with vanilla JS and Vite.",
+  "description": "Saint-Pierre Weather — a premium, modern weather dashboard built with vanilla JS and Vite.",
   "type": "module",
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

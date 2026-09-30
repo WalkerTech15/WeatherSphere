@@ -1,7 +1,7 @@
 /* The map must not raise SDK warnings for a feature it never uses.
  *
  * @maptiler/sdk adds a starfield ("space") and an atmosphere ("halo") layer
- * for its globe view. WeatherSphere's map is permanently flat, so neither is
+ * for its globe view. Saint-Pierre Weather's map is permanently flat, so neither is
  * ever visible — but left on, the starfield's textures load asynchronously
  * and its first frames log "[CubemapLayer]: Texture is undefined" in
  * development, and a style without globe metadata logs
