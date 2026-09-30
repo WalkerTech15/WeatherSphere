@@ -39,7 +39,7 @@ export const ES = {
   scrollRight: "Desplazar a la derecha",
 
   /* accessible names for landmarks/controls that carry no visible text */
-  logoHome: "Inicio de WeatherSphere",
+  logoHome: "Inicio de Saint-Pierre Weather",
   searchSuggestions: "Sugerencias de búsqueda",
   mainNav: "Navegación principal",
   insightsMapRegion: "Análisis y mapa",

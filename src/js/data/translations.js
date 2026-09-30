@@ -35,7 +35,7 @@ export const I18N = {
     scrollRight: "Scroll right",
 
     /* accessible names for landmarks/controls that carry no visible text */
-    logoHome: "WeatherSphere home",
+    logoHome: "Saint-Pierre Weather home",
     searchSuggestions: "Search suggestions",
     mainNav: "Main navigation",
     insightsMapRegion: "Insights and map",
@@ -703,7 +703,7 @@ export const I18N = {
     scrollLeft: "Défiler à gauche",
     scrollRight: "Défiler à droite",
 
-    logoHome: "Accueil WeatherSphere",
+    logoHome: "Accueil Saint-Pierre Weather",
     searchSuggestions: "Suggestions de recherche",
     mainNav: "Navigation principale",
     insightsMapRegion: "Analyses météo et carte",

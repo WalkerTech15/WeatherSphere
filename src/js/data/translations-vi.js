@@ -37,7 +37,7 @@ export const VI = {
   scrollRight: "Cuộn sang phải",
 
   /* accessible names for landmarks/controls that carry no visible text */
-  logoHome: "Trang chủ WeatherSphere",
+  logoHome: "Trang chủ Saint-Pierre Weather",
   searchSuggestions: "Gợi ý tìm kiếm",
   mainNav: "Điều hướng chính",
   insightsMapRegion: "Phân tích và bản đồ",

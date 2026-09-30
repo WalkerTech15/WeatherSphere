@@ -67,6 +67,13 @@ body[data-theme="dark"] .topnav {
   color: var(--text);
   flex-shrink: 0;
 }
+.brand-logo {
+  display: block;
+  width: 190px;
+  height: 42px;
+  object-fit: contain;
+  object-position: left center;
+}
 .logo-mark {
   display: grid;
   place-items: center;

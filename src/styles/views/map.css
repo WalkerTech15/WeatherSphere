@@ -2705,7 +2705,7 @@ body.map-expanded .map-show-panel {
      search field room for its whole placeholder beside the exit control.
      The link's accessible name comes from its aria-label ("Accueil
      WeatherSphere"), not this text, so it is unchanged. */
-  body.map-expanded .topnav .logo-text {
+  body.map-expanded .topnav .brand-logo {
     display: none;
   }
 }

@@ -129,7 +129,7 @@
 }
 
 @media (max-width: 640px) {
-  .logo-text {
+  .brand-logo {
     display: none;
   }
   .hero {
